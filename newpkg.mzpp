@@ -1,0 +1,21 @@
+This announces the availability of a new package from PLaneT:
+
+-------
+Name:            <<name>>
+
+Package version: <<major-version>>.<<minor-version>>
+
+Owner:           <<owner>>
+
+
+<<blurb>>
+
+
+-------
+
+Go to 
+
+<<url>>
+
+
+for more information.
