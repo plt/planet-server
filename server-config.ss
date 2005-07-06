@@ -7,8 +7,9 @@
   (define-parameters 
     
     ;; repository
-    (PLANET-SERVER-REPOSITORY (build-path (this-expression-source-directory) "repository"))
-    (PLANET-SERVER-PORT       270)
+    (PLANET-SERVER-REPOSITORY (build-path #;(this-expression-source-directory)
+					  "/home/jacobm/tmp/fake-repository"))
+    (PLANET-SERVER-PORT       2700)
     (METAINFO-FILE            "info.ss")
     
     ;; logging
@@ -31,9 +32,9 @@
     (RSS-FILE-NAME "planet.rss")
     
     ;; web page
-    (PORT                     8000)
-    (PLANET-WEB-HOST          "planet.plt-scheme.org")
-    (PLANET-WEB-PATH          '())
+    (PORT                     80)
+    (PLANET-WEB-HOST          "www.cs.uchicago.edu")
+    (PLANET-WEB-PATH          '("~jacobm" "planet-mockup"))
     (WEBROOT                  "/home/jacobm/html/planet-mockup/")
     (WEB-PAGE-FILE            "index.html")
     (NEWEST-PAGE-FILE         "newest.html")

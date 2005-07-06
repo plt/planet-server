@@ -25,6 +25,7 @@ Follows the protocol listed in the PLaneT client file
       (repeat-forever 
        (lambda () 
          (let-values ([(ip op) (tcp-accept listener)])
+           (file-stream-buffer-mode op 'line)
            (thread 
             (lambda () 
               (with-handlers ([exn:fail? (void)])
@@ -121,6 +122,7 @@ Follows the protocol listed in the PLaneT client file
            (log-error client-ip-address 'malformed-input request)
            (close-ports)])))
 
+    (printf "handling connection from ~a\n" client-ip-address)
     (state:initialize))
   
   ; log-download : string string string nat nat -> void

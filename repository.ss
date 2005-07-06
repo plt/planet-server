@@ -20,7 +20,9 @@
            (prefix srfi1: (lib "1.ss" "srfi"))
            (prefix srfi13: (lib "13.ss" "srfi"))
            
-           (file "../web/common/layout.ss"))
+           (file "../web/common/layout.ss")
+           (all-except (file "../web/common/paths.ss") url)
+           (file "../web/common/distribute.ss"))
   
   ;; ============================================================
   ;; TYPES
@@ -305,7 +307,7 @@
            [file-to-write 
             (build-path (WEBROOT) (repository-name rep) (RSS-FILE-NAME))]
            [o 
-            (open-output-file file-to-write 'replace)])
+            (open-output-file file-to-write 'truncate)])
       (display "<?xml version=\"1.0\"?>\n" o)
       (write-xml/content (xexpr->xml new-rss-xexpr) o)
       (close-output-port o)))
@@ -358,12 +360,12 @@
          (list (caar (last-pair category-table)))])))
             
   (define (rebuild-web-site)
-    (for-each 
-     (lambda (r)
-       (rebuild-repository-pages r)
-       (rebuild-rss-feed r))
-     (get-all-repositories)))
-  
+    
+      (for-each 
+       (lambda (r)
+         (rebuild-repository-pages r)
+         (rebuild-rss-feed r))
+       (get-all-repositories)))
   
   ;; web-contents : installed-package | (cons string (listof web-contents))
   
@@ -371,9 +373,9 @@
   (define (update-web-site pkgs)
     
     (define (install-doc-file pkg doc-dir)
-      (let ((doc-file "doc.txt"))
+      (let ((doc-file "./doc.txt"))
         (make-directory* doc-dir)
-        (extract-package-file pkg (pregexp-quote doc-file) doc-dir)))
+        (extract-package-file pkg doc-file doc-dir)))
     
     (define (update-web-site/internal pkg)
       (let ((doc-dir (pkg->doc-dir pkg)))
@@ -465,30 +467,31 @@
      (repository->newest-first-page rep)))
   
   (define (build-web-page* file rep header-blurb contents)
-    (parameterize ((current-write-page 
-                    (lambda (x y) 
-                      (make-directory* (build-path (WEBROOT) (repository-name rep)))
-                      (let ((out (open-output-file
-                                  (build-path (WEBROOT) (repository-name rep) file)
-                                  'replace)))
-                        (write-xml/content (xexpr->xml y) out)
-                        (close-output-port out)))))
-      (write-tall-page 
-       (format "http://planet.plt-scheme.org/~a/" (repository-name rep))
-       (format "PLaneT Package Repository")
-       (generate-web-page rep 
-                          (append
-                           header-blurb
-                           `((p "You can be notified when new packages are added by subscribing to the "
-                              (a ((href ,(url->string (repository->rss-url rep)))) "RSS feed")
-                              " or to the " 
-                              (a ((href ,(url->string (MAIL-SUBSCRIBE-URL)))) "PLaneT-Announce mailing list") ".")))
-                          contents)
-       (list (make-hubs-panel #f #f))
-       `((link ((rel "alternate")
-                (type "application/rss+xml")
-                (title "RSS")
-                (href ,(url->string (repository->rss-url rep)))))))))
+    (set-simple-mappings! (url->string (repository->url rep)))
+    (parameterize ((build-dir (build-path (WEBROOT) (repository-name rep))))
+      (make-directory* (build-path (WEBROOT) (repository-name rep)))
+      (let ((out (open-output-file
+                  (build-path (WEBROOT) (repository-name rep) file)
+                  'replace)))
+        (write-xml/content 
+         (xexpr->xml
+          (apply 
+           tall-page 
+           (format "PLaneT Package Repository")
+           ':head-stuff `((link ((rel "alternate")
+                                 (type "application/rss+xml")
+                                 (title "RSS")
+                                 (href ,(url->string (repository->rss-url rep))))))
+           (generate-web-page rep 
+                              (append
+                               header-blurb
+                               `((p "You can be notified when new packages are added by subscribing to the "
+                                    (a ((href ,(url->string (repository->rss-url rep)))) "RSS feed")
+                                    " or to the " 
+                                    (a ((href ,(url->string (MAIL-SUBSCRIBE-URL)))) "PLaneT-Announce mailing list") ".")))
+                              contents))) 
+         out)
+      (close-output-port out))))
   
   ;; generate-web-page : repository (listof xexpr[html]) (listof web-contents) -> listof xexpr[xhtml]
   ;; makes the body of a web page telling all currently-available packages
@@ -512,9 +515,9 @@
      `(div ((class "name")) (p ,(format "PLaneT repository for PLT Scheme v~a" 
                                         (version->description (repository-name rep)))))
      `(div ((class "description")) ,@header-blurb)
-     (make-tall-page-section "Available Packages")
+     `(section "Available Packages")
      (web-contents->table contents)
-     (make-tall-page-section "Available Packages: Detail")
+     `(section "Available Packages: Detail")
      (web-contents->xexprs contents)))
   
   ;; web-contents->table : (listof web-contents) -> xexpr[html table]
