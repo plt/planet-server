@@ -328,6 +328,7 @@
       (scientific     "Mathematical and Scientific")
       (system         "Hardware/Operating System-Specific Tools")
       (ui             "Textual and Graphical User Interface")
+      (metaprogramming "Metaprogramming")
       (planet         "PLaneT-Related")
       (misc           "Miscellaneous")))
 
@@ -355,7 +356,9 @@
       (match c-symbols
         [((? symbol?) ...)
          (let ((ans (srfi1:filter-map symbol->category c-symbols)))
-           (or ans (caar (last-pair category-table))))]
+           (if (null? ans)
+               (list (caar (last-pair category-table)))
+               ans))]
         [_
          (list (caar (last-pair category-table)))])))
             
