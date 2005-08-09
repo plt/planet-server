@@ -57,11 +57,13 @@ Follows the protocol listed in the PLaneT client file
           (copy-port file-port op)
           (log-download client-ip-address (pkg-path thepkg) (pkg-name thepkg) maj min))))
     
-    ; transmit-failure : Nat FULL-PKG ERROR-CODE string -> void
+    ; transmit-failure : Nat PKG-SPEC ERROR-CODE string -> void
     ; reports a failure to handle a get request
     (define (transmit-failure seqno thepkg error-code msg)
       (write-line (list seqno 'get 'error error-code msg) op)
-      (log-error client-ip-address error-code msg))
+      (log-error client-ip-address error-code 
+                 (parameterize ((print-struct #t))
+                   (format "~a: ~s" msg thepkg))))
     
     (define (state:initialize)
       (let ((version (read-line ip)))
