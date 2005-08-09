@@ -103,7 +103,10 @@ Follows the protocol listed in the PLaneT client file
                        (if (file-exists? file)
                            (transmit-file seqno cache-pkg maj min file)
                            (transmit-failure seqno thepkg 'not-found "Internal error: inconsistent server state")))
-                     (transmit-failure seqno thepkg 'not-found "No package matched the specified criteria"))
+                     (transmit-failure seqno thepkg 'not-found 
+                                       (format "No package in repository ~s (for language version ~s) matched the specified criteria"
+                                               (path->string repository)
+                                               language-version)))
                  (state:get-requests))
                (begin
                  (write-line (list seqno
