@@ -36,7 +36,7 @@ Follows the protocol listed in the PLaneT client file
   (define (handle ip op)
     
     ;; exceptions raised here will be handled by the calling loop
-    (define-values (client-ip-address server-ip-address)
+    (define-values (server-ip-address client-ip-address)
       (if (tcp-port? ip)
           (tcp-addresses ip)
           (values "<unknown>" "<unknown>")))
