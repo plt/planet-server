@@ -4,7 +4,7 @@
            (lib "process.ss"))
 
   (define (restart-web-server response)
-    (system "/etc/init.d/plt-web-server stop && /etc/init.d/plt-web-server start"))
+    (system "/etc/init.d/plt-web-server stop ; /etc/init.d/plt-web-server start"))
   
   (monitor
    "jacobm@cs.uchicago.edu"
