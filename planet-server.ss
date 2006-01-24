@@ -11,7 +11,7 @@ Follows the protocol listed in the PLaneT client file
    (lib "match.ss")
    (lib "port.ss")
    (lib "planet-shared.ss" "planet" "private")
-   (lib "config.ss" "planet")
+   (only (lib "config.ss" "planet") CACHE-DIR)
    
    "server-config.ss"
    "logging.ss")
