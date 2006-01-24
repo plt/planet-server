@@ -91,6 +91,8 @@
               [min-lo           (get 'min-lo nat-or-false?)]
               [min-hi           (get 'min-hi nat-or-false?)]
               [path             (get 'path list-of-strings?)])
+          (unless (legal-language? language-version)
+            (error 'servlet "Illegal language: ~a" language-version))
           (handle-one-request 
            language-version
            (make-pkg-spec name maj min-lo min-hi path #f language-version)
