@@ -93,7 +93,7 @@
               [path             (get 'path list-of-strings?)])
           (handle-one-request 
            language-version
-           (make-pkg-spec name maj min-lo min-hi path #f)
+           (make-pkg-spec name maj min-lo min-hi path #f lang)
            transmit-file/exit
            transmit-failure/exit
            void

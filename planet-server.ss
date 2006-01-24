@@ -140,7 +140,7 @@ Follows the protocol listed in the PLaneT client file
             (? nat-or-false? min-hi) 
             (? string? path) ...)
            (handle-one-request language-version
-                               (make-pkg-spec name maj min-lo min-hi path #f)
+                               (make-pkg-spec name maj min-lo min-hi path #f language-version)
                                (transmit-file seqno)
                                (transmit-failure seqno)
                                state:get-requests
