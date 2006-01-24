@@ -11,6 +11,7 @@ Follows the protocol listed in the PLaneT client file
    (lib "match.ss")
    (lib "port.ss")
    (lib "planet-shared.ss" "planet" "private")
+   (lib "config.ss" "planet")
    
    "server-config.ss"
    "logging.ss")
@@ -33,7 +34,8 @@ Follows the protocol listed in the PLaneT client file
         (let* ([repository (build-path 
                             (PLANET-SERVER-REPOSITORY) 
                             (language-version->repository language-version))]
-               [cache-pkg (lookup-package pkg-spec repository)])
+               [cache-pkg (parameterize ((CACHE-DIR repository))
+                            (lookup-package pkg-spec))])
           (if cache-pkg
               (let* ([path (pkg-path cache-pkg)]
                      [maj (pkg-maj cache-pkg)]
