@@ -1,6 +1,6 @@
 (module server-config mzscheme
   
-  (require (lib "planet-shared.ss" "planet" "private")
+  (require (lib "define-config.ss" "planet" "private")
            (lib "etc.ss")
            (lib "url.ss" "net"))
   
