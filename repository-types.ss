@@ -169,10 +169,10 @@
   ;; the url for the web page containing info on the given repository
   (define (repository->url rep)
     (make-url
-     "http" #f (PLANET-WEB-HOST) (PORT)
-     `(,@(PLANET-WEB-PATH)
-         ,(repository-name rep)
-         "")
+     "http" #f (PLANET-WEB-HOST) (if (eqv? (PORT) 80) #f (PORT)) #t
+     `(,@(map (λ (s) (make-path/param s '())) (PLANET-WEB-PATH))
+       ,(make-path/param (repository-name rep) '())
+       ,(make-path/param "" '()))
      '()
      #f))
   
@@ -187,12 +187,12 @@
   (provide/contract (pkg->doc-url (installed-package? . -> . url?)))
   ;; url for this package's documentation
   (define (pkg->doc-url p)
-    (make-url "http" #f (PLANET-WEB-HOST) (PORT)
-              `(,@(PLANET-WEB-PATH)
-                  ,(repository-name (installed-package-repository p))
-                  ,(DOCS-DIR) 
-                  ,@(map path->string (pkg->relative-path/list p))
-                  "doc.txt")
+    (make-url "http" #f (PLANET-WEB-HOST) (if (eqv? (PORT) 80) #f (PORT)) #t
+              `(,@(map (λ (s) (make-path/param s '())) (PLANET-WEB-PATH))
+                ,(make-path/param (repository-name (installed-package-repository p)) '())
+                ,(make-path/param (DOCS-DIR) '()) 
+                ,@(map (λ (p) (make-path/param (path->string p) '())) (pkg->relative-path/list p))
+                ,(make-path/param "doc.txt" '()))
               '()
               #f))
   
