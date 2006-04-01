@@ -48,11 +48,9 @@ about the repository or planet packages.
     (define (owner-line->owner owner)
       (make-owner
        (owner->name owner)
-       (quicksort
-        (map 
-         (lambda (x) (package-line->package x (owner->name owner)))
-         (owner->packages owner))
-        (lambda (a b) (string<? (package-name a) (package-name b))))))
+       (sort (map (lambda (x) (package-line->package x (owner->name owner)))
+                  (owner->packages owner))
+             (lambda (a b) (string<? (package-name a) (package-name b))))))
 
     ;; sexp -> package structure (as defined at the top of the file)
     (define (package-line->package pkg owner-name)
@@ -105,11 +103,8 @@ about the repository or planet packages.
     (let* ([owners/all-versions (current-repository-contents)]
            [owners (let ((x (assoc version owners/all-versions)))
                      (if x (cdr x) '()))])
-      (quicksort
-       (map 
-        owner-line->owner
-        owners)
-       (lambda (a b) (string<? (owner-name a) (owner-name b))))))
+      (sort (map owner-line->owner owners)
+            (lambda (a b) (string<? (owner-name a) (owner-name b))))))
     
     
   ;; ============================================================

@@ -196,7 +196,7 @@
               ht
               file
               (srfi1:delete-duplicates
-               (quicksort (apply append (hash-table-map ht (lambda (k v) v))) pkg<)
+               (sort (apply append (hash-table-map ht (lambda (k v) v))) pkg<)
                (lambda (a b) (equal? (key a) (key b)))))))
       (write-cache c)
       c))
@@ -422,15 +422,12 @@
   (define (repository->normal-page rep)
     (let* ([the-categories
             (packages-by-category rep)])
-      (map 
-        (lambda (category-stuff)
-          (cons (cat->string (car category-stuff))
-                (quicksort 
-                 (cdr category-stuff)
-                 (lambda (a b) (string<? (package-name a) (package-name b))))))
-        (quicksort 
-         the-categories
-         (lambda (a b) (cat< (car a) (car b)))))))
+      (map (lambda (category-stuff)
+             (cons (cat->string (car category-stuff))
+                   (sort (cdr category-stuff)
+                         (lambda (a b)
+                           (string<? (package-name a) (package-name b))))))
+           (sort the-categories (lambda (a b) (cat< (car a) (car b)))))))
   
   (define PKGS-PER-PAGE 50)
   
