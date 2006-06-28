@@ -30,9 +30,6 @@
     ; transmit-file : Nat FULL-PKG Nat Nat string[filename] -> void
     ; transmits the file named by the given string over op. The given number is the
     ; transaction's sequence number.  
-    ; [NOTICE: we log a successful download before we've actually done it. That's because of an
-    ;  annoying problem with the server where we can't actually just generate the output we want
-    ;  to send to the client ...]
     (define (transmit-file/exit thepkg maj min file)
       (log-download (request-client-ip initial-request) (pkg-path thepkg) (pkg-name thepkg) maj min)
       (send/finish
@@ -44,11 +41,11 @@
         `((Content-Length . ,(number->string (file-size file)))
           (Package-Major-Version . ,(number->string maj))
           (Package-Minor-Version . ,(number->string min)))
-
-        (let ([file-port (open-input-file file)]
-              [bytes (open-output-bytes)])
-          (copy-port file-port bytes)
-          (list (get-output-bytes bytes))))))
+        
+        (let ([file-port (open-input-file file)])
+          (begin0
+            (list (read-bytes (file-size file) file-port))
+            (close-input-port file-port))))))
     
     ;; error-code->status-code : error-code -> (list number string)
     ;; get the HTTP status code that goes with the given error
@@ -76,15 +73,26 @@
           '()
           (list msg)))))  
     
-    (let* ([bindings (request-bindings initial-request)]
-           [get (lambda (n ok?) 
-                  (let ((v (with-handlers ([exn? (λ (e) (transmit-failure/exit #f
-                                                                               'malformed-input
-                                                                               (format "Binding for ~a had improper format" n)))])
-                             (read-from-string (extract-binding/single n bindings)))))
-                    (if (ok? v)
-                        v
-                        (transmit-failure/exit #f 'malformed-input (format "Binding for ~a had improper format" n)))))])
+    (with-handlers ([exn? (lambda (e)
+                            (send/finish
+                             (make-response/full
+                              500
+                              "PLaneT server error"
+                              (current-seconds)
+                              #"text/plain"
+                              '()
+                              (exn-message e))))])
+                            
+                            
+      (let* ([bindings (request-bindings initial-request)]
+             [get (lambda (n ok?) 
+                    (let ((v (with-handlers ([exn? (λ (e) (transmit-failure/exit #f
+                                                                                 'malformed-input
+                                                                                 (format "Binding for ~a had improper format" n)))])
+                               (read-from-string (extract-binding/single n bindings)))))
+                      (if (ok? v)
+                          v
+                          (transmit-failure/exit #f 'malformed-input (format "Binding for ~a had improper format" n)))))])
         (let ([language-version (get 'lang string?)]
               [name             (get 'name string?)]
               [maj              (get 'maj nat-or-false?)]
@@ -99,6 +107,4 @@
            transmit-file/exit
            transmit-failure/exit
            void
-           void))))
-
-  )
+           void))))))
