@@ -112,9 +112,15 @@
           (list blurb)
           blurb)))
   
-  (provide/contract (pkg->anchor (installed-package? . -> . string?)))
+  (provide/contract 
+   (pkg->anchor (installed-package? . -> . string?))
+   (pkg->old-anchor (installed-package? . -> . string?)))
+  
   ;; gets an achor for the given package  
-  (define (pkg->anchor pkg)
+  (define (pkg->anchor pkg) (package-name pkg))
+  
+  ;; gets the old anchor (so the web page doesn't break backwards compatibility)
+  (define (pkg->old-anchor pkg)
     (format "~a~a.~a" (package-name pkg) (package-maj pkg) (package-min pkg)))
   
   ;; installed-package installed-package -> boolean

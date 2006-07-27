@@ -57,7 +57,7 @@
         [else (error 'error-code->status-code (format "Unknown error code: ~s" err))]))
     
     
-    ; transmit-failure : Nat PKG-SPEC ERROR-CODE string -> void
+    ; transmit-failure/exit : PKG-SPEC ERROR-CODE string -> void
     ; reports a failure to handle a get request
     (define (transmit-failure/exit thepkg error-code msg)
       (log-error (request-client-ip initial-request) error-code

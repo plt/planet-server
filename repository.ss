@@ -2,27 +2,27 @@
   
   (provide (all-defined))
   
-  (require "archives.ss"
-           "server-config.ss"
+  (require "archives.ss")
+  (require "server-config.ss")
            
-           "email.ss"
-           "repository-types.ss"
+  (require "email.ss")
+  (require "repository-types.ss")
            
-           (lib "planet-shared.ss" "planet" "private")
-           (lib "list.ss")
-           (lib "file.ss")
-           (lib "pregexp.ss")
-           (lib "url.ss" "net")
-           (lib "xml.ss" "xml")
-           (lib "date.ss")
-           (lib "match.ss")
-           
-           (prefix srfi1: (lib "1.ss" "srfi"))
-           (prefix srfi13: (lib "13.ss" "srfi"))
-           
-           (file "../web/common/layout.ss")
-           (all-except (file "../web/common/paths.ss") url)
-           (file "../web/common/distribute.ss"))
+  (require (all-except (lib "planet-shared.ss" "planet" "private") pkg<))
+  (require (lib "list.ss"))
+  (require (lib "file.ss"))
+  (require (lib "pregexp.ss"))
+  (require (lib "url.ss" "net"))
+  (require (lib "xml.ss" "xml"))
+  (require (lib "date.ss"))
+  (require (lib "match.ss"))
+  
+  (require (prefix srfi1: (lib "1.ss" "srfi")))
+  (require (prefix srfi13: (lib "13.ss" "srfi")))
+  
+  (require (file "../web/common/layout.ss"))
+  (require (all-except (file "../web/common/paths.ss") url))
+  (require (file "../web/common/distribute.ss"))
   
   ;; ============================================================
   ;; TYPES
@@ -54,7 +54,7 @@
          (announce-new-package installations))]))
 
   ;; additize : string path[file] bool string -> installed-package
-  ;; add a package to a particular repository
+  ;; add a package to the repository corresponding to the language specified
   (define (additize owner plt-file minor-update? lang)
     (define repository (get-repository lang))
     (define package-name (path->string (file-name-from-path plt-file)))
@@ -196,7 +196,7 @@
               ht
               file
               (srfi1:delete-duplicates
-               (sort (apply append (hash-table-map ht (lambda (k v) v))) pkg<)
+               (quicksort (apply append (hash-table-map ht (lambda (k v) v))) pkg<)
                (lambda (a b) (equal? (key a) (key b)))))))
       (write-cache c)
       c))
@@ -424,10 +424,10 @@
             (packages-by-category rep)])
       (map (lambda (category-stuff)
              (cons (cat->string (car category-stuff))
-                   (sort (cdr category-stuff)
-                         (lambda (a b)
-                           (string<? (package-name a) (package-name b))))))
-           (sort the-categories (lambda (a b) (cat< (car a) (car b)))))))
+                   (quicksort (cdr category-stuff)
+                              (lambda (a b)
+                                (string<? (package-name a) (package-name b))))))
+           (quicksort the-categories (lambda (a b) (cat< (car a) (car b)))))))
   
   (define PKGS-PER-PAGE 50)
   
@@ -568,6 +568,7 @@
           [(installed-package? wc)
            `(div ((class "package")
                   (style "background-color: #f3f4ff; padding-left: 10px; margin-left: 10px; margin-right: 30px; margin-bottom: 10px;"))
+                 (a ((name ,(pkg->old-anchor wc))))
                  (a ((name ,(pkg->anchor wc)))
                     (b ,(package-name wc)) 
                     " contributed by " ,(package-owner wc)
