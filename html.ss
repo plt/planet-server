@@ -1,7 +1,7 @@
 (module html mzscheme
   (require 
    "configuration.ss" "data-structures.ss"
-   (file "/Users/jacobm/svn/iplt/web/common/layout.ss"))
+   (file "/local/svn/iplt/web/common/layout.ss"))
   
   (provide mkhtmlpage)
   
