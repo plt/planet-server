@@ -7,14 +7,13 @@
   ;; make firewalls angry?
     
   (require (only "planet-server.ss" handle-one-request) 
-           "logging.ss"
-           
+           "db.ss"
+           "data-structures.ss"
            (lib "planet-shared.ss" "planet" "private")
            
            (lib "servlet.ss" "web-server")
            (lib "response.ss" "web-server")
-           (lib "string.ss")
-           (lib "port.ss"))
+           (lib "string.ss"))
   
   (provide interface-version timeout start)
   (define interface-version 'v1)
@@ -26,26 +25,6 @@
   
   ; start : request -> response
   (define (start initial-request)
-    
-    ; transmit-file : Nat FULL-PKG Nat Nat string[filename] -> void
-    ; transmits the file named by the given string over op. The given number is the
-    ; transaction's sequence number.  
-    (define (transmit-file/exit thepkg maj min file)
-      (log-download (request-client-ip initial-request) (pkg-path thepkg) (pkg-name thepkg) maj min)
-      (send/finish
-       (make-response/full
-        200
-        "Okay"
-        (current-seconds)
-        #"text/plain"
-        `((Content-Length . ,(number->string (file-size file)))
-          (Package-Major-Version . ,(number->string maj))
-          (Package-Minor-Version . ,(number->string min)))
-        
-        (let ([file-port (open-input-file file)])
-          (begin0
-            (list (read-bytes (file-size file) file-port))
-            (close-input-port file-port))))))
     
     ;; error-code->status-code : error-code -> (list number string)
     ;; get the HTTP status code that goes with the given error
@@ -60,7 +39,7 @@
     ; transmit-failure/exit : PKG-SPEC ERROR-CODE string -> void
     ; reports a failure to handle a get request
     (define (transmit-failure/exit thepkg error-code msg)
-      (log-error (request-client-ip initial-request) error-code
+      (log-error (request-client-ip initial-request) #;error-code ; don't record the error code (it's useless at the moment)
                  (parameterize ((print-struct #t))
                    (format "~a: ~s" msg thepkg)))
       (let ((status-code (error-code->status-code error-code)))
@@ -73,6 +52,7 @@
           '()
           (list msg)))))  
     
+    
     (with-handlers ([exn? (lambda (e)
                             (send/finish
                              (make-response/full
@@ -81,9 +61,9 @@
                               (current-seconds)
                               #"text/plain"
                               '()
-                              (exn-message e))))])
+                              (list (exn-message e)))))])
                             
-                            
+      (startup)
       (let* ([bindings (request-bindings initial-request)]
              [get (lambda (n ok?) 
                     (let ((v (with-handlers ([exn? (λ (e) (transmit-failure/exit #f
@@ -100,11 +80,30 @@
               [min-hi           (get 'min-hi nat-or-false?)]
               [path             (get 'path list-of-strings?)])
           (unless (legal-language? language-version)
-            (error 'servlet "Illegal language: ~a" language-version))
-          (handle-one-request 
-           language-version
-           (make-pkg-spec name maj min-lo min-hi path #f language-version)
-           transmit-file/exit
-           transmit-failure/exit
-           void
-           void))))))
+            (transmit-failure/exit #f 'illegal-language (format "Illegal language: ~s" language-version)))
+          (let ([; transmit-file : (pkgversion? path? . -> . any)
+                 ; transmits the given package to the client.
+                 transmit-file/exit 
+                 (lambda (thepkgver file)
+                   (log-download (request-client-ip initial-request) thepkgver language-version)
+                   (send/finish
+                    (make-response/full
+                     200
+                     "Okay"
+                     (current-seconds)
+                     #"text/plain"
+                     `((Content-Length . ,(number->string (file-size file)))
+                       (Package-Major-Version . ,(number->string (pkgversion-maj thepkgver)))
+                       (Package-Minor-Version . ,(number->string (pkgversion-min thepkgver))))
+                     
+                     (let ([file-port (open-input-file file)])
+                       (begin0
+                         (list (read-bytes (file-size file) file-port))
+                         (close-input-port file-port))))))])
+            (handle-one-request 
+             language-version
+             (make-pkg-spec name maj min-lo min-hi path #f language-version)
+             transmit-file/exit
+             transmit-failure/exit
+             void
+             void)))))))

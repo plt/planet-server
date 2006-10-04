@@ -1,14 +1,14 @@
 (module logging mzscheme
   ;; logging.ss -- provides logging facilities for the planet server
   
-  (require "server-config.ss")
+  (require "db.ss")
   (provide log-download log-error)
   ;; ============================================================
   
   ; log-download : string string string nat nat -> void
   ; logs the given download
   (define (log-download ip-addr owner pkg-name v-maj v-min)
-    (record (list ip-addr (current-seconds) owner pkg-name v-maj v-min) (PLANET-CONNECT-LOG)))
+    (record- ip-addr (current-seconds) owner pkg-name v-maj v-min)))
   
   ; log-error : string symbol tst ... -> void
   ; logs the given error. The extras should be information relevant to the given error type.
