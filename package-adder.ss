@@ -12,7 +12,7 @@
            
            "data-structures.ss"
            "html.ss"
-           
+           "configuration.ss"
            "scm2xexpr.scm")
   
   (provide/contract
@@ -24,11 +24,6 @@
                    natural-number/c #| min |#
                    . -> .
                    path? #| where it was installed; i'm not actually really sure what to return here |#)])
-  
-  (define *FILE-STORAGE-PATH* (make-parameter (build-path "/Users/jacobm/tmp/planet-files")))
-  (define *WEB-PACKAGES-ROOT* (make-parameter (build-path "/Users/jacobm/svn/plt/collects/web-server/default-web-root/htdocs/planet-packages/")))
-  (define *BASE-URL*          (make-parameter "http://localhost:8080/planet-packages/")) 
-  
   
   (define (store-package file user pkgname maj min)
     ;; tasks:
@@ -50,8 +45,8 @@
       (let ([dir (build-path (root-dir-param) (user-username usr) pkgname (number->string maj) (number->string min))])
         (make-directory* dir)
         dir)))
-  (define create-package-directory (make-creator *FILE-STORAGE-PATH*))
-  (define create-web-directory (make-creator *WEB-PACKAGES-ROOT*))
+  (define create-package-directory (make-creator FILE-STORAGE-PATH))
+  (define create-web-directory (make-creator WEB-PACKAGES-ROOT))
   
   ;; unpack-planet-package : path? path? -> void
   ;; unpacks the given package (specified by its path) into the given directory
