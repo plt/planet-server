@@ -60,8 +60,5 @@
         (if ans
             '()
             (list (apply formatter args))))))
-    
-  
-  
   
   )
