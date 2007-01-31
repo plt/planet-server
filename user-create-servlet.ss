@@ -1,21 +1,21 @@
 (module user-create-servlet mzscheme
-  
+
   (require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss")
   (require (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
            (lib "file.ss")
            (prefix srfi1: (lib "1.ss" "srfi"))
            (prefix srfi13: (lib "13.ss" "srfi")))
-  
+
   (provide interface-version timeout start)
   (define interface-version 'v1)
   (define timeout +inf.0)
-  
+
   (startup)
-  
+
   (define (get request symbol)
     (extract-binding/single symbol (request-bindings request)))
-  
+
   (define (start req)
     (let loop ()
       (let ([r (send/forward LOGIN/CREATE-USER-PAGE)])
@@ -24,24 +24,24 @@
           [(eq? (get r 'mode) 'login)
            (get-user-info/loop r)]
           [(eq? (get r 'mode) 'create)
-           
-    
-    
+
+
+
     (get-user-info/loop req))
-  
-         
-  
-  
+
+
+
+
   ;; the list of things that will stop a new user account from being created
   (define-struct problem ())
   (define-struct (already-taken-username-problem problem) ())
   (define-struct (passwords-do-not-match-problem problem) ())
   (define-struct (email-taken-problem problem) ())
   (define-struct (nonexistant-field-problem problem) (field))
-  
+
   (define problems
     (list
-     (lambda (r) 
+     (lambda (r)
        (cond
          [(not (exists-binding? 'username (request-bindings r)))
           (make-nonexistant-field-problem 'username)]
@@ -64,7 +64,7 @@
          [(email-taken? (srfi13:string-trim-both (get r 'email)))
           (make-email-taken-problem)]
          [else #f]))))
-  
+
   (define (get-user-info/loop req)
     (let* ([problems (srfi1:filter-map (lambda (problem) (problem req)) problems)])
       (cond
@@ -78,10 +78,10 @@
            (verify-email-address email)
            (create-new-user username realname email password)
            (send/finish FINISHED-PAGE))])))
-  
+
   (define (USER-CREATE-PAGE problems)
     (lambda (k)
-      (mkhtmlpage 
+      (mkhtmlpage
        '("Create a user account")
        `((p "On this page you can create an account for contributing packages to PLaneT.")
          (form ((action ,k) (method "post"))
@@ -97,11 +97,11 @@
                 (tr (td "Password again")
                     (td (input ((type "password") (name "password2"))))))
                (input ((type "submit"))))))))
-  
+
   (define (verify-email-address email)
-    (send/suspend 
-     (lambda (k) 
-       #;(send-mail-message "PLaneT <planet@plt-scheme.org>" 
+    (send/suspend
+     (lambda (k)
+       #;(send-mail-message "PLaneT <planet@plt-scheme.org>"
                           "Please verify your email address"
                           (list k)
                           '()
@@ -117,12 +117,12 @@
                                 ""
                                 "Thanks,"
                                 "PLaneT"))
-       (mkhtmlpage 
+       (mkhtmlpage
         '("Confirm email address")
         `((p "Thank you for creating an account! To complete the registration process, please check the email account "
              (b ,email) " for a message telling you how to proceed.")
           (p "For testing: " (a ((href ,k)) "click here")))))))
-  
+
   (define FINISHED-PAGE
     (mkhtmlpage '("User created")
                 '((p "Your user account has been created. Thank you!")))))

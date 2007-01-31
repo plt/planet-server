@@ -1,31 +1,31 @@
 (module planet-servlet mzscheme
-  
+
   ;; this servlet implements the PLaneT response mechanism over HTTP
-  ;; it does not support all the features planned for the full 
+  ;; it does not support all the features planned for the full
   ;; PLaneT protocol (in particular it won't do negotiation) but
   ;; then again the regular planet server doesn't either so why
   ;; make firewalls angry?
-    
-  (require (only "planet-server.ss" handle-one-request) 
+
+  (require (only "planet-server.ss" handle-one-request)
            "db.ss"
            "data-structures.ss"
            (lib "planet-shared.ss" "planet" "private")
-           
+
            (lib "servlet.ss" "web-server")
            (lib "response.ss" "web-server")
            (lib "string.ss"))
-  
+
   (provide interface-version timeout start)
   (define interface-version 'v1)
   (define timeout +inf.0)
-  
+
   (define (nat-or-false? x) (or (not x) (nat? x)))
   (define (list-of-strings? v)
     (and (list? v) (andmap string? v)))
-  
+
   ; start : request -> response
   (define (start initial-request)
-    
+
     ;; error-code->status-code : error-code -> (list number string)
     ;; get the HTTP status code that goes with the given error
     (define (error-code->status-code err)
@@ -34,8 +34,8 @@
         [(bad-language) (list 400 "Bad Request")]
         [(malformed-input) (list 400 "Bad Request")]
         [else (error 'error-code->status-code (format "Unknown error code: ~s" err))]))
-    
-    
+
+
     ; transmit-failure/exit : PKG-SPEC ERROR-CODE string -> void
     ; reports a failure to handle a get request
     (define (transmit-failure/exit thepkg error-code msg)
@@ -50,9 +50,9 @@
           (current-seconds)
           #"text/plain"
           '()
-          (list msg)))))  
-    
-    
+          (list msg)))))
+
+
     (with-handlers ([exn? (lambda (e)
                             (send/finish
                              (make-response/full
@@ -62,10 +62,10 @@
                               #"text/plain"
                               '()
                               (list (exn-message e)))))])
-                            
+
       (startup)
       (let* ([bindings (request-bindings initial-request)]
-             [get (lambda (n ok?) 
+             [get (lambda (n ok?)
                     (let ((v (with-handlers ([exn? (λ (e) (transmit-failure/exit #f
                                                                                  'malformed-input
                                                                                  (format "Binding for ~a had improper format" n)))])
@@ -83,7 +83,7 @@
             (transmit-failure/exit #f 'illegal-language (format "Illegal language: ~s" language-version)))
           (let ([; transmit-file : (pkgversion? path? . -> . any)
                  ; transmits the given package to the client.
-                 transmit-file/exit 
+                 transmit-file/exit
                  (lambda (thepkgver file)
                    (log-download (request-client-ip initial-request) thepkgver language-version)
                    (send/finish
@@ -95,12 +95,12 @@
                      `((Content-Length . ,(number->string (file-size file)))
                        (Package-Major-Version . ,(number->string (pkgversion-maj thepkgver)))
                        (Package-Minor-Version . ,(number->string (pkgversion-min thepkgver))))
-                     
+
                      (let ([file-port (open-input-file file)])
                        (begin0
                          (list (read-bytes (file-size file) file-port))
                          (close-input-port file-port))))))])
-            (handle-one-request 
+            (handle-one-request
              language-version
              (make-pkg-spec name maj min-lo min-hi path #f language-version)
              transmit-file/exit

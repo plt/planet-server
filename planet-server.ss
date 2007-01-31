@@ -1,14 +1,14 @@
 (module planet-server mzscheme
-  
-  (require 
+
+  (require
    (lib "contract.ss")
    (lib "planet-shared.ss" "planet" "private")
    "data-structures.ss"
    "db.ss")
-  
-  (provide/contract 
-   [handle-one-request 
-    (string? 
+
+  (provide/contract
+   [handle-one-request
+    (string?
      pkg-spec?
      (pkgversion? path? . -> . any)
      (pkg-spec? symbol? string? . -> . any)
@@ -16,7 +16,7 @@
      (-> any)
      . -> .
      any)])
-  
+
   ;; ============================================================
   ;; BASIC SERVER MECHANISMS
 
@@ -31,7 +31,7 @@
   (define (handle-one-request language-version pkg-spec transmit-file transmit-failure proceed-k stop-k)
     (startup)
     (if (legal-language? language-version)
-        (let ([cache-pkg-list (get-matching-packages language-version 
+        (let ([cache-pkg-list (get-matching-packages language-version
                                                      (car (pkg-spec-path pkg-spec))
                                                      (pkg-spec-name pkg-spec)
                                                      (pkg-spec-maj pkg-spec)

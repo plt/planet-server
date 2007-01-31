@@ -1,7 +1,7 @@
 (module scheme-names mzscheme
   (provide *scm-builtins* *scm-keywords*)
 
-  (define *scm-builtins* 
+  (define *scm-builtins*
     '("abs"
       "acos"
       "angle"
@@ -14,7 +14,7 @@
       "car" "cdr"
       "caar"   "cadr"   "cdar"   "cddr"
       "caaar"  "caadr"  "cadar"  "caddr"  "cdaar"  "cdadr"  "cddar"  "cdddr"
-      "caaaar" "caaadr" "caadar" "caaddr" "cadaar" "cadadr" "caddar" "cadddr" 
+      "caaaar" "caaadr" "caadar" "caaddr" "cadaar" "cadadr" "caddar" "cadddr"
       "cdaaar" "cdaadr" "cdadar" "cdaddr" "cddaar" "cddadr" "cdddar" "cddddr"
       "call-with-current-continuation" "call/cc"
       "call-with-input-file"
@@ -147,7 +147,7 @@
       "=" "<" ">" "<=" ">="
       "+" "*" "-" "/"
       ))
-  
+
   (define *scm-keywords*
     '("=>"
       "and"
