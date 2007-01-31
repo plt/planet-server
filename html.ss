@@ -121,7 +121,7 @@
                     (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
                     (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
                     (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; "))
-     #:precomputed-image-tag `(image ((src "/images/logo.png") (width "128px") (height "123px") (alt "[PLT logo]")))
+     #:precomputed-image-tag `(image ((src "/images/logo.jpg") (width "128px") (height "123px") (alt "[PLT logo]")))
      `((div ((class "planetNav"))
             ,@(join '(nbsp ">" nbsp) (map title->link titles)))
        ,@contents)))
