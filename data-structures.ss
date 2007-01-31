@@ -5,7 +5,7 @@
            (lib "contract.ss"))
   
   (provide (struct user (id username realname))
-           (struct category (id name packages))
+           (struct category (id name shortname packages))
            (struct package (id owner name blurb versions))
            (struct pkgversion (id
                                package-id
@@ -18,11 +18,7 @@
                                repositories
                                required-core
                                downloads))
-           (struct repository (id name client-lower-bound client-upper-bound))
-           
-           )
-
-  
+           (struct repository (id name client-lower-bound client-upper-bound)))
   
   (define-struct user (id       ; nat
                        username ; string
@@ -32,7 +28,8 @@
   
   (define-struct category (id        ; nat 
                            name      ; string
-                           packages  ; listof package
+                           shortname ; symbol | #f
+                           packages  ; listof package | #f
                            )
     (make-inspector))
   
@@ -48,7 +45,7 @@
   (define-struct pkgversion (id package-id maj min 
                              plt-path src-path 
                              default-file doctxt
-                             blurb
+                             blurb ;; release notes
                              date-added
                              name
                              repositories

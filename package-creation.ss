@@ -14,14 +14,15 @@
            (lib "string.ss")
            (lib "getinfo.ss" "setup"))
   
+  (define (planet-file-name? s)
+    (and (string? s) (regexp-match #rx"^[^.].*\\.plt$" s)))
   (provide/contract
+   [planet-file-name? (any/c . -> . boolean?)]
    [create-package
     (user?                    ; package owner
-     string?                  ; file name
+     planet-file-name?        ; file name
      bytes?                   ; package file contents
-     (listof category?)       ; categories the package belongs to
-     string?                  ; blurb describing the package
-     (listof repository?)     ; repositories this package belongs to
+     (listof natural-number/c)     ; repositories this package belongs to
      . -> .
      void?)]
    [update-package
@@ -33,18 +34,39 @@
      . -> .
      void?)])
   
-  (define (create-package user package-name file-bytes categories blurb repositories)
-    (let* ([pkg-stub (add-package-to-db! user package-name blurb)])
-      (update/internal user pkg-stub 1 0 file-bytes repositories)
-      (for-each
-       (lambda (category) (associate-package-with-category pkg-stub category))
-       categories)))
+  (define (create-package user package-name file-bytes repositories)
+    (let* ([cats (get-category-names)]
+           [cats-ht (make-hash-table)])
+      (for-each 
+       (λ (c) (hash-table-put! cats-ht (category-shortname c) c))
+       cats)
+      (update/internal user
+                       package-name
+                       1
+                       0
+                       file-bytes
+                       repositories
+                       (λ (i)
+                         (let ([pkg-stub (add-package-to-db! user package-name (i 'blurb (λ () #f)))]
+                               [count 0])
+                           (for-each
+                            (lambda (shortname) 
+                              (let ([c (hash-table-get cats-ht shortname (λ () #f))])
+                                (if c
+                                    (begin 
+                                      (associate-package-with-category pkg-stub c)
+                                      (set! count (add1 count)))
+                                    (void) #;(report-bad-category shortname))))
+                            (i 'categories (λ () '())))
+                           (when (= count 0)
+                             (associate-package-with-category pkg-stub (hash-table-get cats-ht 'misc)))
+                           pkg-stub)))))
   
   (define (update-package user pkg minor-update? file-bytes repositories)
     (let* ([maj+min (get-next-version-number pkg minor-update?)]
            [maj (car maj+min)]
            [min (cdr maj+min)])
-      (update/internal user pkg maj min file-bytes repositories)))
+      (update/internal user (package-name pkg) maj min file-bytes repositories (λ (_) pkg))))
     
   ;; get-metainfo : path[directory] -> (symbol (-> TST) -> TST)
   ;; gets an info.ss -retrieving thunk for the given package which is unpacked in the given directory
@@ -55,25 +77,29 @@
       (or metainfo
           (lambda (s t) (t)))))
   
-  (define (update/internal user pkg maj min file-bytes repositories)
-    (let* ([pkgname (package-name pkg)]
-           [username (user-username user)]
+  ;; update/internal : user? string nat nat bytes (listof repository?) ((listof xexpr) -> pkg) -> void
+  (define (update/internal user pkgname maj min file-bytes repositories getpkg)
+    (let* ([username (user-username user)]
            [pkgdir (create-package-directory username pkgname maj min)]
-           [permanent-file-path (build-path pkgdir pkgname)] ;; TODO: verify that the file name is safe (no ..), or this will be an exploit!!!!
+           
+           [permanent-file-path (build-path pkgdir pkgname)] 
+           ;; FIXME: verify that the file name is safe (no ..), or this will be an exploit!!!!
+           ;; [1/30/07: I believe this isn't an issue anymore because of the planet-file-name? contract check]
+           
            [srcdir (build-path pkgdir "contents")]
-           [webdir (create-web-directory username pkgname maj min)])
-      (with-output-to-file permanent-file-path (lambda () (write-bytes file-bytes)) 'truncate/replace)
-      (unpack-planet-package permanent-file-path srcdir)
-      (let ([id (add-pkgversion-to-db! user 
-                                       pkg
-                                       maj
-                                       min
-                                       permanent-file-path
-                                       srcdir
-                                       (get-metainfo srcdir))])
-        (for-each
-         (lambda (rep) (associate-pkgversion-with-repository! id rep))
-         repositories))
+           [webdir (create-web-directory username pkgname maj min)]
+           [_ (with-output-to-file permanent-file-path (lambda () (write-bytes file-bytes)) 'truncate/replace)]
+           [_ (unpack-planet-package permanent-file-path srcdir)]
+           [info.ss (get-metainfo srcdir)]
+           [pkg (getpkg info.ss)]
+           [id (add-pkgversion-to-db! user 
+                                      pkg
+                                      maj
+                                      min
+                                      permanent-file-path
+                                      srcdir
+                                      info.ss)])
+      (for-each (λ (r) (associate-pkgversion-with-repository! id r)) repositories)
       (code-to-html srcdir webdir username pkgname maj min)))
   
   ;; rebuild-package-pages : string string nat nat -> void
@@ -364,5 +390,10 @@
                                                (path->string (file-info-path file)))))))))]
       [else
        (error di)]))
+  
+  
+  
+  
+  
   
   )

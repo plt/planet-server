@@ -4,9 +4,11 @@
   ;; servlet that displays planet's contents to the world
   
   
-  (require "db.ss" "data-structures.ss" "html.ss" "configuration.ss")
+  (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss")
   (require (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
+           (lib "url.ss" "net")
+           (lib "cookie.ss" "net")
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   (provide interface-version timeout start)
@@ -15,27 +17,12 @@
   
   (startup) ; initialize the database
   
-  
-  ;; given a set of bindings, determines the repository to which it refers
-  (define (bindings->repository bindings)
-    (cond
-      [(not (exists-binding? 'rep bindings))
-       (DEFAULT-REPOSITORY)]
-      [(extract-bindings 'rep bindings)
-       =>
-       (lambda (reps)
-         (cond
-           [(null? (cdr reps))
-            ;; no error checking for now
-            (string->number (car reps))]
-           [else
-            (DEFAULT-REPOSITORY)]))]))
-  
   ;; we want everything to have req in scope, so we put everything here.
   ;; alternatively we could bang a global variable, which might be kinder to memory
   (define (start req)
     
-    (define rep (bindings->repository (request-bindings req)))
+    (define-values (rep rep-explicit?)
+      (apply values (request->repository req)))
         
     ;; ============================================================
     ;; COMMON CODE / PAGE GENERATION
@@ -47,42 +34,24 @@
          (lambda args (op (apply val args)))]
         [else (op val)]))
     
+    ;; if the user explicitly specified a repository in the url, then make links
+    ;; carry that specification. Otherwise don't include it.
     (define-values
       (package->link package->owner-link user->link home-link)
-      (let ([suffix (string-append "&rep=" (number->string rep))])
+      (let ([suffix (string-append "&rep=" (number->string rep))]
+            [basic-operations
+             (list package->link/base 
+                   package->owner-link/base
+                   user->link/base
+                   home-link/base)])
         (apply values
-               (map (lift-operation (lambda (x) (string-append x suffix)))
-                    (list package->link/base 
-                          package->owner-link/base
-                          user->link/base
-                          home-link/base)))))
-    
-    ;; ----------------------------------------
-    ;; HTML generation
-    
-    (define (mkdisplay titles contents)
-      (mkhtmlpage
-       (cons (list "Home" home-link) titles)
-       `((div ((class "nav") (align "right")) 
-              (small 
-               ,@(item (ADD-URL-ROOT) "contribute a package")
-               nbsp "|" nbsp
-               ,@(join
-                  `(nbsp "|" nbsp)
-                  (map (lambda (r)
-                         (if (= (repository-id r) rep)
-                             (format "[~a]" (repository-name r))
-                             `(a ((href ,(repository->url-string r))) ,(repository-name r))))
-                       (get-all-repositories)))))
-         ,@contents)))
-  
-    (define (item url text)
-      (list "[" `(a ((href ,url)) ,text) "]"))
-  
-    (define (repository->url-string repository)
-      (let* ([new-bindings (add-or-replace 'rep (number->string (repository-id repository)) (request-bindings req))]
-             [new-url (format "display-servlet.ss?~a" (bindings->get-line new-bindings))]) 
-        new-url))
+               (if rep-explicit?
+                   (map (lift-operation (lambda (x) (string-append x suffix)))
+                        basic-operations)
+                   basic-operations))))    
+        
+    (define (page heads bodies)
+      (mkdisplay heads bodies req))
     
     ;; ============================================================
     ;; MAIN LISTING
@@ -90,7 +59,7 @@
     ;; generate-web-page : repository (listof xexpr[html]) (listof web-contents) -> listof xexpr[xhtml]
     ;; makes the body of a web page telling all currently-available packages
     (define (gen-main-page)
-      (mkdisplay
+      (page
        '()
        `((div ((class "description"))
               (p (strong "PLaneT") " is PLT Scheme's centralized package distribution system. Here you "
@@ -120,18 +89,15 @@
            (td ((valign "top"))
                ,(let* ([p (car (package-versions pkg))]
                        [version-str (or (pkgversion-name p) "")])
-                  #;(string-append version-str
-                                 " " 
-                                 (format "(~a.~a)" (pkgversion-maj p) (pkgversion-min p)))
                   (format "~a.~a" (pkgversion-maj p) (pkgversion-min p))
                   )) 
            (td ((valign "top")) (a ((href ,(package->owner-link pkg))) ,(package-owner pkg)))
-           (td ((valign "top")) ,(package-blurb pkg))))
+           (td ((valign "top")) ,@(package-blurb pkg))))
     
     (define (pvs->table pkg pvs to-load-fn)
       `(table ((width "100%"))
               (thead
-               (th "Package version") (th "Version") (th "Source") (th "DLs") (th "To load"))
+               (th "Package version") (th "Version") (th "Source") (th "DLs") (th "Docs") (th "To load"))
               ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
     
     (define (load-current pkg pv)
@@ -150,8 +116,6 @@
               (pkgversion-maj pv)
               (pkgversion-min pv)))
     
-    
-    
     ;; makes a set of table rows to present concise information about a particular version of
     ;; a given package and version.
     ;; Invariant: pv must be a version of the package pkg
@@ -165,13 +129,19 @@
                 "[" (a ((href ,(source-code-url pkg pv))) "browse") "]")
             (td ((width "2em") (valign "top") (class "downloads"))
                 ,(number->string (pkgversion-downloads pv)))
+            (td ((width "8em") (valign "top") (class "docs"))
+                ,@(if (pkgversion-doctxt pv)
+                      `("[" 
+                        (a ((href ,(url->string (combine-url/relative (string->url (source-code-url pkg pv)) (pkgversion-doctxt pv)))))
+                           "doc.txt")
+                        "]")
+                      `("[none]")))
             (td ((width "*") (valign "top") (class "toload")) 
                 (tt ,(to-load-fn pkg pv))))
             
         (tr (td ((colspan "4") (class "blurb"))
-                ,(if (pkgversion-blurb pv)
-                     (make-cdata #f #f (pkgversion-blurb pv))
-                     "[no release notes]")))))
+                ,@(or (pkgversion-blurb pv)
+                      `("[no release notes]"))))))
     
     
     ;; ============================================================
@@ -180,7 +150,7 @@
     ;; gen-package-page : package -> xexpr[xhtml]
     ;; generates the web page for a particular package
     (define (gen-package-page pkg)
-      (mkdisplay
+      (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
              (list (package-name pkg) (package->link pkg)))
        `((div 
@@ -189,7 +159,7 @@
                "Package " (b ((class "packageName")) ,(package-name pkg))
                " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))) 
           (div ((class "packageBlurb"))
-               ,(make-cdata #f #f (package-blurb pkg))))
+               ,@(package-blurb pkg)))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])
@@ -203,7 +173,7 @@
     
     (define (gen-user-page user)
       (let ([pkgs (user->packages user rep)])
-        (mkdisplay
+        (page
          (list (list (user-username user) (user->link user)))
          `((div 
             ((id "userInfo"))
@@ -224,31 +194,40 @@
           [(and (null? pkgname) (not (null? owner)))
            (let ([user (get-user-record/no-password (car owner))])
              (if (not user)
-                 (mkdisplay
+                 (page
                   (list (car owner))
                   `((p "The requested user does not exist.")))
                  (gen-user-page user)))]
           [else
-           (let* ([pkg (get-package (car owner) (car pkgname))]
-                  [rpkg (filter-package-for-repository pkg rep)])
-             (cond
-               [(not pkg)
-                (mkdisplay
-                 (list (car owner) (car pkgname))
-                 `((p "The requested package does not exist.")))]
-               [(not rpkg)
-                (mkdisplay
-                 (list (car owner) (car pkgname))
-                 `((p "The requested package does not exist in this repository. Try another repository.")))]
-               [else
-                (gen-package-page pkg)]))])))
+           (let ([pkg (get-package (car owner) (car pkgname))])
+             (if (not pkg)
+                 
+                 (page
+                  (list (car owner) (car pkgname))
+                  `((p "The requested package does not exist.")))
+                 
+                 (let ([rpkg (filter-package-for-repository pkg rep)])
+                   (if (not rpkg)
+                       
+                       (page
+                        (list (car owner) (car pkgname))
+                        `((p "The requested package does not exist in this repository. Try another repository.")))
+                       
+                       (gen-package-page pkg)))))])))
+    
+    ;; build-response : page -> response
+    ;; constructs an appropriate response, given the web page to respond with
+    (define (build-response v)
+      (validate-xexpr v)
+      (let ([new-repository (get-new-repository (request-bindings req))])
+        (if new-repository
+            (build-cookie-response v (list (set-cookie "rep" (number->string new-repository))))
+            v)))
     
     ;; the actual executor
-    (show-and-tell (page-for-request req)))
+    (build-response (page-for-request req)))
   
-  (define (show-and-tell v)
-    (validate-xexpr v)
-    v)
+  
   
   ; join : (listof x) (listof x) -> listof x
   ; intersperses all values in separator between each element of items
@@ -266,13 +245,10 @@
   (define (string-join sep items)
     (apply string-append (join (list sep) items)))
   
-  (define (add-or-replace key new-val bs)
-    (cond
-      [(null? bs) (list (cons key new-val))]
-      [(equal? (car (car bs)) key) (cons (cons key new-val) (cdr bs))]
-      [else (cons (car bs) (add-or-replace key new-val (cdr bs)))]))
+  
+  
+  
     
-  (define (bindings->get-line bs)
-    (string-join "&" (map (lambda (x) (format "~a=~a" (car x) (cdr x))) bs)))
+  
   
   )

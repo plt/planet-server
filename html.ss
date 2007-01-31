@@ -1,16 +1,119 @@
 (module html mzscheme
   (require 
-   "configuration.ss" "data-structures.ss"
-   (file "/local/svn/iplt/web/common/layout.ss"))
+   (lib "contract.ss") (lib "servlet.ss" "web-server")
+   "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
+   (file "/Users/jacobm/svn/iplt/web/common/layout.ss"))
   
-  (provide mkhtmlpage)
+  (define bindings/c (listof (cons/c (union symbol? string?) string?)))
+  (define title/c (or/c string? (list/c string? string?)))
   
-  ;; mkhtmlpage : (listof string) (listof xexpr[xhtml body exprs] -> xexpr[xhtml]
+  (provide/contract
+   [request->repository (request? . -> . (list/c natural-number/c boolean?))]
+   [get-repository (bindings/c . -> . (union natural-number/c false/c))]
+   [get-new-repository (bindings/c . -> . (union natural-number/c false/c))]
+   [mkhtmlpage ((listof title/c) (listof any/c #|xexpr|#) . -> . any #|xexpr|#)]
+   [mkdisplay ((listof title/c) any/c request? . -> . any #|xexpr|#)]
+   [mkdisplay* (opt-> ((listof title/c) any/c natural-number/c user?)
+                      ((listof (cons/c (union string? symbol?) string?)))
+                      any)])
+  
+  ;; ------------------------------------------------------------
+  ;; binding stuff
+  
+  ;; request->repository : req -> (values number[id of a repository] boolean)
+  (define (request->repository req)
+    (bindings->repository (request-bindings req) (request-cookies req)))
+  
+  ;; given a set of bindings, determines the repository to which it refers
+  (define (bindings->repository url-bindings cookie-bindings)
+    (let ([explicit-repository-request (get-repository url-bindings)]
+          [just-swapped-repository (get-new-repository url-bindings)]
+          [user-setting-repository (get-repository cookie-bindings)])
+      (cond
+        [explicit-repository-request
+         (list explicit-repository-request #t)]
+        [just-swapped-repository
+         (list just-swapped-repository #f)]
+        [user-setting-repository
+         (list user-setting-repository #f)]
+        [else 
+         (list (DEFAULT-REPOSITORY) #f)])))
+
+  ;; get-repository : env -> number | #f
+  ;; extracts the binding for rep in the given binding set, which must be a
+  ;; number pointing to a repository's id
+  (define (get-repository bindings)
+    (with-handlers ([exn:fail? (λ (e) #f)])
+      (string->number (extract-binding/single 'rep bindings))))
+
+  ;; get-new-repository : bindings -> number | #f
+  ;; extracts a repository-change request from the given bindings,
+  ;; if it exists and is legal
+  (define (get-new-repository bindings)
+    (with-handlers ([exn:fail? (λ (e) #f)])
+      (let* ([repstr (extract-binding/single 'changerep bindings)]
+             [repnum (string->number repstr)])
+        (if (and repnum (legal-repository? repnum))
+            repnum
+            #f))))
+  
+  ;; ----------------------------------------
+  ;; HTML generation
+    
+  (define mkdisplay*
+    (case-lambda
+      [(titles contents rep user)
+       (mkdisplay* titles contents rep user '())]
+      [(titles contents rep user bindings)
+       (mkhtmlpage
+        (cons (list "Home" home-link/base) titles)
+        `((div ((class "nav") (align "right")) 
+               (small 
+                "View packages: "
+                nbsp
+                ,@(join
+                   `(nbsp "|" nbsp)
+                   (map (lambda (r)
+                          (if (= (repository-id r) rep)
+                              (format "[~a]" (repository-name r))
+                              `(a ((href ,(repository->url-string* r bindings))) ,(repository-name r))))
+                        (get-all-repositories)))
+                (br)
+                ,@(if user
+                      `("logged in as " (b ,(user-username user)) nbsp "|" nbsp
+                                        ,@(item (ADD-URL-ROOT) "manage packages") nbsp "|" nbsp
+                                        ,@(item (LOGOUT-PAGE) "log out"))
+                      (item (ADD-URL-ROOT) "contribute a package"))))
+          ,@contents))]))
+  
+  (define (mkdisplay titles contents req)
+    (let* ([rep/? (request->repository req)]
+           [rep (car rep/?)])
+      (mkdisplay* titles contents rep (logged-in-user req) (request-bindings req))))
+  
+  (define (item url text)
+    (list "[" `(a ((href ,url)) ,@(if (string? text) (list text) text)) "]"))
+  
+  (define (repository->url-string* repository old-bindings)
+    (let* ([new-bindings (delete 'rep (add-or-replace 'changerep 
+                                                      (number->string (repository-id repository))
+                                                      old-bindings))]
+           [new-url (format "display-servlet.ss?~a" (bindings->get-line new-bindings))])
+      new-url))
+  
+  (define (repository->url-string repository req)
+    (repository->url-string* repository (request-bindings req)))
+
+  ;; title ::= string | (list string string)
+  ;; mkhtmlpage : (listof title) (listof xexpr[xhtml body exprs] -> xexpr[xhtml]
   ;;  makes an html page with the given title path and body expressions
   (define (mkhtmlpage titles contents)
     (apply
      tall-page 
-     "PLaneT Package Repository"
+     ; I'd like to have the <title> attribute be the following, and the printed title on the page just be
+     ; "PLaneT Package Repository", but that doesn't appear to be possible with tall-page right now 
+     #;(apply string-append "PLaneT Package Repository : " (join '(" > ") (map title->string titles)))
+     "PLaneT Package Repository" 
      #:head-stuff `(#;(link ((rel "alternate")
                            (type "application/rss+xml")
                            (title "RSS")
@@ -18,14 +121,22 @@
                     (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
                     (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
                     (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; "))
+     #:precomputed-image-tag `(image ((src "/images/logo.png") (width "128px") (height "123px") (alt "[PLT logo]")))
      `((div ((class "planetNav"))
             ,@(join '(nbsp ">" nbsp) (map title->link titles)))
        ,@contents)))
          
+  ;; title->string : title -> string
+  (define (title->string title)
+    (cond
+      [(string? title) title]
+      [else (car title)]))
+     
+  ;; title->link : title -> xexpr  
   (define (title->link title)
     (cond
       [(string? title) title]
-      [(pair? title) `(a ((href ,(cadr title))) ,(car title))]))
+      [else `(a ((href ,(cadr title))) ,(car title))]))
   
   ;; ----------------------------------------
   ;; url builders (for packages, users)
@@ -73,6 +184,23 @@
   ;; makes a title with the given path
   (define (mktitle strs)
     (string-join " > " (cons "PLaneT Package Repository" strs)))
+  
+  (define (bindings->get-line bs)
+    (string-join "&" (map (lambda (x) (format "~a=~a" (car x) (cdr x))) bs)))
+  
+  (define (add-or-replace key new-val bs)
+    (cond
+      [(null? bs) (list (cons key new-val))]
+      [(equal? (car (car bs)) key) (cons (cons key new-val) (cdr bs))]
+      [else (cons (car bs) (add-or-replace key new-val (cdr bs)))]))
+  
+  ;; delete : symbol env -> env
+  ;; removes all bindings for the given key in the given environment
+  (define (delete key bs)
+    (cond
+      [(null? bs) '()]
+      [(eq? (car (car bs)) key) (delete key (cdr bs))]
+      [else (cons (car bs) (delete key (cdr bs)))]))
   
   (define (string-join sep strs)
     (let loop ((strs strs) (acc '()))
