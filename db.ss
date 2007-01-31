@@ -23,7 +23,7 @@
    [user->packages (-> user? natural-number/c (listof package?))]
    [get-category-names (-> (listof category?))]
    [add-package-to-db!
-    (user? string? (listof xexpr?) . -> . package?)]
+    (user? string? (or/c (listof xexpr?) false/c) . -> . package?)]
    [get-package-listing (natural-number/c . -> . (listof category?))]
    [get-matching-packages
     (string? string? string? (union natural-number/c false/c)
@@ -223,7 +223,7 @@
     (let ([query "SELECT name, shortname, id FROM categories ORDER BY sort_order"])
       (send *db* map query (lambda (name shortname id) (make-category id name (string->symbol shortname) #f)))))
   
-  ;; add-package-to-db! : user string (listof xexpr) -> package?
+  ;; add-package-to-db! : user string (or (listof xexpr) #f) -> package?
   ;; adds a record for the given package information, and returns a stub
   (define (add-package-to-db! user package-name blurb)
     (let* ([id (send *db* query-value "SELECT nextval('packages_pk') AS pk")]
@@ -232,7 +232,9 @@
                    "("(number->string id)", "
                       (number->string (user-id user))", "
                       (escape-sql-string package-name)", "
-                      (escape-sql-string (format "~s" blurb))")")])
+                      (if blurb 
+                          (escape-sql-string (format "~s" blurb))
+                          "NULL")")")])
       (begin
         (send *db* exec query)
         (make-package id (user-username user) package-name blurb '()))))
@@ -487,13 +489,13 @@
              (number->string min) ", "
              (escape-sql-string (path->string filename)) ", "
              (escape-sql-string (path->string unpacked-package-path)) ", "
-             (safe-info 'primary-file (lambda () "NULL")) ", "
-             (safe-info 'doc.txt (lambda () "NULL")) ", "
+             (safe-info 'primary-file (lambda () "NULL") (λ (x) (format "~a" x))) ", "
+             (safe-info 'doc.txt (lambda () "NULL") (λ (x) (format "~a" x))) ", "
              (safe-info 'release-blurb 
                         (lambda () "NULL") 
                         (lambda (v)
                           (apply string-append (map xexpr->string (blurb->xexprs v))))) ", "
-             (safe-info 'version (lambda () "NULL")) ", "
+             (safe-info 'version (lambda () "NULL") (λ (x) (format "~a" x))) ", "
              required-core-str", "
              "0)")])
       (send *db* exec query)

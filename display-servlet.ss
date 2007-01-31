@@ -92,7 +92,7 @@
                   (format "~a.~a" (pkgversion-maj p) (pkgversion-min p))
                   )) 
            (td ((valign "top")) (a ((href ,(package->owner-link pkg))) ,(package-owner pkg)))
-           (td ((valign "top")) ,@(package-blurb pkg))))
+           (td ((valign "top")) ,@(or (package-blurb pkg) '("[no description available]")))))
     
     (define (pvs->table pkg pvs to-load-fn)
       `(table ((width "100%"))
@@ -159,7 +159,7 @@
                "Package " (b ((class "packageName")) ,(package-name pkg))
                " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))) 
           (div ((class "packageBlurb"))
-               ,@(package-blurb pkg)))
+               ,@(or (package-blurb pkg) '("[no description available]"))))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])

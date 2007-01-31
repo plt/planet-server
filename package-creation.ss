@@ -47,8 +47,12 @@
                        file-bytes
                        repositories
                        (λ (i)
-                         (let ([pkg-stub (add-package-to-db! user package-name (i 'blurb (λ () #f)))]
-                               [count 0])
+                         (let* ([blurb-datum (i 'blurb (λ () #f))]
+                                [blurb (if (string? blurb-datum)
+                                           (list blurb-datum)
+                                           blurb-datum)]
+                                [pkg-stub (add-package-to-db! user package-name blurb)]
+                                [count 0])
                            (for-each
                             (lambda (shortname) 
                               (let ([c (hash-table-get cats-ht shortname (λ () #f))])
@@ -72,10 +76,12 @@
   ;; gets an info.ss -retrieving thunk for the given package which is unpacked in the given directory
   (define (get-metainfo unpacked-package-path)
     (printf "getting info for ~s\n" unpacked-package-path)
-    (let ([metainfo (get-info/full unpacked-package-path)])
-      (printf "got ~s\n" metainfo)
-      (or metainfo
-          (lambda (s t) (t)))))
+    (let ([default-metainfo (lambda (s t) (t))])
+      (with-handlers ([exn:fail? (λ (e) default-metainfo)])
+        (let ([metainfo (get-info/full unpacked-package-path)])
+          (printf "got ~s\n" metainfo)
+          (or metainfo
+              default-metainfo)))))
   
   ;; update/internal : user? string nat nat bytes (listof repository?) ((listof xexpr) -> pkg) -> void
   (define (update/internal user pkgname maj min file-bytes repositories getpkg)
