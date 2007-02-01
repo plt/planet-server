@@ -180,7 +180,7 @@ an account, log in directly.")
       (lambda (k) 
         (send-mail-message "PLaneT <planet@plt-scheme.org>" 
                            "A password reset request has been made for this account"
-                           (list k)
+                           (list (user-email user))
                            '()
                            '()
                            (list "Greetings! You (or someone claiming to be you) has asked to reset the password for the "
@@ -208,7 +208,7 @@ an account, log in directly.")
        (lambda (k) 
          (send-mail-message "PLaneT <planet@plt-scheme.org>" 
                             "Please verify your email address"
-                            (list k)
+                            (list email)
                             '()
                             '()
                             (list "Greetings! You (or someone claiming to be you) have signed up for an account "

@@ -117,7 +117,7 @@
                (escape-sql-string realname)", "
                (escape-sql-string email)", "
                "md5("(escape-sql-string password)"))"))
-        (make-user id username realname))))
+        (make-user id username realname email))))
   
   (define (valid-password? user pass)
     (let ([query (string-append
@@ -139,7 +139,7 @@
   ;; or #f if the username/password combination is invalid
   (define (get-user-record username password)
     (let ([query (string-append
-                  " SELECT id, username, realname FROM contributors "
+                  " SELECT id, username, realname, email FROM contributors "
                   " WHERE username = "(escape-sql-string username)
                   " AND password = md5("(escape-sql-string password)")")])
       (let ([result (send *db* map query make-user)])
@@ -152,7 +152,7 @@
   ;; code handed out to the user after login
   (define (get-logged-in-user-from-passcode username passcode)
     (let ([query (string-append
-                  " SELECT id, username, realname FROM contributors "
+                  " SELECT id, username, realname, email FROM contributors "
                   " WHERE username = "(escape-sql-string username)
                   " AND passcode = "(escape-sql-string passcode))])
       (let ([result (send *db* map query make-user)])
@@ -181,7 +181,7 @@
   ;; passwordless authentication (e.g., resetting password with email confirmation)
   (define (get-user-record/no-password username)
     (let ([query (string-append
-                  " SELECT id, username, realname FROM contributors "
+                  " SELECT id, username, realname, email FROM contributors "
                   " WHERE username = "(escape-sql-string username))])
       (let ([result (send *db* map query make-user)])
         (if (null? result)

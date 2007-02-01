@@ -4,7 +4,7 @@
            (lib "list.ss")
            (lib "contract.ss"))
 
-  (provide (struct user (id username realname))
+  (provide (struct user (id username realname email))
            (struct category (id name shortname packages))
            (struct package (id owner name blurb versions))
            (struct pkgversion (id
@@ -23,6 +23,7 @@
   (define-struct user (id       ; nat
                        username ; string
                        realname ; string
+                       email    ; string
                        )
     (make-inspector))
 
