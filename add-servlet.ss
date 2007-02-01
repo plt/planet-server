@@ -177,55 +177,55 @@ an account, log in directly.")
     ;; send an email to the given user with a link allowing them to continue, and return a web page indicating this has been done
     (define (PASSWORD-RESET-EMAIL/PAGE user)
       (lambda (k) 
-        #;(send-mail-message "PLaneT <planet@plt-scheme.org>" 
-                             "A password reset request has been made for this account"
-                             (list k)
-                             '()
-                             '()
-                             (list "Greetings! You (or someone claiming to be you) has asked to reset the password for the "
-                                   "account " (user-username user) " on PLaneT, the PLT Scheme package repository. "
-                                   "Our records indicate that that account belongs to this email address. If you really want to "
-                                   "reset your password, then please visit the following URL: "
-                                   ""
-                                   k
-                                   ""
-                                   "If you do not want to reset the password to your PLaneT account, then please disregard "
-                                   "this message."
-                                   ""
-                                   "Thanks,"
-                                   "PLaneT"))
+        (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+                           "A password reset request has been made for this account"
+                           (list k)
+                           '()
+                           '()
+                           (list "Greetings! You (or someone claiming to be you) has asked to reset the password for the "
+                                 "account " (user-username user) " on PLaneT, the PLT Scheme package repository. "
+                                 "Our records indicate that that account belongs to this email address. If you really want to "
+                                 "reset your password, then please visit the following URL: "
+                                 ""
+                                 k
+                                 ""
+                                 "If you do not want to reset the password to your PLaneT account, then please disregard "
+                                 "this message."
+                                 ""
+                                 "Thanks,"
+                                 "PLaneT"))
         (page 
          '("Confirm email")
          `((section "Confirmation message sent")
            (p "We have sent an email to the address we have listed as belonging to the user " (b ,(user-username user))". "
               "For security purposes, you must visit the link provided in that message to proceed. If you have further questions, "
               "please contact a PLaneT administrator by emailing planet@plt-scheme.org for help.")
-           (p "For testing: " (a ((href ,k)) "click here"))))))
+           #;(p "For testing: " (a ((href ,k)) "click here"))))))
     
     (define (verify-email-address email)
       (send/suspend 
        (lambda (k) 
-         #;(send-mail-message "PLaneT <planet@plt-scheme.org>" 
-                              "Please verify your email address"
-                              (list k)
-                              '()
-                              '()
-                              (list "Greetings! You (or someone claiming to be you) have signed up for an account "
-                                    "with PLaneT, the PLT Scheme package repository. To verify your email address, "
-                                    "please visit the following URL: "
-                                    ""
-                                    k
-                                    ""
-                                    "If you do not want to create an account with PLaneT, then please disregard "
-                                    "this message."
-                                    ""
-                                    "Thanks,"
-                                    "PLaneT"))
+         (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+                            "Please verify your email address"
+                            (list k)
+                            '()
+                            '()
+                            (list "Greetings! You (or someone claiming to be you) have signed up for an account "
+                                  "with PLaneT, the PLT Scheme package repository. To verify your email address, "
+                                  "please visit the following URL: "
+                                  ""
+                                  k
+                                  ""
+                                  "If you do not want to create an account with PLaneT, then please disregard "
+                                  "this message."
+                                  ""
+                                  "Thanks,"
+                                  "PLaneT"))
          (page
           '("Confirm email address")
           `((p "Thank you for creating an account! To complete the registration process, please check the email account "
                (b ,email) " for a message telling you how to proceed.")
-            (p "For testing: " (a ((href ,k)) "click here")))))))
+            #;(p "For testing: " (a ((href ,k)) "click here")))))))
     
     ;; do-passwordless-reset : user -> void 
     (define (do-passwordless-reset user)
