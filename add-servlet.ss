@@ -188,7 +188,7 @@ an account, log in directly.")
                                  "Our records indicate that that account belongs to this email address. If you really want to "
                                  "reset your password, then please visit the following URL: "
                                  ""
-                                 k
+                                 (string-append (URL-ROOT) k)
                                  ""
                                  "If you do not want to reset the password to your PLaneT account, then please disregard "
                                  "this message."
