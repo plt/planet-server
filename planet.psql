@@ -101,12 +101,13 @@ CREATE TABLE packages (
     owner_id integer NOT NULL,
     name character varying(127) NOT NULL,
     date_added timestamp with time zone DEFAULT ('now'::text)::timestamp(6) with time zone NOT NULL,
-    blurb text
+    blurb text,
+    homepage character varying
 );
 
 
 --
--- TOC entry 24 (OID 17211)
+-- TOC entry 25 (OID 17211)
 -- Name: dependences; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -121,7 +122,7 @@ CREATE TABLE dependences (
 
 
 --
--- TOC entry 30 (OID 17224)
+-- TOC entry 31 (OID 17224)
 -- Name: categories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -134,7 +135,7 @@ CREATE TABLE categories (
 
 
 --
--- TOC entry 33 (OID 17224)
+-- TOC entry 34 (OID 17224)
 -- Name: categories; Type: ACL; Schema: public; Owner: jacobm
 --
 
@@ -151,7 +152,7 @@ RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION 'jacobm';
 
 --
--- TOC entry 34 (OID 17258)
+-- TOC entry 35 (OID 17258)
 -- Name: downloads; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -165,7 +166,7 @@ CREATE TABLE downloads (
 
 
 --
--- TOC entry 39 (OID 25462)
+-- TOC entry 40 (OID 25462)
 -- Name: package_categories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -176,7 +177,7 @@ CREATE TABLE package_categories (
 
 
 --
--- TOC entry 40 (OID 25462)
+-- TOC entry 41 (OID 25462)
 -- Name: package_categories; Type: ACL; Schema: public; Owner: jacobm
 --
 
@@ -232,7 +233,7 @@ CREATE SEQUENCE contributors_pk
 
 
 --
--- TOC entry 41 (OID 33651)
+-- TOC entry 42 (OID 33651)
 -- Name: repositories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -246,7 +247,7 @@ CREATE TABLE repositories (
 
 
 --
--- TOC entry 42 (OID 33662)
+-- TOC entry 43 (OID 33662)
 -- Name: version_repositories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -269,7 +270,7 @@ CREATE SEQUENCE downloads_pk
 
 
 --
--- TOC entry 44 (OID 41889)
+-- TOC entry 45 (OID 41889)
 -- Name: errors; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -294,52 +295,52 @@ CREATE SEQUENCE errors_pk
 
 
 --
--- TOC entry 46 (OID 41961)
+-- TOC entry 47 (OID 60924)
 -- Name: all_packages; Type: VIEW; Schema: public; Owner: jacobm
 --
 
 CREATE VIEW all_packages AS
-    SELECT c.id AS contributor_id, p.id AS package_id, pv.id AS package_version_id, c.username, p.name, pv.maj, pv.min, p.date_added AS create_date, pv.date_added AS version_date, pv.plt_path, pv.src_path, pv.default_file, pv.doctxt, p.blurb AS pkg_blurb, pv.release_blurb, pv.version_name, pv.required_core_version, rv.repository_id, pv.downloads FROM contributors c, packages p, package_versions pv, version_repositories rv WHERE (((p.id = pv.package_id) AND (c.id = p.owner_id)) AND (rv.package_version_id = pv.id)) ORDER BY rv.repository_id, p.name, pv.maj DESC, pv.min DESC;
+    SELECT c.id AS contributor_id, p.id AS package_id, pv.id AS package_version_id, c.username, p.name, pv.maj, pv.min, p.homepage, p.date_added AS create_date, pv.date_added AS version_date, pv.plt_path, pv.src_path, pv.default_file, pv.doctxt, p.blurb AS pkg_blurb, pv.release_blurb, pv.version_name, pv.required_core_version, rv.repository_id, pv.downloads FROM contributors c, packages p, package_versions pv, version_repositories rv WHERE (((p.id = pv.package_id) AND (c.id = p.owner_id)) AND (rv.package_version_id = pv.id)) ORDER BY rv.repository_id, p.name, pv.maj DESC, pv.min DESC;
 
 
 --
--- TOC entry 47 (OID 41964)
+-- TOC entry 48 (OID 60927)
 -- Name: all_packages_without_repositories; Type: VIEW; Schema: public; Owner: jacobm
 --
 
 CREATE VIEW all_packages_without_repositories AS
-    SELECT c.id AS contributor_id, p.id AS package_id, pv.id AS package_version_id, c.username, p.name, pv.maj, pv.min, p.date_added AS create_date, pv.date_added AS version_date, pv.plt_path, pv.src_path, pv.default_file, pv.doctxt, p.blurb AS pkg_blurb, pv.release_blurb, pv.version_name, pv.required_core_version, pv.downloads FROM contributors c, packages p, package_versions pv WHERE ((p.id = pv.package_id) AND (c.id = p.owner_id)) ORDER BY p.name, pv.maj DESC, pv.min DESC;
+    SELECT c.id AS contributor_id, p.id AS package_id, pv.id AS package_version_id, c.username, p.name, pv.maj, pv.min, p.homepage, p.date_added AS create_date, pv.date_added AS version_date, pv.plt_path, pv.src_path, pv.default_file, pv.doctxt, p.blurb AS pkg_blurb, pv.release_blurb, pv.version_name, pv.required_core_version, pv.downloads FROM contributors c, packages p, package_versions pv WHERE ((p.id = pv.package_id) AND (c.id = p.owner_id)) ORDER BY p.name, pv.maj DESC, pv.min DESC;
 
 
 --
--- TOC entry 48 (OID 41967)
+-- TOC entry 49 (OID 60930)
 -- Name: most_recent_packages; Type: VIEW; Schema: public; Owner: jacobm
 --
 
 CREATE VIEW most_recent_packages AS
-    SELECT ap.contributor_id, ap.package_id, ap.package_version_id, ap.username, ap.name, ap.maj, ap.min, ap.create_date, ap.version_date, ap.plt_path, ap.src_path, ap.default_file, ap.doctxt, ap.pkg_blurb, ap.release_blurb, ap.version_name, ap.required_core_version, cat.id AS category_id, cat.name AS category_name, ap.repository_id, ap.downloads FROM all_packages ap, categories cat, package_categories pc WHERE ((((ap.package_id = pc.package_id) AND (pc.category_id = cat.id)) AND (ap.maj IN (SELECT max(pv.maj) AS max FROM package_versions pv, version_repositories vr2 WHERE (((pv.package_id = ap.package_id) AND (vr2.package_version_id = pv.id)) AND (ap.repository_id = vr2.repository_id))))) AND (ap.min IN (SELECT max(pv.min) AS max FROM package_versions pv, version_repositories vr2 WHERE ((((pv.package_id = ap.package_id) AND (ap.maj = pv.maj)) AND (vr2.package_version_id = pv.id)) AND (ap.repository_id = vr2.repository_id))))) ORDER BY cat.sort_order, ap.name;
+    SELECT ap.contributor_id, ap.package_id, ap.package_version_id, ap.username, ap.name, ap.maj, ap.min, ap.homepage, ap.create_date, ap.version_date, ap.plt_path, ap.src_path, ap.default_file, ap.doctxt, ap.pkg_blurb, ap.release_blurb, ap.version_name, ap.required_core_version, cat.id AS category_id, cat.name AS category_name, ap.repository_id, ap.downloads FROM all_packages ap, categories cat, package_categories pc WHERE ((((ap.package_id = pc.package_id) AND (pc.category_id = cat.id)) AND (ap.maj IN (SELECT max(pv.maj) AS max FROM package_versions pv, version_repositories vr2 WHERE (((pv.package_id = ap.package_id) AND (vr2.package_version_id = pv.id)) AND (ap.repository_id = vr2.repository_id))))) AND (ap.min IN (SELECT max(pv.min) AS max FROM package_versions pv, version_repositories vr2 WHERE ((((pv.package_id = ap.package_id) AND (ap.maj = pv.maj)) AND (vr2.package_version_id = pv.id)) AND (ap.repository_id = vr2.repository_id))))) ORDER BY cat.sort_order, ap.name;
 
 
 --
--- TOC entry 49 (OID 41971)
+-- TOC entry 50 (OID 60934)
 -- Name: packages_with_categories; Type: VIEW; Schema: public; Owner: jacobm
 --
 
 CREATE VIEW packages_with_categories AS
-    SELECT ap.contributor_id, ap.package_id, ap.package_version_id, ap.username, ap.name, ap.maj, ap.min, ap.create_date, ap.version_date, ap.plt_path, ap.src_path, ap.default_file, ap.doctxt, ap.pkg_blurb, ap.release_blurb, ap.version_name, ap.required_core_version, cat.id AS category_id, cat.name AS category, ap.repository_id, ap.downloads FROM all_packages ap, categories cat, package_categories pc WHERE ((ap.package_id = pc.package_id) AND (pc.category_id = cat.id)) ORDER BY ap.repository_id, cat.sort_order, ap.name, ap.maj, ap.min;
+    SELECT ap.contributor_id, ap.package_id, ap.package_version_id, ap.username, ap.name, ap.maj, ap.min, ap.homepage, ap.create_date, ap.version_date, ap.plt_path, ap.src_path, ap.default_file, ap.doctxt, ap.pkg_blurb, ap.release_blurb, ap.version_name, ap.required_core_version, cat.id AS category_id, cat.name AS category, ap.repository_id, ap.downloads FROM all_packages ap, categories cat, package_categories pc WHERE ((ap.package_id = pc.package_id) AND (pc.category_id = cat.id)) ORDER BY ap.repository_id, cat.sort_order, ap.name, ap.maj, ap.min;
 
 
 --
--- TOC entry 50 (OID 41974)
+-- TOC entry 51 (OID 60937)
 -- Name: packages_without_categories; Type: VIEW; Schema: public; Owner: jacobm
 --
 
 CREATE VIEW packages_without_categories AS
-    SELECT ap.contributor_id, ap.package_id, ap.package_version_id, ap.username, ap.name, ap.maj, ap.min, ap.create_date, ap.version_date, ap.plt_path, ap.src_path, ap.default_file, ap.doctxt, ap.pkg_blurb, ap.release_blurb, ap.version_name, ap.required_core_version, ap.repository_id, ap.downloads FROM all_packages ap WHERE ((ap.maj IN (SELECT max(pv.maj) AS max FROM package_versions pv, version_repositories vr2 WHERE (((pv.package_id = ap.package_id) AND (pv.id = vr2.package_version_id)) AND (vr2.repository_id = ap.repository_id)))) AND (ap.min IN (SELECT max(pv.min) AS max FROM package_versions pv, version_repositories vr2 WHERE ((((pv.package_id = ap.package_id) AND (ap.maj = pv.maj)) AND (pv.id = vr2.package_version_id)) AND (vr2.repository_id = ap.repository_id))))) ORDER BY ap.name;
+    SELECT ap.contributor_id, ap.package_id, ap.package_version_id, ap.username, ap.name, ap.maj, ap.min, ap.homepage, ap.create_date, ap.version_date, ap.plt_path, ap.src_path, ap.default_file, ap.doctxt, ap.pkg_blurb, ap.release_blurb, ap.version_name, ap.required_core_version, ap.repository_id, ap.downloads FROM all_packages ap WHERE ((ap.maj IN (SELECT max(pv.maj) AS max FROM package_versions pv, version_repositories vr2 WHERE (((pv.package_id = ap.package_id) AND (pv.id = vr2.package_version_id)) AND (vr2.repository_id = ap.repository_id)))) AND (ap.min IN (SELECT max(pv.min) AS max FROM package_versions pv, version_repositories vr2 WHERE ((((pv.package_id = ap.package_id) AND (ap.maj = pv.maj)) AND (pv.id = vr2.package_version_id)) AND (vr2.repository_id = ap.repository_id))))) ORDER BY ap.name;
 
 
 --
--- TOC entry 51 (OID 17169)
+-- TOC entry 52 (OID 17169)
 -- Name: contributors_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -348,7 +349,7 @@ ALTER TABLE ONLY contributors
 
 
 --
--- TOC entry 52 (OID 17192)
+-- TOC entry 53 (OID 17192)
 -- Name: package_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -357,7 +358,7 @@ ALTER TABLE ONLY package_versions
 
 
 --
--- TOC entry 53 (OID 17197)
+-- TOC entry 54 (OID 17197)
 -- Name: packages_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -366,7 +367,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 54 (OID 17213)
+-- TOC entry 55 (OID 17213)
 -- Name: dependences_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -375,7 +376,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 55 (OID 17229)
+-- TOC entry 56 (OID 17229)
 -- Name: categories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -384,7 +385,7 @@ ALTER TABLE ONLY categories
 
 
 --
--- TOC entry 57 (OID 17264)
+-- TOC entry 58 (OID 17264)
 -- Name: downloads_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -393,7 +394,7 @@ ALTER TABLE ONLY downloads
 
 
 --
--- TOC entry 59 (OID 33656)
+-- TOC entry 60 (OID 33656)
 -- Name: repositories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -402,7 +403,7 @@ ALTER TABLE ONLY repositories
 
 
 --
--- TOC entry 58 (OID 33658)
+-- TOC entry 59 (OID 33658)
 -- Name: repositories_name_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -411,7 +412,7 @@ ALTER TABLE ONLY repositories
 
 
 --
--- TOC entry 60 (OID 33664)
+-- TOC entry 61 (OID 33664)
 -- Name: version_repositories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -420,7 +421,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 61 (OID 41895)
+-- TOC entry 62 (OID 41895)
 -- Name: errors_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -429,7 +430,7 @@ ALTER TABLE ONLY errors
 
 
 --
--- TOC entry 56 (OID 58219)
+-- TOC entry 57 (OID 58219)
 -- Name: categories_shortname_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -438,7 +439,7 @@ ALTER TABLE ONLY categories
 
 
 --
--- TOC entry 63 (OID 17207)
+-- TOC entry 64 (OID 17207)
 -- Name: contributors_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -447,7 +448,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 64 (OID 17216)
+-- TOC entry 65 (OID 17216)
 -- Name: this_package_version_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -456,7 +457,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 65 (OID 17220)
+-- TOC entry 66 (OID 17220)
 -- Name: target_package_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -465,7 +466,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 67 (OID 25468)
+-- TOC entry 68 (OID 25468)
 -- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -474,7 +475,7 @@ ALTER TABLE ONLY package_categories
 
 
 --
--- TOC entry 62 (OID 41915)
+-- TOC entry 63 (OID 41915)
 -- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -483,7 +484,7 @@ ALTER TABLE ONLY package_versions
 
 
 --
--- TOC entry 69 (OID 41919)
+-- TOC entry 70 (OID 41919)
 -- Name: $3; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -492,7 +493,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 70 (OID 41923)
+-- TOC entry 71 (OID 41923)
 -- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -501,7 +502,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 68 (OID 41927)
+-- TOC entry 69 (OID 41927)
 -- Name: $3; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -510,7 +511,7 @@ ALTER TABLE ONLY package_categories
 
 
 --
--- TOC entry 66 (OID 41949)
+-- TOC entry 67 (OID 41949)
 -- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -611,7 +612,15 @@ COMMENT ON COLUMN packages.blurb IS 'Description of the package, in xexpr format
 
 
 --
--- TOC entry 25 (OID 17211)
+-- TOC entry 24 (OID 17194)
+-- Name: COLUMN packages.homepage; Type: COMMENT; Schema: public; Owner: jacobm
+--
+
+COMMENT ON COLUMN packages.homepage IS 'URL representing the home page of the package';
+
+
+--
+-- TOC entry 26 (OID 17211)
 -- Name: COLUMN dependences.package_version_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -619,7 +628,7 @@ COMMENT ON COLUMN dependences.package_version_id IS 'The package version that ha
 
 
 --
--- TOC entry 26 (OID 17211)
+-- TOC entry 27 (OID 17211)
 -- Name: COLUMN dependences.package_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -627,7 +636,7 @@ COMMENT ON COLUMN dependences.package_id IS 'The package this package version de
 
 
 --
--- TOC entry 27 (OID 17211)
+-- TOC entry 28 (OID 17211)
 -- Name: COLUMN dependences.maj; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -635,7 +644,7 @@ COMMENT ON COLUMN dependences.maj IS 'The major version of package_id that this 
 
 
 --
--- TOC entry 28 (OID 17211)
+-- TOC entry 29 (OID 17211)
 -- Name: COLUMN dependences.min_lo; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -643,7 +652,7 @@ COMMENT ON COLUMN dependences.min_lo IS 'The lowest minor package version this p
 
 
 --
--- TOC entry 29 (OID 17211)
+-- TOC entry 30 (OID 17211)
 -- Name: COLUMN dependences.min_hi; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -651,7 +660,7 @@ COMMENT ON COLUMN dependences.min_hi IS 'The highest minor version this package 
 
 
 --
--- TOC entry 31 (OID 17224)
+-- TOC entry 32 (OID 17224)
 -- Name: COLUMN categories.sort_order; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -659,7 +668,7 @@ COMMENT ON COLUMN categories.sort_order IS 'Categories will be sorted ascending 
 
 
 --
--- TOC entry 32 (OID 17224)
+-- TOC entry 33 (OID 17224)
 -- Name: COLUMN categories.shortname; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -667,7 +676,7 @@ COMMENT ON COLUMN categories.shortname IS 'Symbol name identifying this category
 
 
 --
--- TOC entry 35 (OID 17258)
+-- TOC entry 36 (OID 17258)
 -- Name: COLUMN downloads."time"; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -675,7 +684,7 @@ COMMENT ON COLUMN downloads."time" IS 'Time at which the package was downloaded.
 
 
 --
--- TOC entry 36 (OID 17258)
+-- TOC entry 37 (OID 17258)
 -- Name: COLUMN downloads.package_version_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -683,7 +692,7 @@ COMMENT ON COLUMN downloads.package_version_id IS 'The package version downloade
 
 
 --
--- TOC entry 37 (OID 17258)
+-- TOC entry 38 (OID 17258)
 -- Name: COLUMN downloads.ip; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -691,7 +700,7 @@ COMMENT ON COLUMN downloads.ip IS 'IP address of the receiver.';
 
 
 --
--- TOC entry 38 (OID 17258)
+-- TOC entry 39 (OID 17258)
 -- Name: COLUMN downloads.client_version; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -699,7 +708,7 @@ COMMENT ON COLUMN downloads.client_version IS 'Client version of the receiver (e
 
 
 --
--- TOC entry 43 (OID 33662)
+-- TOC entry 44 (OID 33662)
 -- Name: TABLE version_repositories; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -707,7 +716,7 @@ COMMENT ON TABLE version_repositories IS 'relates package versions to the reposi
 
 
 --
--- TOC entry 45 (OID 41889)
+-- TOC entry 46 (OID 41889)
 -- Name: TABLE errors; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
