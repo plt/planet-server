@@ -51,7 +51,7 @@
                                 [blurb (if (string? blurb-datum)
                                            (list blurb-datum)
                                            blurb-datum)]
-                                [pkg-stub (add-package-to-db! user package-name blurb)]
+                                [pkg-stub (add-package-to-db! user package-name blurb (i 'homepage (λ () #f)))]
                                 [count 0])
                            (for-each
                             (lambda (shortname) 

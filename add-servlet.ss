@@ -6,6 +6,7 @@
            (lib "string.ss")
            (lib "xml.ss" "xml")
            (lib "file.ss")
+           (lib "url.ss" "net")
            (lib "sendmail.ss" "net")
            (prefix srfi1: (lib "1.ss" "srfi"))
            (prefix srfi13: (lib "13.ss" "srfi")))
@@ -476,10 +477,12 @@ an account, log in directly.")
                                         pkgversion
                                         (package-blurb pkg)
                                         (pkgversion-blurb pkgversion)
+                                        (package-homepage pkg)
                                         (pkgversion-default-file pkgversion)
                                         (pkgversion-required-core pkgversion)))]
                [blurb-string (string->string-option (get req 'description))]
                [notes-string (string->string-option (get req 'notes))]
+               [homepage-string (string->string-option (get req 'homepage))]
                [primary-file-string (string->string-option (get req 'defaultfile))]
                [core-version-string (string->string-option (get req 'core))]
                
@@ -497,6 +500,7 @@ an account, log in directly.")
            pkg
            pkgversion
            blurb
+           homepage-string
            notes
            (path->string primary-file) ; i don't know how to get around this;
                                        ; there are probably problems with
@@ -526,7 +530,7 @@ an account, log in directly.")
     
     ;; this page represents the "new style" and is intended for use with send/suspend/demand
     ;; i should probably switch over the others if this works out
-    (define (package-edit-page pkg pkgversion description notes default-file required-core)
+    (define (package-edit-page pkg pkgversion description notes homepage default-file required-core)
       
       (define ((page-producer problems) k)
         (with-problems problems
@@ -549,6 +553,10 @@ an account, log in directly.")
                                          (->string description)
                                          (->string submitted-description))))
                         ,@(errors-for 'description)))
+                (tr (td ((valign "top")) "Home page")
+                    (td (input ((type "text") (name "homepage")
+                                              (value ,(or homepage ""))))
+                        ,@(errors-for 'homepage)))
                 (tr (td ((valign "top")) "Release notes") 
                     (td (textarea ((name "notes") (rows "6") (cols "40"))
                                   ,(let ([submitted-notes (value-for 'notes (λ (x) x))])
@@ -571,7 +579,15 @@ an account, log in directly.")
                                                              submitted-core)))))
                         ,@(errors-for 'core)))
                 (tr (td ((colspan "2")) (input ((type "submit") (value "Update"))))))))))))
-         
+      
+      ;; url-string? : string -> boolean
+      ;; determines if the given string is a reasonable homepage url
+      ;; [stolen from plt/collects/planet/util.ss; should be factored out into the net collection]
+      (define (url-string? s)
+        (and (string? s)
+             (let ([u (string->url s)])
+               (and (url-scheme u)
+                    (url-host u)))))
       (define demands
         (all-demands 
          ; no fields are required, but any that exist have to be properly formatted
@@ -584,8 +600,13 @@ an account, log in directly.")
           (wrap-as-demand-p
            (blank-or (λ (filename) (file-in-package? filename pkgversion)))
            (λ (filename) `(defaultfile (message "Must be the name of a file in your package"))))
-          'defaultfile)))
-      
+          'defaultfile)
+         (field-constraint
+          (wrap-as-demand-p
+           (blank-or (λ (url) (url-string? url)))
+           (λ (url) `(homepage (message "Must be a URL"))))
+          'homepage)))
+ 
       (make-demand-page page-producer demands))
     
       

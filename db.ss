@@ -23,7 +23,7 @@
    [user->packages (-> user? natural-number/c (listof package?))]
    [get-category-names (-> (listof category?))]
    [add-package-to-db!
-    (user? string? (or/c (listof xexpr?) false/c) . -> . package?)]
+    (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
    [get-package-listing (natural-number/c . -> . (listof category?))]
    [get-matching-packages
     (string? string? string? (union natural-number/c false/c)
@@ -50,10 +50,11 @@
    [add-pkgversion-to-db!
     (-> user? package? natural-number/c natural-number/c path? path? (-> symbol? (-> any) any)
         natural-number/c)]
-   [update-package-fields! 
+   [update-package-fields!
     (-> package? 
         pkgversion?
         (union (listof xexpr?) false/c) ;; package blurb
+        (union string? false/c)         ;; package homepage
         (union (listof xexpr?) false/c) ;; package notes
         (union string? false/c) 
         (union string? false/c)
@@ -213,6 +214,7 @@
                              (fld (packages_without_categories) row 'username)
                              (fld (packages_without_categories) row 'name)
                              (blurb-string->blurb (fld (packages_without_categories) row 'pkg_blurb))
+                             (fld (packages_without_categories) row 'homepage)
                              (list (row->pkgversion (packages_without_categories) row)))))])
       results))
     
@@ -225,7 +227,7 @@
   
   ;; add-package-to-db! : user string (or (listof xexpr) #f) -> package?
   ;; adds a record for the given package information, and returns a stub
-  (define (add-package-to-db! user package-name blurb)
+  (define (add-package-to-db! user package-name blurb homepage)
     (let* ([id (send *db* query-value "SELECT nextval('packages_pk') AS pk")]
            [query (string-append 
                    "INSERT INTO packages (id, owner_id, name, blurb) VALUES "
@@ -237,7 +239,7 @@
                           "NULL")")")])
       (begin
         (send *db* exec query)
-        (make-package id (user-username user) package-name blurb '()))))
+        (make-package id (user-username user) package-name blurb homepage '()))))
                   
   
   ;; ------------------------------------------------------------
@@ -340,7 +342,8 @@
   (define (get-package owner name)
     (let* ([query
             (string-append
-             "SELECT * FROM all_packages_without_repositories WHERE username ="(escape-sql-string owner)
+             "SELECT * FROM all_packages_without_repositories "
+             " WHERE username = "(escape-sql-string owner)
              " AND name = "(escape-sql-string name)
              " ORDER BY maj DESC, min DESC")]
            [pkgversions (send *db* map query list)])
@@ -357,6 +360,8 @@
            [pkgversions (send *db* map query list)])
       (version-rows->package (all_packages_without_repositories) pkgversions)))
          
+  ;; this function relies on the idea the rows passed in will be from a derivative of the all_packages
+  ;; query and at least have its rows as a prefix
   (define (version-rows->package columns pkgversions)
     (cond
       [(null? pkgversions) #f]
@@ -366,6 +371,7 @@
         (fld (all_packages) (car pkgversions) 'username)
         (fld (all_packages) (car pkgversions) 'name)
         (blurb-string->blurb (fld (all_packages) (car pkgversions) 'pkg_blurb))
+        (fld (all_packages) (car pkgversions) 'homepage)
         (map (lambda (r) (row->pkgversion columns r)) pkgversions))]))        
   
   (define (get-package-version-by-id id user-id)
@@ -416,6 +422,7 @@
                            (fld (most_recent_packages) row 'username)
                            (fld (most_recent_packages) row 'name)
                            (blurb-string->blurb (fld (most_recent_packages) row 'pkg_blurb))
+                           (fld (most_recent_packages) row 'homepage)
                            (list (row->pkgversion (most_recent_packages) row))))))])
       (map
        (lambda (x) (make-category (car (car x)) (cadr (car x)) #f (cadr x))) 
@@ -506,7 +513,7 @@
         (escape-sql-string (blurb->blurb-string xexprs))
         "NULL"))
   
-  (define (update-package-fields! pkg pkgversion blurb notes default-file required-core)
+  (define (update-package-fields! pkg pkgversion blurb homepage notes default-file required-core)
     (let* ([rc-str
             (cond
               [(not required-core) "NULL"]
@@ -523,7 +530,8 @@
              " WHERE id = "(number->string (pkgversion-id pkgversion)) ";")]
           [package-update-statement
            (string-append
-            "UPDATE packages SET blurb = "(sqlize-blurb blurb)
+            "UPDATE packages SET blurb = "(sqlize-blurb blurb)", "
+            " homepage = "(if homepage (escape-sql-string homepage) "NULL")
             " WHERE id = "(number->string (package-id pkg))"; ")])
       (send *db* exec pkgversion-update-statement)
       (send *db* exec package-update-statement)

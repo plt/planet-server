@@ -6,7 +6,7 @@
 
   (provide (struct user (id username realname email))
            (struct category (id name shortname packages))
-           (struct package (id owner name blurb versions))
+           (struct package (id owner name blurb homepage versions))
            (struct pkgversion (id
                                package-id
                                maj min
@@ -37,7 +37,8 @@
   (define-struct package (id         ; nat
                           owner      ; string
                           name       ; string
-                          blurb      ; (listof xexpr)
+                          blurb      ; (listof xexpr) | #f
+                          homepage   ; string[url] | #f
                           versions   ; (ne-listof pkgversion)[sorted newest to oldest]
                                      ; #f [for a package-stub]
                           )
