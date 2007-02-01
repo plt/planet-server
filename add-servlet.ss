@@ -6,6 +6,7 @@
            (lib "string.ss")
            (lib "xml.ss" "xml")
            (lib "file.ss")
+           (lib "sendmail.ss" "net")
            (prefix srfi1: (lib "1.ss" "srfi"))
            (prefix srfi13: (lib "13.ss" "srfi")))
   
