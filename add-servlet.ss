@@ -215,7 +215,7 @@ an account, log in directly.")
                                   "with PLaneT, the PLT Scheme package repository. To verify your email address, "
                                   "please visit the following URL: "
                                   ""
-                                  k
+                                  (string-append (URL-ROOT) k)
                                   ""
                                   "If you do not want to create an account with PLaneT, then please disregard "
                                   "this message."
