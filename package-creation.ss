@@ -14,13 +14,14 @@
            (lib "string.ss")
            (lib "getinfo.ss" "setup"))
   
-  (define (planet-file-name? s)
-    (and (string? s) (regexp-match #rx"^[^.].*\\.plt$" s)))
+  (define-struct (exn:fail:bad-package exn:fail) (xexprs))
+  
+  (provide (struct exn:fail:bad-package (xexprs)))
   (provide/contract
    [planet-file-name? (any/c . -> . boolean?)]
    [create-package
     (user?                    ; package owner
-     planet-file-name?        ; file name
+     string?
      bytes?                   ; package file contents
      (listof natural-number/c)     ; repositories this package belongs to
      . -> .
@@ -32,9 +33,41 @@
      bytes?                   ; package contents
      (listof repository?)     ; repositories this update belongs to
      . -> .
-     void?)])
+     void?)]
+   [rebuild-package-pages
+    (string? string? natural-number/c natural-number/c
+     . -> .
+     void?)]
+   [rebuild-all-code-pages
+    (-> any)])
+    
+  ;; planet-file-name? : any -> boolean
+  ;; determines if the given value represents a planet file name
+  (define (planet-file-name? s)
+    (and (string? s) (regexp-match #rx"^[^.].*\\.plt$" s)))
+  
+  ;; raise-bad-package-error : string -> [raises exn:fail:bad-package]
+  ;; report on a package problem
+  (define (raise-bad-package-error xexprs)
+    (raise (make-exn:fail:bad-package
+            (string->immutable-string (format "~s" xexprs))
+            (current-continuation-marks)
+            xexprs)))
   
   (define (create-package user package-name file-bytes repositories)
+    
+    (unless (planet-file-name? package-name)
+      (raise-bad-package-error 
+       `("The file name "(b ,package-name) " is not a valid name for a PLaneT package. PLaneT packages "
+         " must be .plt files created by the " (tt "planet") " command-line tool whose names consist of "
+         "letters, numbers, and hyphens.")))
+    
+    (when (get-package (user-username user) package-name)
+      (raise-bad-package-error
+       `("You already have a package named "(b ,package-name)" on PLaneT. If you would like to update that "
+         "package, please click the \"update this package\" link next to its name.")))
+  
+       
     (let* ([cats (get-category-names)]
            [cats-ht (make-hash-table)])
       (for-each 
@@ -86,28 +119,69 @@
   ;; update/internal : user? string nat nat bytes (listof repository?) ((listof xexpr) -> pkg) -> void
   (define (update/internal user pkgname maj min file-bytes repositories getpkg)
     (let* ([username (user-username user)]
-           [pkgdir (create-package-directory username pkgname maj min)]
            
-           [permanent-file-path (build-path pkgdir pkgname)] 
-           ;; FIXME: verify that the file name is safe (no ..), or this will be an exploit!!!!
-           ;; [1/30/07: I believe this isn't an issue anymore because of the planet-file-name? contract check]
-           
-           [srcdir (build-path pkgdir "contents")]
-           [webdir (create-web-directory username pkgname maj min)]
-           [_ (with-output-to-file permanent-file-path (lambda () (write-bytes file-bytes)) 'truncate/replace)]
-           [_ (unpack-planet-package permanent-file-path srcdir)]
-           [info.ss (get-metainfo srcdir)]
-           [pkg (getpkg info.ss)]
-           [id (add-pkgversion-to-db! user 
-                                      pkg
-                                      maj
-                                      min
-                                      permanent-file-path
-                                      srcdir
-                                      info.ss)])
-      (for-each (λ (r) (associate-pkgversion-with-repository! id r)) repositories)
-      (code-to-html srcdir webdir username pkgname maj min)))
+           ;; unpack in a temporary spot -- this makes sure the package is valid before
+           ;; we write into permanent storage
+           [tmpdir (make-temporary-file "planettmpdir~a" 'directory)]
+           [tmpfilepath (build-path tmpdir pkgname)]
+           [tmpsrcdir (build-path tmpdir "contents")])
+      (dynamic-wind
+       void
+       (λ ()
+         (let* ([_ (with-output-to-file tmpfilepath (lambda () (write-bytes file-bytes)) 'truncate/replace)]
+                [_ 
+                 (with-handlers ([exn:fail?
+                                  (λ (e) 
+                                    ((error-display-handler) 
+                                     (format "When unpacking a package, intercepted this exception:\n~a" 
+                                             (exn-message e))
+                                     e)
+                                    (raise-bad-package-error
+                                     `("The given package appears to be malformed. Please ensure that the file "
+                                       "you are uploading is a .plt file that was built with the "(tt "planet")
+                                       " command-line tool.")))])
+                   (unpack-planet-package tmpfilepath tmpsrcdir))]
+                
+                ;; once we've unpacked, we're sure that the package is valid (at least valid enough)
+                ;; so create permanent directories and move things over to them.
+                [pkgdir (create-package-directory username pkgname maj min)]
+                [permanent-file-path (build-path pkgdir pkgname)] 
+                [srcdir (build-path pkgdir "contents")]
+                [webdir (create-web-directory username pkgname maj min)]
+                [_ (copy-file tmpfilepath permanent-file-path)]
+                [_ (rename-file-or-directory tmpsrcdir srcdir)]
+                
+                ;; get metainfo, add to database
+                [info.ss (get-metainfo srcdir)]
+                [pkg (getpkg info.ss)]
+                [id (add-pkgversion-to-db! user 
+                                           pkg
+                                           maj
+                                           min
+                                           permanent-file-path
+                                           srcdir
+                                           info.ss)])
+           (for-each (λ (r) (associate-pkgversion-with-repository! id r)) repositories)
+           (code-to-html srcdir webdir username pkgname maj min)))
+       
+       (λ () (delete-directory* tmpdir)) ;; regardless of how we exit, clean up the tmp dir
+       )))
   
+  ;; rebuild-all-code-pages : -> void
+  ;; rebuilds the entire code pages site.
+  (define (rebuild-all-code-pages)
+    (for-each-package-version
+     (λ (pkg pv)
+       (let ([user (package-owner pkg)]
+             [name (package-name pkg)]
+             [maj (pkgversion-maj pv)]
+             [min (pkgversion-min pv)])
+         (let ([webdir (create-web-directory user name maj min)])
+           (printf "deleting ~s\n" webdir)
+           (delete-directory* webdir)
+           (printf "building ~a/~a/~a/~a\n" user name maj min)
+           (rebuild-package-pages user name maj min))))))
+    
   ;; rebuild-package-pages : string string nat nat -> void
   ;; rebuilds the web pages for the given package
   ;; assumes the package is already unpacked in its appropriate location
@@ -265,7 +339,6 @@
     (define root-path-list (path->listof-bytes root-path))
     (define (trim-to-extension path)
       (bytes->path (car (last-pair (regexp-split #rx"/" (path->bytes path))))))
-      
     
     ; enter all paths in hash-table
     (parameterize ([current-directory root-path])
@@ -286,20 +359,27 @@
        (lambda (path type acc)
          (let ([source-path (build-path root-path path)])
            (case type
-             [(file) (let ([fi (make-file-info
-                                path
-                                (file-or-directory-modify-seconds path)
-                                (robust-file-size path))])
-                       (hash-table-put! info (prepare path) fi)
-                       (let ([di (hash-table-get info (prepare (parent-path path)) (print-info info (path->bytes (parent-path path)) 1))])
-                       (set-dir-info-files! di (cons fi (dir-info-files di)))))]
-             [(dir)   (let ([di (hash-table-get info (prepare (parent-path path)) (λ () #f))])
-                        (when di
-                          (set-dir-info-subdirs! di 
-                                                 (cons  (hash-table-get info (prepare path) (print-info info (prepare path) 2))
-                                                        (dir-info-subdirs di)))))]
-             [(link)   (error "No links should occur in the source directory")]
-             [else     (error "Unknown type")])))
+             [(file)
+              (let ([fi (make-file-info
+                         (trim-to-extension path)
+                         (file-or-directory-modify-seconds path)
+                         (robust-file-size path))])
+                (hash-table-put! info (prepare path) fi)
+                (let ([di (hash-table-get info 
+                                          (prepare (parent-path path))
+                                          (print-info info (path->bytes (parent-path path)) 1))])
+                  (set-dir-info-files! di (cons fi (dir-info-files di)))))]
+             [(dir)   
+              (let ([di (hash-table-get info (prepare (parent-path path)) (λ () #f))])
+                (when di
+                  (set-dir-info-subdirs! 
+                   di 
+                   (cons (hash-table-get info (prepare path) (print-info info (prepare path) 2))
+                         (dir-info-subdirs di)))))]
+             [(link)   
+              (error "No links should occur in the source directory")]
+             [else 
+              (error "Unknown type")])))
      'init-val
      #f)) ; #f => path relative to current-directory
     info)
@@ -398,7 +478,25 @@
        (error di)]))
   
   
+  ;; ============================================================
+  ;; misc utility
   
+  ;; delete-directory* : path -> void
+  ;; rm -rf a directory.
+  (define (delete-directory* path)
+    (cond
+      [(link-exists? path)
+       (error 'delete-directory* "found a symbolic link, which isn't supposed to exist here: ~e" path)]
+      [(file-exists? path)
+       (delete-file path)]
+      [(directory-exists? path)
+       (for-each
+        (λ (e) (delete-directory* (build-path path e)) (directory-list path))
+        (directory-list path))
+       (delete-directory path)]
+      [else 
+       (error 'delete-directory* "Given path does not exist: ~e" path)]))
+    
   
   
   

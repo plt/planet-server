@@ -5,6 +5,7 @@
   (require (lib "string.ss"))
   (require (lib "contract.ss"))
   (require (lib "xml.ss" "xml"))
+  (require (lib "etc.ss"))
   
   (require "data-structures.ss")
 
@@ -31,8 +32,8 @@
      . -> .
      (listof pkgversion?))]
    [get-package
-    (-> string? string?
-        (union package? false/c))]
+    (opt-> (string? string?) (boolean?)
+           (union package? false/c))]
    [get-package-by-id
     (-> natural-number/c natural-number/c
         (union package? false/c))]
@@ -73,22 +74,63 @@
      string?          ; freeform error message
      . -> . void?)]
    
+   [for-each-package-version
+    ((package? pkgversion? . -> . any) . -> . any)]
+   
    [core-version-string->code (string? . -> . (union number? false/c))]
    [code->core-version-string (number? . -> . (union string? false/c))]
    )
   
   (provide sql-null?)
   
+  ;; ============================================================
+  ;; database setup
+  ;; The strategy here is to create a connection, and refresh it
+  ;; as necessary when a link dies for some reason. We use a proxy
+  ;; object of class restarting-connection% for this purpose.
+  
+  (define retrying-connection%
+    (class* object% ()
+      (init-field get-conn)
+      (define conn (get-conn))
+      
+      (define/public (perform-action action)
+        (when (send conn disconnected?)
+          (set! conn (get-conn)))
+        (action))
+        
+        
+      (define/public (query-value . args)
+        (perform-action (λ () (send/apply conn query-value args))))
+      (define/public (query-tuple . args)
+        (perform-action (λ () (send/apply conn query-tuple args))))
+      (define/public (exec . args)
+        (perform-action (λ () (send/apply conn exec args))))
+      (define/public (map . args)
+        (perform-action (λ () (send/apply conn map args))))
+      (define/public (for-each . args)
+        (perform-action (λ () (send/apply conn for-each args))))
+      
+      (define/public (disconnect)
+        (send conn disconnect))
+      
+      (super-new)))
+  
   (define *db* #f)
   (define (startup)
     (unless *db* 
-      (set! *db* (connect "localhost" 5432 "planet" "jacobm" "matrix"))
-      (send *db* use-type-conversions #t)))
+      (set! *db* 
+            (new retrying-connection%
+                 [get-conn 
+                  (λ () 
+                    (let ([db (connect "localhost" 5432 "planet" "jacobm" "matrix")])
+                      (send db use-type-conversions #t)
+                      db))]))))
   (define (teardown)
     (when *db*
-      (send *db* disconnect)))
-  
-  
+      (send *db* disconnect)
+      (set! *db* #f)))
+    
   ;; ============================================================
   ;; persistence functions
   
@@ -247,6 +289,8 @@
   
   ;; matching-packages : string string string (union nat #f) [nat (union nat #f) | if maj \in nat] -> list pkg-version
   ;; gets all the matching package versions, sorted from best to worst
+  ;; [note that ordering by hidden means that all the entries where hidden = true are after all the ones where
+  ;;  it is false; this means that hidden packages are only selected if no non-hidden packages fit the request]
   (define (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)
     (let* ([rc-version (number->string (core-version-string->code requester-core-version))]
            [query (string-append
@@ -258,7 +302,7 @@
                        (string-append " AND maj = "(number->string maj)" AND min >= "(number->string minlo)
                                       (if minhi (string-append " AND min <= "(number->string minhi)) ""))
                        "")
-                   " ORDER BY maj DESC, min DESC;")])
+                   " ORDER BY hidden, maj DESC, min DESC;")])
       (send *db* map query (lambda row (row->pkgversion (all_packages) row)))))
   
   ;; ----------------------------------------
@@ -325,10 +369,7 @@
        (string->path (f 'src_path))
        (f 'default_file)
        (f 'doctxt)
-       (let ([notes-str (f 'release_blurb)])
-         (if notes-str
-             (read-from-string notes-str)
-             #f))
+       (blurb-string->blurb (f 'release_blurb))
        (f 'version_date)
        (f 'version_name)
        repositories
@@ -338,16 +379,20 @@
              #f))
        (f 'downloads))))
   
-  ;; get-package : string string -> (union package #f)
-  (define (get-package owner name)
-    (let* ([query
-            (string-append
-             "SELECT * FROM all_packages_without_repositories "
-             " WHERE username = "(escape-sql-string owner)
-             " AND name = "(escape-sql-string name)
-             " ORDER BY maj DESC, min DESC")]
-           [pkgversions (send *db* map query list)])
-      (version-rows->package (all_packages_without_repositories) pkgversions)))
+  ;; get-package : string string [boolean] -> (union package #f)
+  (define get-package
+    (opt-lambda (owner name [include-hidden? #f])
+      (let* ([query
+              (string-append
+               "SELECT * FROM all_packages_without_repositories "
+               " WHERE username = "(escape-sql-string owner)
+               " AND name = "(escape-sql-string name)
+               (if include-hidden?
+                   ""
+                   " AND hidden = false")
+               " ORDER BY maj DESC, min DESC")]
+             [pkgversions (send *db* map query list)])
+        (version-rows->package (all_packages_without_repositories) pkgversions))))
   
   ;; get-package-by-id : nat nat -> (union package #f)
   ;; gets the given package id, but only if its owner is the given owner
@@ -567,7 +612,44 @@
           (cons-immutable (add1 (vector-ref maj/min-vector 0))
                 0))))
   
-  
+  ;; for-each-package-version : (package-stub pkgversion -> X) -> X
+  ;; calls f for effect on each package version in the system [ordered username/pkgname/maj/min], and
+  ;; returns the last result.
+  ;; At the moment, it gives #f for pkgversion-repository to avoid having to do extra DB
+  ;; transactions or software processing to batch up results. You've been warned. 
+  (define (for-each-package-version fn)
+    (let ([query "SELECT * FROM all_packages_without_repositories ORDER BY username, name, maj, min"])
+      (send *db* for-each query
+       (λ row
+         (let* ([f (λ (col) (fld (all_packages_without_repositories) row col))]
+                [pkg (make-package 
+                      (f 'package_id)
+                      (f 'username)
+                      (f 'name)
+                      (blurb-string->blurb (f 'pkg_blurb))
+                      (f 'homepage)
+                      #f)]
+               [pkgver
+                (make-pkgversion
+                 (f 'package_version_id)
+                 (f 'package_id)
+                 (f 'maj)
+                 (f 'min)
+                 (string->path (f 'plt_path))
+                 (string->path (f 'src_path))
+                 (f 'default_file)
+                 (f 'doctxt)
+                 (blurb-string->blurb (f 'release_blurb))
+                 (f 'version_date)
+                 (f 'version_name)
+                 #f
+                 (let ([s (f 'required_core_version)])
+                   (if s
+                       (code->core-version-string s)
+                       #f))
+                 (f 'downloads))])
+           (fn pkg pkgver))))))
+                
   ;; ------------------------------------------------------------
   ;; logging
   (define (log-download ip-addr pkgver client-core-version)

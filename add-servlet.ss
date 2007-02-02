@@ -8,6 +8,7 @@
            (lib "file.ss")
            (lib "url.ss" "net")
            (lib "sendmail.ss" "net")
+           (lib "date.ss")
            (prefix srfi1: (lib "1.ss" "srfi"))
            (prefix srfi13: (lib "13.ss" "srfi")))
   
@@ -87,8 +88,9 @@
         (lambda (k)
           (page
            (list "contribute")
-           `((p "Thanks for deciding to contribute a package to PLaneT! You can either create an account using the form below, or, if you already have 
-an account, log in directly.")
+           `((p "Thanks for deciding to contribute a package to PLaneT! "
+                "You can either create an account using the form below, or, "
+                "if you already have an account, log in directly.")
              (section "Log in")
              ,@general-error-messages
              (div 
@@ -151,29 +153,40 @@ an account, log in directly.")
                   (all-demands 
                    (fields-nonblank '(username))
                    (field-constraint
-                    (wrap-as-demand-p username-taken? (λ (n) `(username (message "No username " (b ,n) " exists"))))
+                    (wrap-as-demand-p 
+                     username-taken? 
+                     (λ (n) `(username (message "No username " (b ,n) " exists"))))
                     'username))]
                  [new-problems (demands (request-bindings r))])
             (cond
               [(null? new-problems)
                (let ([user (get-user-record/no-password (get r 'username))])
                  (begin
-                   ; send an email to the address associated with the account, the followup to which resets the password
+                   ; send an email to the address associated with the account, 
+                   ; the followup to which resets the password
                    (send/suspend (PASSWORD-RESET-EMAIL/PAGE user))
-                   ; if send-email returns the email recipient got the message and is in control, so go ahead and let them change the password
+                   ; if send-email returns the email recipient got the message
+                   ; and is in control, so go ahead and let them change the password
                    (do-passwordless-reset user)))]
               [else (loop new-problems)])))))
     
     (define (RESET-PASSWORD-PAGE problems)
-      (lambda (k)
-        (page
-         '("Reset password")
-         `((section "Reset your password")
-           (p "For security purposes, we cannot send you your password directly. However, we can allow you to choose a new password "
-              " as long as you can verify that you control the email address associated with your username.")
-           (form ((action ,k) (method "post"))
-                 (table (tr (td "Username:") (td (input ((type "text") (name "username")))))
-                        (tr (td ((colspan "2")) (input ((type "submit") (value "Send a confirmation email")))))))))))
+      (with-problems problems
+       (λ (general-errors value-for message-for)
+         (lambda (k)
+           (page
+            '("Reset password")
+            `((section "Reset your password")
+              (p "For security purposes, we cannot send you your password directly. "
+                 "However, we can allow you to choose a new password "
+                 " as long as you can verify that you control the email address "
+                 " associated with your username.")
+              (form ((action ,k) (method "post"))
+                    (table (tr (td "Username:") 
+                               (td (input ((type "text") (name "username"))) ,@(message-for 'username)))
+                           (tr (td ((colspan "2")) 
+                                   (input ((type "submit") 
+                                           (value "Send a confirmation email")))))))))))))
     
     
     ;; send an email to the given user with a link allowing them to continue, and return a web page indicating this has been done
@@ -200,7 +213,7 @@ an account, log in directly.")
          '("Confirm email")
          `((section "Confirmation message sent")
            (p "We have sent an email to the address we have listed as belonging to the user " (b ,(user-username user))". "
-              "For security purposes, you must visit the link provided in that message to proceed. If you have further questions, "
+              "For security purposes, you must visit the link provided in that message within 48 hours to proceed. If you have further questions, "
               "please contact a PLaneT administrator by emailing planet@plt-scheme.org for help.")
            #;(p "For testing: " (a ((href ,k)) "click here"))))))
     
@@ -218,7 +231,7 @@ an account, log in directly.")
                                   ""
                                   (string-append (URL-ROOT) k)
                                   ""
-                                  "If you do not want to create an account with PLaneT, then please disregard "
+                                  "within 48 hours. If you do not want to create an account with PLaneT, then please disregard "
                                   "this message."
                                   ""
                                   "Thanks,"
@@ -296,78 +309,73 @@ an account, log in directly.")
       (mkdisplay* titles bodies repository user))
     
     ;; html pages
-    (define main-loop-page
-      (lambda (k)
-        (define packages (user->packages user (DEFAULT-REPOSITORY))) 
-        (define (package->rows pkg)
-          (let ([v (car (package-versions pkg))])
-            `((tr ((class "pkgStats")) 
-                  (td ,(package-name pkg)) 
-                  (td ,(format "~a.~a"
-                               (pkgversion-maj v)
-                               (pkgversion-min v)))
-                  (td (small "["
-                      (a ((href ,(string-append k "?action=update&package=" (number->string (package-id pkg)))))
-                         "update this package")
-                      "] or ["
-                      (a ((href ,(string-append k "?action=edit&pkgversion=" (number->string (pkgversion-id v)))))
-                         "edit package metadata")
-                      "]")))
-              (tr ((class "pkgBlurb"))
-                  (td ((colspan "3")) ,@(or (package-blurb pkg) '("[no package description]"))))
-              (tr ((class "pkgVersionBlurb"))
-                  (td ((colspan "3")) ,@(or (pkgversion-blurb v)
-                                            `("[no version notes]")))))))
-        (page
-         (list "Your packages")
-         `((section "Contribute a package")
-           (form ((action ,k) (method "post") (enctype "multipart/form-data"))
-                 (p "Contribute a new package: "
-                    (input ((type "file") (name "file")))
-                    (input ((type "submit") (value "Upload")))
-                    (input ((type "hidden") (name "action") (value "newpackage")))))
-           (section "Manage your packages")
-           ,@(cond
-               [(null? packages) '()]
-               [else
-                `((p "These are your packages:")
-                  (table ((id "yourPackages")) ,@(apply append (map package->rows packages))))])
-           (section "Manage your account")
-           
-           (form ((action ,k) (method "post"))
-                 (input ((type "hidden") (name "action") (value "setpassword")))
-                 (p (b "Change your password"))
-                 (table
-                  (tr (td "Old password:") (td (input ((type "password") (name "oldpass")))))
-                  (tr (td "New password:") (td (input ((type "password") (name "newpass1")))))
-                  (tr (td "Again:") (td (input ((type "password") (name "newpass2")))))
-                  (tr (td ((colspan "2")) (input ((type "submit") (value "Change password")))))))))))
-    
-    (define (package-add-page categories repositories)
-      (lambda (k)
-        (page
-         (list "add a new package")
-         `((form ((action ,k) (method "post") (enctype "multipart/form-data"))
-                 (table
-                  (tr (td "File") (td (input ((type "file") (name "file")))))
-                  (tr (td "Description") (td (textarea ((name "blurb")) " ")))
-                  (tr (td "Categories (check all that apply)") (td ""))
-                  ,@(map
-                     (lambda (cat)
-                       `(tr (td "") (td (input ((type "checkbox") (name "category") (value ,(number->string (category-id cat)))))
-                                        ,(category-name cat))))
-                     categories)
-                  (tr (td "Which repositories is this package compatible with?") (td ""))
-                  ,@(map
-                     (lambda (rep)
-                       `(tr (td "") (td (input ((type "checkbox") (name "repository") (value ,(number->string (repository-id rep)))
-                                                                  ,@(if (= (repository-id rep) (DEFAULT-REPOSITORY))
-                                                                        `((selected "selected"))
-                                                                        '())))
-                                        ,(repository-name rep))))
-                     repositories)
-                  (tr (td ((colspan "2")) (input ((type "submit")))))))))))
-    
+    (define (main-loop-page problems)
+      (with-problems problems
+       (λ (general-errors value-for message-for)
+        (lambda (k)
+          (define packages (user->packages user (DEFAULT-REPOSITORY))) 
+          (define (package->rows pkg)
+            (let ([v (car (package-versions pkg))])
+              `((tr ((class "pkgStats")) 
+                    (td ,(package-name pkg)) 
+                    (td ,(format "~a.~a"
+                                 (pkgversion-maj v)
+                                 (pkgversion-min v)))
+                    (td (small "["
+                               (a ((href ,(string-append k "?action=update&package=" 
+                                                         (number->string (package-id pkg)))))
+                                  "update this package")
+                               "] or ["
+                               (a ((href ,(string-append k "?action=edit&pkgversion=" 
+                                                         (number->string (pkgversion-id v)))))
+                                  "edit package metadata")
+                               "]")))
+                (tr ((class "pkgBlurb"))
+                    (td ((colspan "3")) ,@(or (package-blurb pkg) '("[no package description]"))))
+                (tr ((class "pkgVersionBlurb"))
+                    (td ((colspan "3")) ,@(or (pkgversion-blurb v)
+                                              `("[no version notes]")))))))
+          (page
+           (list "Your packages")
+           `(,@(if (null? general-errors)
+                   '()
+                   `((div ,@(map (λ (msg) `(p ,msg)) general-errors))))
+                   
+                    
+             (section "Contribute a package")
+             (form ((action ,k) (method "post") (enctype "multipart/form-data"))
+                   (p "Contribute a new package: "
+                      (input ((type "file") (name "file")))
+                      (input ((type "submit") (value "Upload")))
+                      (input ((type "hidden") (name "action") (value "newpackage"))))
+                   ,@(message-for 'contribute))
+             (section "Manage your packages")
+             ,@(cond
+                 [(null? packages) '()]
+                 [else
+                  `((p "These are your packages:")
+                    (table ((id "yourPackages")) ,@(apply append (map package->rows packages))))])
+             (section "Manage your account")
+             
+             (form ((action ,k) (method "post"))
+                   (input ((type "hidden") (name "action") (value "setpassword")))
+                   (p (b "Change your password"))
+                   (table
+                    (tr (td "Old password:") 
+                        (td (input ((type "password") (name "oldpass")))
+                            ,@(message-for 'oldpass)))
+                    (tr (td "New password:") 
+                        (td (input ((type "password") (name "newpass1")))
+                            ,@(message-for 'newpass1)))
+                    (tr (td "Again:") 
+                        (td (input ((type "password") (name "newpass2")))
+                            ,@(message-for 'newpass2)))
+                    (tr (td ((colspan "2")) (input ((type "submit") (value "Change password")))))
+                    ,@(let ([pw-errors (message-for 'password)])
+                        (if (null? pw-errors)
+                            '()
+                            `((tr (td ((colspan "2")) ,@pw-errors)))))))))))))
+      
     ;; package-update-page : package #;(listof repository) (listof problem?) -> string -> response
     (define (package-update-page pkg #;repositories problems)
       (let ([general-error-messages (strings->error-xhtml (extract 'general problems))])
@@ -397,14 +405,11 @@ an account, log in directly.")
     (define (do-add-package request)
         (let* ([valid-categories (get-category-names)]
                [valid-repositories (get-all-repositories)]
-               ;[request (send/suspend (package-add-page valid-categories valid-repositories))]
                [file-bytes (get request 'file)]
                [filename-bytes (get-filename request 'file)])
           (let ([package-name (bytes->string/utf-8 filename-bytes)])
             (create-package user package-name file-bytes
-                            (list repository)
-                            ;categories blurb repositories
-                            ))))
+                            (list repository)))))
 
     ;; do-package-update : package -> void
     ;; manages a user-submitted update to the given package.
@@ -609,9 +614,15 @@ an account, log in directly.")
  
       (make-demand-page page-producer demands))
     
+    
+    (let loop ([problems '()])
+      (with-handlers 
+          ([exn:fail? 
+            (λ (e) 
+              ((error-display-handler) (format "~a: ~a" (current-date-string) (exn-message e)) e)
+              (loop `((general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))))])
       
-      (let loop ()
-        (let* ([request (send/suspend main-loop-page)]
+        (let* ([request (send/suspend (main-loop-page problems))]
                [bindings (request-bindings request)]
                [action (get request 'action)])
           (case (string->symbol action)
@@ -619,42 +630,38 @@ an account, log in directly.")
              (let ([pkg (get-package-by-id (string->number (get request 'package)) 
                                            (user-id user))])
                (do-package-update pkg)
-               (loop))]
+               (loop '()))]
             [(edit)
              (let ([pkgver (get-package-version-by-id (string->number (get request 'pkgversion)) 
                                                       (user-id user))])
                (do-pkgversion-edit pkgver)
-               (loop))]
+               (loop '()))]
             [(newpackage)
-             (do-add-package request)
-             (loop)]
+             (with-handlers ([exn:fail:bad-package? 
+                              (λ (e) (loop `((contribute (message ,@(exn:fail:bad-package-xexprs e))))))])
+               (do-add-package request)
+               (loop '()))]
             [(setpassword)
              (let* ([demands (all-demands 
                               (fields-exist '(oldpass newpass1 newpass2))
+                              (field-lengths>= 5 'newpass1 'newpass2)
                               (field-constraint
                                (wrap-as-demand-p
                                 (lambda (pass) (valid-password? user pass))
-                                (lambda (pass) `(general "Incorrect password")))
+                                (lambda (pass) `(oldpass (message "Incorrect password"))))
                                'oldpass)
                               (field-constraint
-                               (wrap-as-demand-p string=? (lambda (p1 p2) `(general "New passwords did not match")))
+                               (wrap-as-demand-p string=? (lambda (p1 p2) `(password (message "New passwords did not match"))))
                                'newpass1 'newpass2))]
                     [problems (demands bindings)])
                (cond
                  [(null? problems)
                   (begin
                     (update-user-password user (get request 'newpass1))
-                    ;; TODO: make a message saying password was updated
-                    (loop))]
-                 ;; TODO: update page to handle errors in the good style
-                 [else (loop)]))]
+                    (loop '((general "Password updated."))))]
+                 [else (loop problems)]))]
             [else
-             (send/suspend 
-              (lambda (k)
-                (page (list "error") 
-                            `((p "Oops! Bad action: " ,action)
-                              (a ((href ,k)) "continue")))))
-             (loop)]))))
+             (loop `((general ,(format "Oops! Bad action: ~a" action))))])))))
   
   
   ;; ============================================================
@@ -695,10 +702,14 @@ an account, log in directly.")
      '()))
   
   ;; ============================================================
-  ;; HTML PAGES
+  ;; UTILITY
   (define-syntax show-and-tell
     (syntax-rules ()
       [(show-and-tell expr)
        (let ([ans expr])
          (printf "~s ==> ~s\n" 'expr ans)
-         ans)])))
+         ans)]))
+  
+  (define (current-date-string)
+    (date->string (seconds->date (current-seconds)) #t))
+  )
