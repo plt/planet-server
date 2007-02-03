@@ -375,7 +375,7 @@
                         (if (null? pw-errors)
                             '()
                             `((tr (td ((colspan "2")) ,@pw-errors)))))))))))))
-      
+    
     ;; package-update-page : package #;(listof repository) (listof problem?) -> string -> response
     (define (package-update-page pkg #;repositories problems)
       (let ([general-error-messages (strings->error-xhtml (extract 'general problems))])
@@ -442,32 +442,7 @@
                                    repositories))
                                 repository-ids))])))))
     
-    (define (string->string-option s)
-      (if (= (string-length (srfi13:string-trim-both s)) 0)
-          #f
-          s))
     
-    ;; blank-or : (string -> boolean) -> (string option -> boolean)
-    ;; predicate that matches if either the given string is blank, or the given predicate matches
-    (define (blank-or p)
-      (λ (s)
-        (let ([v (string->string-option s)])
-          (or (not v) (p v)))))
-    
-    ;; string->xexprs : string -> (listof xexpr)
-    ;; if the given string can be parsed into a list of x-expressions, returns that parse;
-    ;; otherwise returns the singleton xexpr of the given string
-    (define (string->xexprs s)
-      (with-handlers ([(λ (e)
-                         (or (exn:fail? e)
-                             (exn:invalid-xexpr? e)))
-                       (λ (e) (list s))])
-        (let ([exprs (read-from-string s)])
-          (for-each validate-xexpr exprs)
-          exprs)))
-      
-    (define (legal-core-version? s)
-      (core-version-string->code s))
           
     (define (do-pkgversion-edit pkgversion)
       ;; package developers can edit:
@@ -495,9 +470,15 @@
                [blurb (and blurb-string (string->xexprs blurb-string))]
                [notes (and notes-string (string->xexprs notes-string))]
                [primary-file 
-                (find-relative-path 
-                 (pkgversion-src-path pkgversion) 
-                 (normalize-path primary-file-string (pkgversion-src-path pkgversion)))]
+                (if primary-file-string
+                    ; i don't know how to get around this;
+                    ; there are probably problems with
+                    ; unicode file names
+                    (path->string
+                     (find-relative-path 
+                      (pkgversion-src-path pkgversion) 
+                      (normalize-path primary-file-string (pkgversion-src-path pkgversion))))
+                    #f)]
                [core-version (if core-version-string
                                  (srfi13:string-trim-both core-version-string)
                                  #f)])
@@ -507,9 +488,7 @@
            blurb
            homepage-string
            notes
-           (path->string primary-file) ; i don't know how to get around this;
-                                       ; there are probably problems with
-                                       ; unicode file names
+           primary-file
            core-version))))
                                         
                                         
@@ -712,4 +691,36 @@
   
   (define (current-date-string)
     (date->string (seconds->date (current-seconds)) #t))
+  
+  (define (string->string-option s)
+    (if (= (string-length (srfi13:string-trim-both s)) 0)
+        #f
+        s))
+  
+  ;; blank-or : (string -> boolean) -> (string option -> boolean)
+  ;; predicate that matches if either the given string is blank, or the given predicate matches
+  (define (blank-or p)
+    (λ (s)
+      (let ([v (string->string-option s)])
+        (or (not v) (p v)))))
+  
+  ;; string->xexprs : string -> (listof xexpr)
+  ;; if the given string can be parsed into a list of x-expressions, returns that parse;
+  ;; otherwise returns the singleton xexpr of the given string
+  (define (string->xexprs s)
+    (let/ec return
+      (let ([ip (open-input-string s)])
+        (with-handlers ([(λ (e)
+                           (or (exn:fail? e)
+                               (exn:invalid-xexpr? e)))
+                         (λ (e) (return `((pre ,s))))])
+          (let ([exprs (read ip)])
+            (when (regexp-match #rx"[^ \t\n\r]" ip)
+              ; it just happened that an s-exp was the first thing in the string; there's more though
+              (return `((pre ,s))))
+            (for-each validate-xexpr exprs)
+            (return exprs))))))
+  
+  (define (legal-core-version? s)
+    (core-version-string->code s))
   )

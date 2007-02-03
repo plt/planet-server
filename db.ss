@@ -5,6 +5,7 @@
   (require (lib "string.ss"))
   (require (lib "contract.ss"))
   (require (lib "xml.ss" "xml"))
+  (require (lib "list.ss"))
   (require (lib "etc.ss"))
   
   (require "data-structures.ss")
@@ -683,7 +684,14 @@
   
   (define (escape-sql-string s) 
     (format "'~a'" 
-            (regexp-replace* #rx"'" s "\\\\'")))
+            (foldl 
+             (λ (t r) (regexp-replace* (car t) r (cadr t)))
+             s
+             (list 
+              (list #rx"'" "\\\\'")
+              (list #rx"\"" "\\\\\"")
+              (list #rx"\\" "\\\\\\")
+              ))))
   
   ;; group  : {listof X} (X -> (values Y Z) -> (listof (list Y (listof Z)))
   ;; groups l into contiguous stripes that give the same answer to f
