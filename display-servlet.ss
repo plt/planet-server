@@ -204,18 +204,14 @@
           [else
            (let ([pkg (get-package (car owner) (car pkgname))])
              (if (not pkg)
-                 
                  (page
                   (list (car owner) (car pkgname))
                   `((p "The requested package does not exist.")))
-                 
                  (let ([rpkg (filter-package-for-repository pkg rep)])
                    (if (not rpkg)
-                       
                        (page
                         (list (car owner) (car pkgname))
                         `((p "The requested package does not exist in this repository. Try another repository.")))
-                       
                        (gen-package-page pkg)))))])))
     
     ;; build-response : page -> response

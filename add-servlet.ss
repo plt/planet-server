@@ -69,7 +69,7 @@
     
     (define (page titles bodies)
       (mkdisplay titles bodies initial-request))
-    
+        
     (define (LOGIN-PAGE problems)
       (let* ([general-error-messages (strings->error-xhtml (extract 'general problems))]
              [extractor
@@ -152,6 +152,7 @@
           (let* ([demands 
                   (all-demands 
                    (fields-nonblank '(username))
+                   (fields-ascii 'username)
                    (field-constraint
                     (wrap-as-demand-p 
                      username-taken? 
@@ -245,9 +246,11 @@
     ;; do-passwordless-reset : user -> void 
     (define (do-passwordless-reset user)
       (let* ([demands
-              (field-constraint 
-               (wrap-as-demand-p string=? (lambda (a b) "Passwords did not match"))
-               'password1 'password2)]
+              (all-demands
+               (fields-ascii 'password1 'password2)
+               (field-constraint 
+                (wrap-as-demand-p string=? (lambda (a b) "Passwords did not match"))
+                'password1 'password2))]
              [PAGE (PASSWORDLESS-RESET-PAGE user)])
         (let loop ([problems '()])
           (let* ([r (send/suspend (PAGE problems))]
@@ -449,17 +452,20 @@
       ;;  - package description
       ;;  - release notes
       ;;  - primary file
-      ;;  - (categories -- not yet)
+      ;;  - categories
       ;;  - required core version
       (let ([pkg (get-package-by-id (pkgversion-package-id pkgversion) (user-id user))]) 
-        (let* ([req (send/suspend/demand 
+        (let* ([current-categories (get-package-categories pkg)]
+               [req (send/suspend/demand 
                      (package-edit-page pkg
                                         pkgversion
                                         (package-blurb pkg)
                                         (pkgversion-blurb pkgversion)
                                         (package-homepage pkg)
                                         (pkgversion-default-file pkgversion)
-                                        (pkgversion-required-core pkgversion)))]
+                                        (pkgversion-required-core pkgversion)
+                                        (get-category-names)
+                                        current-categories))]
                [blurb-string (string->string-option (get req 'description))]
                [notes-string (string->string-option (get req 'notes))]
                [homepage-string (string->string-option (get req 'homepage))]
@@ -473,7 +479,8 @@
                 (if primary-file-string
                     ; i don't know how to get around this;
                     ; there are probably problems with
-                    ; unicode file names
+                    ; unicode file names but we only allow ascii anyway due to
+                    ; db limitations so it's probably not a pressing concern
                     (path->string
                      (find-relative-path 
                       (pkgversion-src-path pkgversion) 
@@ -481,7 +488,8 @@
                     #f)]
                [core-version (if core-version-string
                                  (srfi13:string-trim-both core-version-string)
-                                 #f)])
+                                 #f)]
+               [categories (map string->number (get-all req 'categories))])
           (update-package-fields!
            pkg
            pkgversion
@@ -489,7 +497,8 @@
            homepage-string
            notes
            primary-file
-           core-version))))
+           core-version)
+          (reassociate-package-with-categories pkg categories))))
                                         
                                         
     (define (->string v)
@@ -514,8 +523,16 @@
     
     ;; this page represents the "new style" and is intended for use with send/suspend/demand
     ;; i should probably switch over the others if this works out
-    (define (package-edit-page pkg pkgversion description notes homepage default-file required-core)
-      
+    (define (package-edit-page pkg 
+                               pkgversion
+                               description
+                               notes
+                               homepage
+                               default-file
+                               required-core
+                               categories
+                               default-categories)
+      (define default-category-ids (map category-id default-categories))
       (define ((page-producer problems) k)
         (with-problems problems
          (λ (general-error-messages value-for errors-for)
@@ -562,6 +579,38 @@
                                                              (list (->string* required-core))
                                                              submitted-core)))))
                         ,@(errors-for 'core)))
+                (tr (td ((valign "top")) "Categories")
+                    (td ((valign "top"))
+                        (table 
+                         ,@(let* ([len (length categories)]
+                                  [half (ceiling (/ len 2))]
+                                  
+                                  [inputbox
+                                   (λ (cat)
+                                     `((input ((type "checkbox")
+                                               (name "categories")
+                                               (value ,(number->string (category-id cat)))
+                                               ,@(if (memv (category-id cat) default-category-ids)
+                                                     `((checked "checked"))
+                                                     `())))
+                                       ,(category-name cat)))])
+                            (let loop ([left (srfi1:take categories half)]
+                                       [right (srfi1:drop categories half)])
+                              (cond
+                                [(and (null? left) (null? right)) '()]
+                                [(null? right)
+                                 ;; in this case i'm taking advantage of the fact that i know
+                                 ;; that (len left) is either (len right) or (len right) + 1
+                                 (list
+                                  `(tr 
+                                    (td ,@(inputbox (car left)))
+                                    (td ,@(if (null? right) '(nbsp) (inputbox (car right))))))]
+                                [else
+                                 (cons
+                                  `(tr
+                                    (td ,@(inputbox (car left)))
+                                    (td ,@(inputbox (car right))))
+                                  (loop (cdr left) (cdr right)))]))))))
                 (tr (td ((colspan "2")) (input ((type "submit") (value "Update"))))))))))))
       
       ;; url-string? : string -> boolean
@@ -575,6 +624,7 @@
       (define demands
         (all-demands 
          ; no fields are required, but any that exist have to be properly formatted
+         (fields-ascii 'filename 'defaultfile 'homepage 'notes 'description)
          (field-constraint
           (wrap-as-demand-p
            (blank-or legal-core-version?)
@@ -598,9 +648,8 @@
       (with-handlers 
           ([exn:fail? 
             (λ (e) 
-              ((error-display-handler) (format "~a: ~a" (current-date-string) (exn-message e)) e)
+              ((error-display-handler) (format "~a:\n ~a" (current-date-string) (exn-message e)) e)
               (loop `((general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))))])
-      
         (let* ([request (send/suspend (main-loop-page problems))]
                [bindings (request-bindings request)]
                [action (get request 'action)])
@@ -613,8 +662,15 @@
             [(edit)
              (let ([pkgver (get-package-version-by-id (string->number (get request 'pkgversion)) 
                                                       (user-id user))])
-               (do-pkgversion-edit pkgver)
-               (loop '()))]
+               (with-handlers ([exn:fail? 
+                                (λ (e) 
+                                  ((error-display-handler) 
+                                   (format "edit: ~a:\n ~a" (current-date-string) (exn-message e))
+                                   e)
+                                  (loop `((general "An internal error occured. Sorry about that."))))])
+                                
+                 (do-pkgversion-edit pkgver)
+                 (loop '())))]
             [(newpackage)
              (with-handlers ([exn:fail:bad-package? 
                               (λ (e) (loop `((contribute (message ,@(exn:fail:bad-package-xexprs e))))))])
@@ -623,6 +679,7 @@
             [(setpassword)
              (let* ([demands (all-demands 
                               (fields-exist '(oldpass newpass1 newpass2))
+                              (fields-ascii 'oldpass 'newpass1 'newpass2)
                               (field-lengths>= 5 'newpass1 'newpass2)
                               (field-constraint
                                (wrap-as-demand-p
@@ -654,6 +711,7 @@
   (define user-creation-demands
     (all-demands
      (fields-nonblank '(username realname email password1 password2))
+     (fields-ascii 'username 'realname 'email 'password1 'password2)
      (field-constraint (wrap-as-demand-p
                         string=? 
                         (λ (a b) '(password1 (message "Passwords did not match"))))

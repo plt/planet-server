@@ -8,7 +8,7 @@
   (require (lib "list.ss"))
   (require (lib "etc.ss"))
   
-  (require "data-structures.ss")
+  (require "data-structures.ss" "configuration.ss")
 
   (provide/contract
    
@@ -40,11 +40,15 @@
         (union package? false/c))]
    [get-package-version-by-id
     (-> natural-number/c natural-number/c (union pkgversion? false/c))]
+   [reassociate-package-with-categories
+    (package? (listof (or/c category? natural-number/c)) . -> . any)]
    [associate-package-with-category
     (package?
-     category?
+     (or/c category? natural-number/c)
      . -> .
      void?)]
+   [get-package-categories
+    (package? . -> . (listof category?))]
    [get-all-repositories (-> (listof repository?))]
    [legal-repository? (-> number? boolean?)]
    [startup (-> void?)]
@@ -93,27 +97,33 @@
   (define retrying-connection%
     (class* object% ()
       (init-field get-conn)
-      (define conn (get-conn))
       
-      (define/public (perform-action action)
-        (when (send conn disconnected?)
-          (set! conn (get-conn)))
-        (action))
+      (define/public (perform-action query action)
+        ;; the commented lines are timing data --- i really should figure out some
+        ;; good way to log this all the time
+        (let* (;[_ (printf "~s\n" query)]
+               ;[start-time (current-milliseconds)]
+               [conn (get-conn)])
+          (begin0
+            (action conn)
+            (send conn disconnect)
+            ;(printf "~a milliseconds\n\n" (- (current-milliseconds) start-time))
+            )))
         
-        
-      (define/public (query-value . args)
-        (perform-action (λ () (send/apply conn query-value args))))
-      (define/public (query-tuple . args)
-        (perform-action (λ () (send/apply conn query-tuple args))))
-      (define/public (exec . args)
-        (perform-action (λ () (send/apply conn exec args))))
-      (define/public (map . args)
-        (perform-action (λ () (send/apply conn map args))))
-      (define/public (for-each . args)
-        (perform-action (λ () (send/apply conn for-each args))))
+      (define/public (query-value q . args)
+        (perform-action q (λ (c) (send/apply c query-value q args))))
+      (define/public (query-tuple q . args)
+        (perform-action q (λ (c) (send/apply c query-tuple q args))))
+      (define/public (exec q . args)
+        (perform-action q (λ (c) (send/apply c exec q args))))
+      (define/public (map q . args)
+        (perform-action q (λ (c) (send/apply c map q args))))
+      (define/public (for-each q . args)
+        (perform-action q (λ (c) (send/apply c for-each q args))))
       
+      ;; not needed if there's no connection pool
       (define/public (disconnect)
-        (send conn disconnect))
+        (void))
       
       (super-new)))
   
@@ -258,7 +268,7 @@
                              (fld (packages_without_categories) row 'name)
                              (blurb-string->blurb (fld (packages_without_categories) row 'pkg_blurb))
                              (fld (packages_without_categories) row 'homepage)
-                             (list (row->pkgversion (packages_without_categories) row)))))])
+                             (list (row->pkgversion (packages_without_categories) row (list rep))))))])
       results))
     
   ;; get-category-names : -> (listof category?)
@@ -303,8 +313,12 @@
                        (string-append " AND maj = "(number->string maj)" AND min >= "(number->string minlo)
                                       (if minhi (string-append " AND min <= "(number->string minhi)) ""))
                        "")
+                   " AND repository_id = "(number->string (DEFAULT-REPOSITORY))
                    " ORDER BY hidden, maj DESC, min DESC;")])
-      (send *db* map query (lambda row (row->pkgversion (all_packages) row)))))
+      (send *db* map query 
+            (lambda row 
+              (let ([rep (fld (all_packages) row 'repository_id)])
+                (row->pkgversion (all_packages) row (list rep)))))))
   
   ;; ----------------------------------------
   ;; table defs
@@ -355,9 +369,9 @@
   ;; row->pkgversion : (listof TST)[row] (listof symbol)[column names for the given row] -> pkgversion?
   ;; converts row into a pkgversion structure. RUNS AN AUXILIARY DB QUERY to determine
   ;; repositories.
-  (define (row->pkgversion columns row)
+  (define (row->pkgversion columns row repositories)
     (let* ([id (fld (all_packages) row 'package_version_id)]
-           [repositories (send *db* map 
+           #;[repositories (send *db* map 
                                (string-append "SELECT repository_id FROM version_repositories WHERE package_version_id = "(number->string id))
                                (lambda (x) x))]
            [f (lambda (col) (fld columns row col))])
@@ -381,11 +395,14 @@
        (f 'downloads))))
   
   ;; get-package : string string [boolean] -> (union package #f)
+  ;; gets the given package by owner and package name
+  ;; [could be reduced to get-package-by-id, but i'm a little concerned about the number
+  ;;  of queries I'm generating at the moment]
   (define get-package
     (opt-lambda (owner name [include-hidden? #f])
       (let* ([query
               (string-append
-               "SELECT * FROM all_packages_without_repositories "
+               "SELECT * FROM all_packages "
                " WHERE username = "(escape-sql-string owner)
                " AND name = "(escape-sql-string name)
                (if include-hidden?
@@ -393,18 +410,18 @@
                    " AND hidden = false")
                " ORDER BY maj DESC, min DESC")]
              [pkgversions (send *db* map query list)])
-        (version-rows->package (all_packages_without_repositories) pkgversions))))
+        (version-rows->package (all_packages) pkgversions))))
   
   ;; get-package-by-id : nat nat -> (union package #f)
   ;; gets the given package id, but only if its owner is the given owner
   (define (get-package-by-id pkg-id user-id)
     (let* ([query 
             (string-append
-             "SELECT * FROM all_packages_without_repositories WHERE contributor_id = "(number->string user-id)
+             "SELECT * FROM all_packages WHERE contributor_id = "(number->string user-id)
              " AND package_id = "(number->string pkg-id)
              " ORDER BY maj DESC, min DESC")]
            [pkgversions (send *db* map query list)])
-      (version-rows->package (all_packages_without_repositories) pkgversions)))
+      (version-rows->package (all_packages) pkgversions)))
          
   ;; this function relies on the idea the rows passed in will be from a derivative of the all_packages
   ;; query and at least have its rows as a prefix
@@ -413,12 +430,31 @@
       [(null? pkgversions) #f]
       [else
        (make-package
-        (fld (all_packages) (car pkgversions) 'package_id)
-        (fld (all_packages) (car pkgversions) 'username)
-        (fld (all_packages) (car pkgversions) 'name)
-        (blurb-string->blurb (fld (all_packages) (car pkgversions) 'pkg_blurb))
-        (fld (all_packages) (car pkgversions) 'homepage)
-        (map (lambda (r) (row->pkgversion columns r)) pkgversions))]))        
+        (fld columns (car pkgversions) 'package_id)
+        (fld columns (car pkgversions) 'username)
+        (fld columns (car pkgversions) 'name)
+        (blurb-string->blurb (fld columns (car pkgversions) 'pkg_blurb))
+        (fld columns (car pkgversions) 'homepage)
+        (let outer-loop ([rows pkgversions])
+          (if (null? rows)
+              '()
+              (let loop ([rest (cdr rows)]
+                         [first (car rows)]
+                         [maj (fld columns (car rows) 'maj)]
+                         [min (fld columns (car rows) 'min)]
+                         [reps (list (fld columns (car rows) 'repository_id))])
+                (cond
+                  [(or (null? rest)
+                       (not
+                        (and (= maj (fld columns (car rest) 'maj))
+                             (= min (fld columns (car rest) 'min)))))
+                   (cons (row->pkgversion columns first reps) (outer-loop rest))]
+                  [else
+                   (loop
+                    (cdr rest)
+                    (car rest)
+                    maj min
+                    (cons (fld columns (car pkgversions) 'repository_id) reps))])))))]))
   
   (define (get-package-version-by-id id user-id)
     (let* ([query (string-append
@@ -427,24 +463,44 @@
            [resls (send *db* map query list)])
       (cond
         [(null? resls) #f]
-        [(null? (cdr resls))
-         (row->pkgversion (all_packages) (car resls))]
         [else
-          (error 'get-package-version-by-id "too many package versions match the given id, something's wrong")])))
+         (let ([reps (map (λ (row) (fld (all_packages) row 'repository_id)) resls)])
+           (row->pkgversion (all_packages) (car resls) reps))])))
     
-    
-           
+  (define (reassociate-package-with-categories pkg categories)
+    (let ([query
+           (string-append 
+            "BEGIN TRANSACTION; "
+            "DELETE FROM package_categories WHERE package_id = "(number->string (package-id pkg))"; "
+            (apply string-append
+                   (map (λ (c)
+                          (string-append
+                           "INSERT INTO package_categories (package_id, category_id) "
+                           "VALUES ("
+                           (number->string (package-id pkg))", " 
+                           (number->string (if (number? c) c (category-id c)))"); "))
+                        categories))
+            "COMMIT TRANSACTION;")])
+      (send *db* exec query)
+      (void)))
   
   (define (associate-package-with-category pkg category)
     (let ([query (string-append
                   "INSERT INTO package_categories (package_id, category_id) "
                   "VALUES ("(number->string (package-id pkg))", "
-                            (number->string (category-id category))")")])
+                            (if (number? category)
+                                category
+                                (number->string (category-id category)))")")])
       (send *db* exec query)
       (void)))
   
-  
-  
+  (define (get-package-categories pkg)
+    (let ([query (string-append
+                  "SELECT c.id, c.name, c.shortname  FROM categories AS c, package_categories pc "
+                  "WHERE pc.category_id = c.id "
+                  " AND pc.package_id = "(number->string (package-id pkg)) "; ")])
+      (send *db* map query (λ (i n s) (make-category i n s #f))))) 
+                                        
   (define (get-all-repositories)
     (let ([query "SELECT id, name, client_lower_bound, client_upper_bound FROM repositories ORDER BY sort_order"])
       (send *db* map query make-repository)))
@@ -469,7 +525,7 @@
                            (fld (most_recent_packages) row 'name)
                            (blurb-string->blurb (fld (most_recent_packages) row 'pkg_blurb))
                            (fld (most_recent_packages) row 'homepage)
-                           (list (row->pkgversion (most_recent_packages) row))))))])
+                           (list (row->pkgversion (most_recent_packages) row (list repository)))))))])
       (map
        (lambda (x) (make-category (car (car x)) (cadr (car x)) #f (cadr x))) 
        (group rsl 

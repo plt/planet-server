@@ -12,6 +12,7 @@
    field-nonblank
    fields-exist
    fields-nonblank
+   fields-ascii
    field-constraint
    field-lengths<=
    field-lengths-in
@@ -65,37 +66,45 @@
          =>
          (λ (result) (or result '()))])))
   
+  
+  (define (fields-constraint pred gen-message)
+    (λ fields
+      (λ (b)
+        (srfi1:filter-map
+         (λ (field)
+           (if (or (not (exists-binding? field b))
+                   (pred (car (extract-bindings field b))))
+               #f
+               `(,field (message ,@(gen-message (extract-bindings field b))))))
+         fields))))
+  
   (define (field-lengths<= n . fields)
-    (λ (b)
-      (srfi1:filter-map
-       (λ (field)
-         (if (or (not (exists-binding? field b))
-                 (<= (string-length (car (extract-bindings field b))) n))
-             #f
-             `(,field (message "Must be <= " ,(number->string n) " letters"))))
-       fields)))
+    (apply (fields-constraint
+            (λ (b) (<= (string-length b) n))
+            (λ (b) `("Must be <= " ,(number->string n) " letters")))
+           fields))
   
   (define (field-lengths-in min max . fields)
-    (λ (b)
-      (srfi1:filter-map
-       (λ (field)
-         (if (or (not (exists-binding? field b))
-                 (let ([s (car (extract-bindings field b))])
-                   (and (>= (string-length s) min)
-                        (<= (string-length s) max))))
-             #f
-             `(,field (message "Must be from " ,(number->string min) " to " ,(number->string max) " letters"))))
-       fields)))
+    (apply (fields-constraint
+            (λ (b) (and (>= (string-length b) min)
+                        (<= (string-length b) max)))
+            (λ (b) `("Must be from " ,(number->string min) " to " ,(number->string max) " letters")))
+           fields))
   
   (define (field-lengths>= n . fields)
-    (λ (b)
-      (srfi1:filter-map
-       (λ (field)
-         (if (or (not (exists-binding? field b))
-                 (>= (string-length (car (extract-bindings field b))) n))
-             #f
-             `(,field (message "Must be >= " ,(number->string n) " letters"))))
-       fields)))
+    (apply (fields-constraint 
+            (λ (b) (>= (string-length b n)))
+            (λ (_) `("Must be >= " ,(number->string n) " letters")))
+           fields))
+  
+  (define fields-ascii
+    (fields-constraint
+     (λ (b) 
+       (with-handlers ([exn:fail:contract? (λ (e) #f)])
+         (begin 
+           (string->bytes/latin-1 b)
+           #t)))
+     (λ (b) `("Must consist entirely of ASCII characters"))))
   
   (define (wrap-as-demand-p pred formatter)
     (λ args
