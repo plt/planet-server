@@ -93,7 +93,7 @@
   
   (define (field-lengths>= n . fields)
     (apply (fields-constraint 
-            (λ (b) (>= (string-length b n)))
+            (λ (b) (>= (string-length b) n))
             (λ (_) `("Must be >= " ,(number->string n) " letters")))
            fields))
   

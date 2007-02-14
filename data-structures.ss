@@ -6,7 +6,7 @@
 
   (provide (struct user (id username realname email))
            (struct category (id name shortname packages))
-           (struct package (id owner name blurb homepage versions))
+           (struct package (id owner name blurb homepage versions bugtrack-id))
            (struct pkgversion (id
                                package-id
                                maj min
@@ -18,6 +18,7 @@
                                repositories
                                required-core
                                downloads))
+           (struct primary-file (name xexpr))
            (struct repository (id name client-lower-bound client-upper-bound)))
 
   (define-struct user (id       ; nat
@@ -34,13 +35,14 @@
                            )
     (make-inspector))
 
-  (define-struct package (id         ; nat
-                          owner      ; string
-                          name       ; string
-                          blurb      ; (listof xexpr) | #f
-                          homepage   ; string[url] | #f
-                          versions   ; (ne-listof pkgversion)[sorted newest to oldest]
-                                     ; #f [for a package-stub]
+  (define-struct package (id          ; nat
+                          owner       ; string
+                          name        ; string
+                          blurb       ; (listof xexpr) | #f
+                          homepage    ; string[url] | #f
+                          versions    ; (ne-listof pkgversion)[sorted newest to oldest]
+                                      ; #f [for a package-stub]
+                          bugtrack-id ; nat : foreign key into mantis database
                           )
     (make-inspector))
 
@@ -55,7 +57,12 @@
                              downloads)
     (make-inspector))
 
-  (define-struct repository (id name client-lower-bound client-upper-bound))
+  (define-struct primary-file (name  ; string 
+                               xexpr ; xexpr | #f
+                               ) 
+    (make-inspector))
+  
+  (define-struct repository (id name client-lower-bound client-upper-bound) (make-inspector))
 
   ;; ============================================================
   ;; UTILITY

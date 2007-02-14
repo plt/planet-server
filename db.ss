@@ -7,8 +7,10 @@
   (require (lib "xml.ss" "xml"))
   (require (lib "list.ss"))
   (require (lib "etc.ss"))
+  (require (lib "match.ss"))
+  (require (lib "pretty.ss"))
   
-  (require "data-structures.ss" "configuration.ss")
+  (require "data-structures.ss" "configuration.ss" (prefix mantis: "mantis.ss"))
 
   (provide/contract
    
@@ -47,8 +49,9 @@
      (or/c category? natural-number/c)
      . -> .
      void?)]
-   [get-package-categories
-    (package? . -> . (listof category?))]
+   [get-package-categories (package? . -> . (listof category?))]
+   [pkgversion->primary-files (pkgversion? . -> . (listof primary-file?))]
+   [downloads-this-week (pkgversion? . -> . natural-number/c)]
    [get-all-repositories (-> (listof repository?))]
    [legal-repository? (-> number? boolean?)]
    [startup (-> void?)]
@@ -171,7 +174,9 @@
                (escape-sql-string realname)", "
                (escape-sql-string email)", "
                "md5("(escape-sql-string password)"))"))
-        (make-user id username realname email))))
+        (let ([user (make-user id username realname email)])
+          (mantis:create-account user password)
+          user))))
   
   (define (valid-password? user pass)
     (let ([query (string-append
@@ -262,13 +267,15 @@
                                  " ORDER BY name")]
            [results (send *db* map query
                           (lambda row
-                            (make-package
-                             (fld (packages_without_categories) row 'package_id)
-                             (fld (packages_without_categories) row 'username)
-                             (fld (packages_without_categories) row 'name)
-                             (blurb-string->blurb (fld (packages_without_categories) row 'pkg_blurb))
-                             (fld (packages_without_categories) row 'homepage)
-                             (list (row->pkgversion (packages_without_categories) row (list rep))))))])
+                            (let ([f (λ (n) (fld (packages_without_categories) row n))])
+                              (make-package
+                               (f 'package_id)
+                               (f 'username)
+                               (f 'name)
+                               (blurb-string->blurb (f 'pkg_blurb))
+                               (f 'homepage)
+                               (list (row->pkgversion (packages_without_categories) row (list rep)))
+                               (f 'bugtrack_id)))))])
       results))
     
   ;; get-category-names : -> (listof category?)
@@ -283,16 +290,25 @@
   (define (add-package-to-db! user package-name blurb homepage)
     (let* ([id (send *db* query-value "SELECT nextval('packages_pk') AS pk")]
            [query (string-append 
-                   "INSERT INTO packages (id, owner_id, name, blurb) VALUES "
+                   "INSERT INTO packages (id, owner_id, name, blurb, bugtrack_id) VALUES "
                    "("(number->string id)", "
                       (number->string (user-id user))", "
                       (escape-sql-string package-name)", "
                       (if blurb 
                           (escape-sql-string (format "~s" blurb))
-                          "NULL")")")])
+                          "NULL")", "
+                      "0" ;; dummy value that will be updated very shortly
+                      ")")])
       (begin
+        ;; FIXME: these two ought to be executed in the same transaction
         (send *db* exec query)
-        (make-package id (user-username user) package-name blurb homepage '()))))
+        (let* ([pkg (make-package id (user-username user) package-name blurb homepage '() #f)]
+               [mantis-id (mantis:associate-user-with-package user pkg)])
+          (send *db* exec 
+                (string-append "UPDATE packages SET bugtrack_id = "(number->string mantis-id)
+                               " WHERE id = "(number->string id)))
+          (set-package-bugtrack-id! pkg mantis-id)
+          pkg))))
                   
   
   ;; ------------------------------------------------------------
@@ -454,7 +470,8 @@
                     (cdr rest)
                     (car rest)
                     maj min
-                    (cons (fld columns (car pkgversions) 'repository_id) reps))])))))]))
+                    (cons (fld columns (car pkgversions) 'repository_id) reps))]))))
+        (fld columns (car pkgversions) 'bugtrack_id))]))
   
   (define (get-package-version-by-id id user-id)
     (let* ([query (string-append
@@ -499,7 +516,20 @@
                   "SELECT c.id, c.name, c.shortname  FROM categories AS c, package_categories pc "
                   "WHERE pc.category_id = c.id "
                   " AND pc.package_id = "(number->string (package-id pkg)) "; ")])
-      (send *db* map query (λ (i n s) (make-category i n s #f))))) 
+      (send *db* map query (λ (i n s) (make-category i n s #f)))))
+  
+  (define (pkgversion->primary-files pv)
+    (let ([query (string-append
+                  "SELECT filename, interface FROM primary_files WHERE package_version_id = "(number->string (pkgversion-id pv))
+                  " ORDER BY filename; ")])
+      (send *db* map query (λ (f x) (make-primary-file f (if (sql-null? x) #f (read-from-string x)))))))
+  
+  (define (downloads-this-week pv)
+    (let ([query (string-append
+                  "SELECT count(*) FROM downloads "
+                  "WHERE time > (current_timestamp - interval '7 days') "
+                  "AND package_version_id = "(number->string (pkgversion-id pv))"; ")])
+      (send *db* query-value query)))
                                         
   (define (get-all-repositories)
     (let ([query "SELECT id, name, client_lower_bound, client_upper_bound FROM repositories ORDER BY sort_order"])
@@ -525,7 +555,8 @@
                            (fld (most_recent_packages) row 'name)
                            (blurb-string->blurb (fld (most_recent_packages) row 'pkg_blurb))
                            (fld (most_recent_packages) row 'homepage)
-                           (list (row->pkgversion (most_recent_packages) row (list repository)))))))])
+                           (list (row->pkgversion (most_recent_packages) row (list repository)))
+                           (fld (most_recent_packages) row 'bugtrack_id)))))])
       (map
        (lambda (x) (make-category (car (car x)) (cadr (car x)) #f (cadr x))) 
        (group rsl 
@@ -584,6 +615,7 @@
                  (cond
                    [(not required-core) "NULL"]
                    [else (number->string required-core)]))])]
+           [mainfile (info.ss 'primary-file (λ () #f))]
            [id (send *db* query-value "SELECT nextval('package_versions_pk')")]
            [query
             (string-append 
@@ -608,7 +640,49 @@
              required-core-str", "
              "0)")])
       (send *db* exec query)
+      (when mainfile (reset-primary-files id (list (list unpacked-package-path mainfile))))
       id))
+  
+  ;; the association between package versions and primary files is one-to-many even
+  ;; though users can only submit one primary file at the moment because users will
+  ;; be able to submit more than one primary file at once in the near future
+  (define (reset-primary-files id bases+files)
+    (let* ([inserts
+            (map (λ (base+file)
+                   ;; note: we assume here that the caller has already verified that the
+                   ;; package doesn't have malicious field contents; in particular that
+                   ;; it doesn't have mainfiles like ../../../../etc/passwd or something
+                   (let* ([basepath (car base+file)]
+                          [filename (cadr base+file)]
+                          [xexpr (get-interface-xexpr (build-path basepath filename))])
+                     (string-append
+                      "INSERT INTO primary_files (package_version_id, filename, interface) "
+                      "VALUES ("
+                      (number->string id)", "
+                      (escape-sql-string filename)", "
+                      (if xexpr (escape-sql-string (format "~s" xexpr)) "NULL")
+                      "); ")))
+                 bases+files)]
+           [query
+            (string-append
+             "BEGIN TRANSACTION; "
+             "DELETE FROM primary_files WHERE package_version_id = "(number->string id)"; "
+             (apply string-append inserts)
+             "COMMIT TRANSACTION; ")])
+      (send *db* exec query)))
+
+  ;; recompute-all-primary-files : -> void
+  ;; rebuilds all package-version primary file information from the information
+  ;; in source files
+  (define (recompute-all-primary-files)
+    (for-each-package-version
+     (λ (_ pv)
+       (when (and
+              (pkgversion-default-file pv)
+              (file-exists? (build-path (pkgversion-src-path pv) (pkgversion-default-file pv))))
+         (reset-primary-files
+          (pkgversion-id pv)
+          (list (list (pkgversion-src-path pv) (pkgversion-default-file pv))))))))
   
   (define (sqlize-blurb xexprs)
     (if xexprs
@@ -685,7 +759,8 @@
                       (f 'name)
                       (blurb-string->blurb (f 'pkg_blurb))
                       (f 'homepage)
-                      #f)]
+                      #f
+                      (f 'bugtrack_id))]
                [pkgver
                 (make-pkgversion
                  (f 'package_version_id)
@@ -739,15 +814,7 @@
   ;; MISC
   
   (define (escape-sql-string s) 
-    (format "'~a'" 
-            (foldl 
-             (λ (t r) (regexp-replace* (car t) r (cadr t)))
-             s
-             (list 
-              (list #rx"'" "\\\\'")
-              (list #rx"\"" "\\\\\"")
-              (list #rx"\\" "\\\\\\")
-              ))))
+    (sql-marshal 'varchar s))
   
   ;; group  : {listof X} (X -> (values Y Z) -> (listof (list Y (listof Z)))
   ;; groups l into contiguous stripes that give the same answer to f
@@ -777,4 +844,54 @@
     (cond
       [(string? b) (list b)]
       [(not b) (list "[no description]")]
-      [else b])))
+      [else b]))
+  
+  ;; get-interface-expr : path[filename] -> xexpr
+  ;; gets a <pre>...</pre> xexpr corresponding to the provide and provide/contract statements
+  ;; in the given file, if it is a module, or a dummy otherwise.
+  (define (get-interface-xexpr file)
+    (let ([main-expr (with-input-from-file file read)]) ; should i check that there's nothing else following this expr?
+      (cond
+        [(and (pair? main-expr) (eq? (car main-expr) 'module))
+         (let loop ([exprs (cdr main-expr)]
+                    ;; holds a list of provide and provide/contract statements. the outer list
+                    ;; is reverse sorted throughout the progream; the inner lists are verbatim
+                    [provides '()])
+           (cond
+             [(null? exprs)
+              (let* ([provides (reverse! provides)]
+                     [bodies (map provide-statement->string provides)])
+                `(pre ,(apply string-append bodies)))]
+             [else
+              (match (car exprs)
+                [`(provide ,names ...)
+                  (loop (cdr exprs) (cons (car exprs) provides))]
+                [`(provide/contract ,clauses ...)
+                  (loop (cdr exprs) (cons (car exprs) provides))]
+                [_ (loop (cdr exprs) provides)])]))]
+        [else
+         `(pre "[non-module file]")])))
+
+  (define (pretty-format expr)
+    (parameterize ([pretty-print-columns 100])
+      (let ([op (open-output-string)])
+        (pretty-print expr op)
+        (get-output-string op))))
+  
+  (define (format-provide expr)
+    (string-append (pretty-format expr)))
+  
+  (define (format-contract expr)
+    (let ([name (car expr)]
+          [contract (cadr expr)])
+      (string-append (format "~a ::\n" name) (pretty-format contract))))
+  
+  (define (provide-statement->string p)
+    (match p
+      [`(provide ,clause ...)
+        (apply string-append (map format-provide clause))]
+      [`(provide/contract ,clause ...)
+        (apply string-append (map format-contract clause))]))
+  
+  
+  )

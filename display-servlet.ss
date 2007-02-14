@@ -4,11 +4,13 @@
   ;; servlet that displays planet's contents to the world
   
   
-  (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss")
+  (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss" "configuration.ss")
+  (require "mantis.ss") ;; bug tracking
   (require (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
            (lib "url.ss" "net")
            (lib "cookie.ss" "net")
+           (lib "date.ss")
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   (provide interface-version timeout start)
@@ -147,22 +149,77 @@
     ;; ============================================================
     ;; PACKAGE PAGE
     
+    (define (display-primary-file pf)
+      `(div ((class "primaryFile"))
+        (div ((class "name")) ,(primary-file-name pf))
+        (div ((class "interface")) ,(or (primary-file-xexpr pf) `(i "[no interface available]")))))
+    
+    ;; bug-report-page : package -> string[url]
+    ;; generates a url that will allow a user to submit a bug report to the given package
+    ;; note that due to annoying design decisions in mantis this requires both a redirect and
+    ;; a cookie setting, both of which should be handled by the url this points to
+    (define (bug-report-page pkg)
+      ((MANTIS-BUG-REPORT-PAGE-URL) (package-bugtrack-id pkg)))
+      
     ;; gen-package-page : package -> xexpr[xhtml]
     ;; generates the web page for a particular package
     (define (gen-package-page pkg)
       (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
              (list (package-name pkg) (package->link pkg)))
-       `((div 
-          ((id "packageHeader"))
-          (div ((class "packageTitle")) 
-               "Package " (b ((class "packageName")) ,(package-name pkg))
-               " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))
-               ,@(if (package-homepage pkg)
-                     `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
-                     '())) 
-          (div ((class "packageBlurb"))
-               ,@(or (package-blurb pkg) '("[no description available]"))))
+       `((table ((width "100%") (padding "2"))
+          (tr
+           (td ((id "packageHeader") (width "65%") (valign "top"))
+               (div ((class "packageTitle")) 
+                    "Package " (b ((class "packageName")) ,(package-name pkg))
+                    " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))
+                    ,@(if (package-homepage pkg)
+                          `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
+                          '())
+                    (br)
+                    "To load: " (tt ,(load-current pkg (package->current-version pkg)))) 
+               (div ((class "packageBlurb"))
+                    ,@(or (package-blurb pkg) '("[no description available]")))
+               ,@(map 
+                  display-primary-file 
+                  (pkgversion->primary-files (package->current-version pkg))))
+           (td ((valign "top") (id "projectStats"))
+               (h2 "Downloads")
+               (table
+                (tr
+                 (td "This week:") 
+                 (td ,(number->string (downloads-this-week (package->current-version pkg)))))
+                (tr
+                 (td "Total:") 
+                 (td ,(number->string 
+                       (apply + 
+                              (cons 
+                               (pkgversion-downloads (package->current-version pkg))
+                               (map pkgversion-downloads (package->old-versions pkg))))))))
+               
+               (h2 "Open bugs")
+               ,@(let ([bugs (get-open-bugs pkg)])
+                   (cond
+                     [(not bugs)
+                      `((p "No associated bugs database [this should be temporary]"))]
+                     [else
+                      (cond
+                        [(null? bugs)
+                         `((table ((width "100%") (id "noBugsBox"))
+                                  (tr (td "No open bugs!"))
+                                  (tr (td "["(a ((href ,(bug-report-page pkg))) "submit a bug report") "]"))))]
+                        [else
+                         `((table ((width "100%") (id "bugsBox")) 
+                                  (thead (tr (th "Summary") (th  "Date reported")))
+                                  ,@(map
+                                     (λ (b) 
+                                       `(tr 
+                                         (td ,(bug-summary b)) 
+                                         (td ,(parameterize ([date-display-format 'iso-8601])
+                                                (date->string (bug-submitted-on b))))
+                                         (td "["(a ((href ,(bug-url b))) "view")"]")))
+                                     bugs)
+                                  (tr (td ((colspan "2")) "["(a ((href ,(bug-report-page pkg))) "submit a bug report") "]"))))])])))))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])
@@ -242,12 +299,4 @@
              [else (loop (append rsep (list (car items)) acc) (cdr items))])))]))
  
   (define (string-join sep items)
-    (apply string-append (join (list sep) items)))
-  
-  
-  
-  
-    
-  
-  
-  )
+    (apply string-append (join (list sep) items))))
