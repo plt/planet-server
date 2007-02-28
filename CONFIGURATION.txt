@@ -1,0 +1,31 @@
+================================================================================
+CONFIGURATION.txt -- explanation of the planet server configuration
+================================================================================
+
+------------------------------------------------------------
+The planet server as it is currently incarnated consists of
+four major components:
+
+1. A plt-web-server-text (or plt-web-server) instance, configured to
+respond to requests that come in from the local host only, with the
+contents of svn/iplt/planet/ in a directory accessible as
+/servlets/planet/.
+
+2. An Apache instance with PHP, mod_proxy and mod_rewrite, open to the
+world.
+
+3. A Mantis instance set up in a particular way: each planet user is
+also a mantis user, each planet package is also a mantis project, and
+each package owner in planet is also a project manager in mantis. The
+user- and package-creation systems in planet maintain this invariant,
+but the user creation system in mantis does not. For this reason you
+should not create users or projects directly from Mantis.
+
+4. A PostgresQL instance with the schema described in planet.psql
+installed, and that mantis can use as well. It must be set up to
+accept tcp connections that come in on localhost.
+
+At a high level, requests come in to the Apache process. Apache is
+configured to rewrite-and-proxy a normal page view or download request
+to the plt-server instance running on localhost, and to send mantis
+requests to the mantis code.

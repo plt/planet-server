@@ -118,6 +118,16 @@
               (pkgversion-maj pv)
               (pkgversion-min pv)))
     
+    ;; doc-link : pkg pkgversion (listof xexpr) -> (listof xexpr)
+    ;; produces a link to the documentation of the given package, given a default "no docs exist" xexpr
+    (define (doc-link pkg pv failure)
+      (if (pkgversion-doctxt pv)
+          `("[" 
+            (a ((href ,(url->string (combine-url/relative (string->url (source-code-url pkg pv)) (pkgversion-doctxt pv)))))
+               "doc.txt")
+            "]")
+          failure))
+    
     ;; makes a set of table rows to present concise information about a particular version of
     ;; a given package and version.
     ;; Invariant: pv must be a version of the package pkg
@@ -132,12 +142,7 @@
             (td ((width "2em") (valign "top") (class "downloads"))
                 ,(number->string (pkgversion-downloads pv)))
             (td ((width "8em") (valign "top") (class "docs"))
-                ,@(if (pkgversion-doctxt pv)
-                      `("[" 
-                        (a ((href ,(url->string (combine-url/relative (string->url (source-code-url pkg pv)) (pkgversion-doctxt pv)))))
-                           "doc.txt")
-                        "]")
-                      `("[none]")))
+                ,@(doc-link pkg pv `("[none]")))
             (td ((width "*") (valign "top") (class "toload")) 
                 (tt ,(to-load-fn pkg pv))))
             
@@ -173,6 +178,8 @@
                (div ((class "packageTitle")) 
                     "Package " (b ((class "packageName")) ,(package-name pkg))
                     " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))
+                    nbsp
+                    ,@(doc-link pkg (package->current-version pkg) '())
                     ,@(if (package-homepage pkg)
                           `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
                           '())

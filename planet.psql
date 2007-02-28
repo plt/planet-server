@@ -90,7 +90,7 @@ CREATE TABLE packages (
     blurb text,
     homepage character varying,
     hidden boolean DEFAULT false NOT NULL,
-    bugtrack_id integer
+    bugtrack_id integer NOT NULL
 );
 
 
@@ -353,7 +353,7 @@ CREATE SEQUENCE primary_files_pk
 
 
 --
--- TOC entry 68 (OID 67253)
+-- TOC entry 70 (OID 67253)
 -- Name: downloads_time_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -361,7 +361,7 @@ CREATE INDEX downloads_time_idx ON downloads USING btree ("time");
 
 
 --
--- TOC entry 67 (OID 67254)
+-- TOC entry 69 (OID 67254)
 -- Name: downloads_pkgversion_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -369,7 +369,7 @@ CREATE INDEX downloads_pkgversion_idx ON downloads USING btree (package_version_
 
 
 --
--- TOC entry 75 (OID 67274)
+-- TOC entry 77 (OID 67274)
 -- Name: primary_files_pkgversion_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -382,6 +382,14 @@ CREATE INDEX primary_files_pkgversion_idx ON primary_files USING btree (package_
 --
 
 CREATE INDEX package_versions_pkg_idx ON package_versions USING btree (package_id);
+
+
+--
+-- TOC entry 63 (OID 74984)
+-- Name: packages_owner_idx; Type: INDEX; Schema: public; Owner: jacobm
+--
+
+CREATE INDEX packages_owner_idx ON packages USING btree (owner_id);
 
 
 --
@@ -403,7 +411,7 @@ ALTER TABLE ONLY package_versions
 
 
 --
--- TOC entry 62 (OID 17197)
+-- TOC entry 64 (OID 17197)
 -- Name: packages_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -412,7 +420,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 63 (OID 17213)
+-- TOC entry 65 (OID 17213)
 -- Name: dependences_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -421,7 +429,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 64 (OID 17229)
+-- TOC entry 66 (OID 17229)
 -- Name: categories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -430,7 +438,7 @@ ALTER TABLE ONLY categories
 
 
 --
--- TOC entry 66 (OID 17264)
+-- TOC entry 68 (OID 17264)
 -- Name: downloads_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -439,7 +447,7 @@ ALTER TABLE ONLY downloads
 
 
 --
--- TOC entry 71 (OID 33656)
+-- TOC entry 73 (OID 33656)
 -- Name: repositories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -448,7 +456,7 @@ ALTER TABLE ONLY repositories
 
 
 --
--- TOC entry 70 (OID 33658)
+-- TOC entry 72 (OID 33658)
 -- Name: repositories_name_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -457,7 +465,7 @@ ALTER TABLE ONLY repositories
 
 
 --
--- TOC entry 72 (OID 33664)
+-- TOC entry 74 (OID 33664)
 -- Name: version_repositories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -466,7 +474,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 73 (OID 41895)
+-- TOC entry 75 (OID 41895)
 -- Name: errors_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -475,7 +483,7 @@ ALTER TABLE ONLY errors
 
 
 --
--- TOC entry 65 (OID 58219)
+-- TOC entry 67 (OID 58219)
 -- Name: categories_shortname_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -484,7 +492,7 @@ ALTER TABLE ONLY categories
 
 
 --
--- TOC entry 74 (OID 67268)
+-- TOC entry 76 (OID 67268)
 -- Name: primary_files_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -493,7 +501,7 @@ ALTER TABLE ONLY primary_files
 
 
 --
--- TOC entry 69 (OID 67277)
+-- TOC entry 71 (OID 67277)
 -- Name: package_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -502,7 +510,16 @@ ALTER TABLE ONLY package_categories
 
 
 --
--- TOC entry 77 (OID 17207)
+-- TOC entry 62 (OID 74982)
+-- Name: packages_bugtrack_id_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
+--
+
+ALTER TABLE ONLY packages
+    ADD CONSTRAINT packages_bugtrack_id_key UNIQUE (bugtrack_id);
+
+
+--
+-- TOC entry 79 (OID 17207)
 -- Name: contributors_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -511,7 +528,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 78 (OID 17216)
+-- TOC entry 80 (OID 17216)
 -- Name: this_package_version_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -520,7 +537,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 79 (OID 17220)
+-- TOC entry 81 (OID 17220)
 -- Name: target_package_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -529,7 +546,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 81 (OID 25468)
+-- TOC entry 83 (OID 25468)
 -- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -538,7 +555,7 @@ ALTER TABLE ONLY package_categories
 
 
 --
--- TOC entry 76 (OID 41915)
+-- TOC entry 78 (OID 41915)
 -- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -547,7 +564,7 @@ ALTER TABLE ONLY package_versions
 
 
 --
--- TOC entry 83 (OID 41919)
+-- TOC entry 85 (OID 41919)
 -- Name: $3; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -556,7 +573,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 84 (OID 41923)
+-- TOC entry 86 (OID 41923)
 -- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -565,7 +582,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 82 (OID 41927)
+-- TOC entry 84 (OID 41927)
 -- Name: $3; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -574,7 +591,7 @@ ALTER TABLE ONLY package_categories
 
 
 --
--- TOC entry 80 (OID 41949)
+-- TOC entry 82 (OID 41949)
 -- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -583,7 +600,7 @@ ALTER TABLE ONLY downloads
 
 
 --
--- TOC entry 85 (OID 67270)
+-- TOC entry 87 (OID 67270)
 -- Name: primary_files_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
