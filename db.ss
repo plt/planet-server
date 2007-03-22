@@ -850,8 +850,9 @@
   ;; gets a <pre>...</pre> xexpr corresponding to the provide and provide/contract statements
   ;; in the given file, if it is a module, or a dummy otherwise.
   (define (get-interface-xexpr file)
-    (let ([main-expr (with-input-from-file file read)]) ; should i check that there's nothing else following this expr?
+    (let ([main-expr (and (file-exists? file) (with-input-from-file file read))]) ; should i check that there's nothing else following this expr?
       (cond
+        [(not main-expr) `(pre "[file does not exist]")]
         [(and (pair? main-expr) (eq? (car main-expr) 'module))
          (let loop ([exprs (cdr main-expr)]
                     ;; holds a list of provide and provide/contract statements. the outer list
