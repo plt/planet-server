@@ -164,9 +164,7 @@
       (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
              (list (package-name pkg) (package->link pkg)))
-       `((table ((width "100%") (padding "2"))
-          (tr
-           (td ((id "packageHeader") (width "65%") (valign "top"))
+       `((div ((id "packageHeader"))
                (div ((class "packageTitle")) 
                     "Package " (b ((class "packageName")) ,(package-name pkg))
                     " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))
@@ -176,13 +174,23 @@
                           `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
                           '())
                     (br)
-                    "To load: " (tt ,(load-current pkg (package->current-version pkg)))) 
+                    "To load: " (tt ,(load-current pkg (package->current-version pkg)))
+                    (br)
+                    "Downloads this week: " ,(number->string (downloads-this-week (package->current-version pkg)))
+                    (br)
+                    "Total downloads: " ,(number->string 
+                                          (apply + 
+                                                 (cons 
+                                                  (pkgversion-downloads (package->current-version pkg))
+                                                  (map pkgversion-downloads (package->old-versions pkg)))))
+                    (br)
+                    ) 
                (div ((class "packageBlurb"))
                     ,@(or (package-blurb pkg) '("[no description available]")))
                ,@(map 
                   display-primary-file 
                   (pkgversion->primary-files (package->current-version pkg))))
-           (td ((valign "top") (id "projectStats"))
+         #;(td ((valign "top") (id "projectStats"))
                (h2 "Downloads")
                (table
                 (tr
@@ -194,7 +202,7 @@
                        (apply + 
                               (cons 
                                (pkgversion-downloads (package->current-version pkg))
-                               (map pkgversion-downloads (package->old-versions pkg)))))))))))
+                               (map pkgversion-downloads (package->old-versions pkg)))))))))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])
