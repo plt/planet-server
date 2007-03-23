@@ -5,7 +5,6 @@
   
   
   (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss" "configuration.ss")
-  (require "mantis.ss") ;; bug tracking
   (require (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
            (lib "url.ss" "net")
@@ -159,13 +158,6 @@
         (div ((class "name")) ,(primary-file-name pf))
         (div ((class "interface")) ,(or (primary-file-xexpr pf) `(i "[no interface available]")))))
     
-    ;; bug-report-page : package -> string[url]
-    ;; generates a url that will allow a user to submit a bug report to the given package
-    ;; note that due to annoying design decisions in mantis this requires both a redirect and
-    ;; a cookie setting, both of which should be handled by the url this points to
-    (define (bug-report-page pkg)
-      ((MANTIS-BUG-REPORT-PAGE-URL) (package-bugtrack-id pkg)))
-      
     ;; gen-package-page : package -> xexpr[xhtml]
     ;; generates the web page for a particular package
     (define (gen-package-page pkg)
@@ -202,31 +194,7 @@
                        (apply + 
                               (cons 
                                (pkgversion-downloads (package->current-version pkg))
-                               (map pkgversion-downloads (package->old-versions pkg))))))))
-               
-               (h2 "Open bugs")
-               ,@(let ([bugs (get-open-bugs pkg)])
-                   (cond
-                     [(not bugs)
-                      `((p "No associated bugs database [this should be temporary]"))]
-                     [else
-                      (cond
-                        [(null? bugs)
-                         `((table ((width "100%") (id "noBugsBox"))
-                                  (tr (td "No open bugs!"))
-                                  (tr (td "["(a ((href ,(bug-report-page pkg))) "submit a bug report") "]"))))]
-                        [else
-                         `((table ((width "100%") (id "bugsBox")) 
-                                  (thead (tr (th "Summary") (th  "Date reported")))
-                                  ,@(map
-                                     (λ (b) 
-                                       `(tr 
-                                         (td ,(bug-summary b)) 
-                                         (td ,(parameterize ([date-display-format 'iso-8601])
-                                                (date->string (bug-submitted-on b))))
-                                         (td "["(a ((href ,(bug-url b))) "view")"]")))
-                                     bugs)
-                                  (tr (td ((colspan "2")) "["(a ((href ,(bug-report-page pkg))) "submit a bug report") "]"))))])])))))
+                               (map pkgversion-downloads (package->old-versions pkg)))))))))))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])

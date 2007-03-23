@@ -42,7 +42,7 @@
                           homepage    ; string[url] | #f
                           versions    ; (ne-listof pkgversion)[sorted newest to oldest]
                                       ; #f [for a package-stub]
-                          bugtrack-id ; nat : foreign key into mantis database
+                          bugtrack-id ; nat : foreign key into mantis database [unused; included for future use]
                           )
     (make-inspector))
 

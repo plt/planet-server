@@ -10,7 +10,7 @@
   (require (lib "match.ss"))
   (require (lib "pretty.ss"))
   
-  (require "data-structures.ss" "configuration.ss" (prefix mantis: "mantis.ss"))
+  (require "data-structures.ss" "configuration.ss")
 
   (provide/contract
    
@@ -174,9 +174,7 @@
                (escape-sql-string realname)", "
                (escape-sql-string email)", "
                "md5("(escape-sql-string password)"))"))
-        (let ([user (make-user id username realname email)])
-          (mantis:create-account user password)
-          user))))
+        (make-user id username realname email))))
   
   (define (valid-password? user pass)
     (let ([query (string-append
@@ -300,15 +298,8 @@
                       "0" ;; dummy value that will be updated very shortly
                       ")")])
       (begin
-        ;; FIXME: these two ought to be executed in the same transaction
         (send *db* exec query)
-        (let* ([pkg (make-package id (user-username user) package-name blurb homepage '() #f)]
-               [mantis-id (mantis:associate-user-with-package user pkg)])
-          (send *db* exec 
-                (string-append "UPDATE packages SET bugtrack_id = "(number->string mantis-id)
-                               " WHERE id = "(number->string id)))
-          (set-package-bugtrack-id! pkg mantis-id)
-          pkg))))
+        (make-package id (user-username user) package-name blurb homepage '() #f))))
                   
   
   ;; ------------------------------------------------------------
