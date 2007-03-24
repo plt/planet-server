@@ -198,7 +198,7 @@
             (row external-name)]
           [`(all-from ,(? string? module-filename))
             (let ([url (file-link pkg pv module-filename module-filename)])
-              (row* `("(all-from " ,url ,module-filename)")"))]
+              (row* `("(all-from " ,url ")")))]
           [`(all-from-except ,(? string? module-filename) ,id ...)
             (let ([url (file-link pkg pv module-filename module-filename)])
               (row* `("(all-from-except " ,url ,@(space-prefix (map symbol->string id))")")))]
