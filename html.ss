@@ -98,7 +98,7 @@
     (let* ([new-bindings (delete 'rep (add-or-replace 'changerep 
                                                       (number->string (repository-id repository))
                                                       old-bindings))]
-           [new-url (format "display-servlet.ss?~a" (bindings->get-line new-bindings))])
+           [new-url (format "display.ss?~a" (bindings->get-line new-bindings))])
       new-url))
   
   (define (repository->url-string repository req)
