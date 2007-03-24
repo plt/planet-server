@@ -1,4 +1,4 @@
-(module add-servlet mzscheme
+(module add mzscheme
   
   (require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss" "demands.ss"
            "user-utilities.ss" "cookie-monster.ss")

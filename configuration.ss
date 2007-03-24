@@ -1,4 +1,4 @@
-module configuration mzscheme
+(module configuration mzscheme
   
   (provide (all-defined))
   (define FILE-STORAGE-PATH     (make-parameter (build-path "/Users/jacobm/tmp/planet-files")))

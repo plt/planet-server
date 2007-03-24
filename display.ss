@@ -1,4 +1,4 @@
-(module display-servlet mzscheme
+(module display mzscheme
   
   ;; ============================================================
   ;; servlet that displays planet's contents to the world
