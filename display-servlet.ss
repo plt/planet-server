@@ -342,7 +342,10 @@
             "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
            ,@(if (DISPLAY-ERRORS-OVER-WEB?)
                  `((p "The error message was: ")
-                   (pre ,(exn-message e)))
+                   (pre ,(let ([op (open-output-string)])
+                           (parameterize ([current-output-port op])
+                             ((error-display-handler) (exn-message e) e))
+                           (get-output-string op))))
                  '()))
          r)))
     
