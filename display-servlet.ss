@@ -331,23 +331,25 @@
                          (gen-package-page pkg)))))]))))
     
     (define (default-exception-handler r e)
-      (begin
-        (log-error 
-         (request-client-ip r)
-         (format "unhandled exception: ~a" (exn-message e)))
-        (mkdisplay
-         '("Error")
-         `((p 
-            "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
-            "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
-           ,@(if (DISPLAY-ERRORS-OVER-WEB?)
-                 `((p "The error message was: ")
-                   (pre ,(let ([op (open-output-string)])
-                           (parameterize ([current-error-port op])
-                             ((error-display-handler) (exn-message e) e))
-                           (get-output-string op))))
-                 '()))
-         r)))
+      (let ([exception-message 
+             (let ([op (open-output-string)])
+               (parameterize ([current-error-port op])
+                 ((error-display-handler) (exn-message e) e))
+               (get-output-string op))])
+        (begin
+          (log-error 
+           (request-client-ip r)
+           (format "unhandled exception: ~a" exception-message))
+          (mkdisplay
+           '("Error")
+           `((p 
+              "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
+              "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
+             ,@(if (DISPLAY-ERRORS-OVER-WEB?)
+                   `((p "The error message was: ")
+                     (pre ,exception-message))
+                   '()))
+           r))))
     
     ;; build-response : page -> response
     ;; constructs an appropriate response, given the web page to respond with
