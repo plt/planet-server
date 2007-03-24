@@ -184,7 +184,7 @@
             (get-output-string op))))
       
       (define (provide-item->table-rows p)
-        (define (row* exprs) `((tr (td ,@exprs) (td nbsp))))
+        (define (row* exprs) `((tr (td ,@exprs) (td mdash))))
         (define (row i) (row* (list (pretty-format i))))
         (define (space-prefix ls)
           (cond
@@ -227,8 +227,8 @@
             (div ((class "interface")) 
                  ,(cond
                     [(primary-file-xexpr pf)
-                     `(table
-                       (thead (th "Name") (th "Contract"))
+                     `(table ((width "60%"))
+                       (thead (th ((width "30%")) "Name") (th ((width "*")) "Contract"))
                        ,@(apply append (map provide->table-rows (primary-file-xexpr pf))))]
                     [else 
                      `(i "[no interface available]")]))))
