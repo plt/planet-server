@@ -129,6 +129,19 @@
             "]")
           failure))
     
+    ;; file-link: package pkgversion string xexpr -> xexpr
+    ;; give a link to the source code for the given file in the given package and version,
+    ;; or the contents of failure if that file doesn't exist
+    (define (file-link pkg pv file failure)
+      (if (file-exists? (build-path (pkgversion-src-path pv) file))
+         `(a ((href ,(file-url pkg pv file))) ,(format "~a" file))
+         failure))
+    
+    ;; file-url : package pkgversion string -> string[url]
+    ;; generate a url for the given file in the given package and version
+    (define (file-url pkg pv file)
+      (url->string (combine-url/relative (string->url (source-code-url pkg pv)) file)))
+    
     ;; makes a set of table rows to present concise information about a particular version of
     ;; a given package and version.
     ;; Invariant: pv must be a version of the package pkg
@@ -184,11 +197,11 @@
           [`(rename ,_ ,external-name)
             (row external-name)]
           [`(all-from ,(? string? module-filename))
-            (let ([url (url->string (combine-url/relative (string->url (source-code-url pkg pv)) module-filename))])
-              (row* `("(all-from "(a ((href ,url)) ,module-filename)")")))]
+            (let ([url (file-link pkg pv module-filename module-filename)])
+              (row* `("(all-from " ,url ,module-filename)")"))]
           [`(all-from-except ,(? string? module-filename) ,id ...)
-            (let ([url (url->string (combine-url/relative (string->url (source-code-url pkg pv)) module-filename))])
-              (row* `("(all-from-except " (a ((href ,url)) ,module-filename) ,@(space-prefix (map symbol->string id))")")))]
+            (let ([url (file-link pkg pv module-filename module-filename)])
+              (row* `("(all-from-except " ,url ,@(space-prefix (map symbol->string id))")")))]
           [_  
            ;; (struct ...), non-string all-from and all-from-except, (all-defined), (all-defined-except ...), 
            ;; (prefix-all-defined p), and (prefix-all-defined-except ...)
@@ -199,7 +212,7 @@
       
       (define (provide/contract-item->table-row p)
         (define (row* id-exprs contract-exprs) `(tr (td ,@id-exprs) (td ,@contract-exprs)))
-        (define (row id contract-expr) `(tr (td ,(format "~a" id)) (tr ,contract-expr)))
+        (define (row id contract-expr) `(tr (td ,(format "~a" id)) (td ,contract-expr)))
         (match p
           [`(struct ,id-expr ((,field ,contract) ...))
             (row* `((code ,(pretty-format `(struct ,id-expr ,@field)))) `(nbsp))]
@@ -209,7 +222,8 @@
             (row id (contract->xexpr contract))]))  
       
       `(div ((class "primaryFile"))
-            (div ((class "name")) ,(primary-file-name pf))
+            (div ((class "name")) 
+                 ,(file-link pkg pv (primary-file-name pf) (primary-file-name pf)))
             (div ((class "interface")) 
                  ,(cond
                     [(primary-file-xexpr pf)
@@ -218,16 +232,6 @@
                        ,@(apply append (map provide->table-rows (primary-file-xexpr pf))))]
                     [else 
                      `(i "[no interface available]")]))))
-    
-    
-    
-    
-          
-        
-      
-      
-      
-      
     
     ;; gen-package-page : package -> xexpr[xhtml]
     ;; generates the web page for a particular package
