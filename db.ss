@@ -846,7 +846,7 @@
   (define (get-interface-sexpr file)
     (let ([main-expr (and (file-exists? file) (with-input-from-file file read))]) ; should i check that there's nothing else following this expr?
       (cond
-        [(not main-expr) `(pre "[file does not exist]")]
+        [(not main-expr) #f]
         [(and (pair? main-expr) (eq? (car main-expr) 'module))
          (let loop ([exprs (cdr main-expr)]
                     ;; holds a list of provide and provide/contract statements. the outer list
@@ -861,8 +861,7 @@
                 [`(provide/contract ,clauses ...)
                   (loop (cdr exprs) (cons (car exprs) provides))]
                 [_ (loop (cdr exprs) provides)])]))]
-        [else
-         `(pre "[non-module file]")])))
+        [else #f])))
 
   #|
 (define (pretty-format expr)

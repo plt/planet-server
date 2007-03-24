@@ -345,11 +345,6 @@
                    (pre ,(exn-message e)))
                  '()))
          r)))
-            
-        
-        
-        
-        
     
     ;; build-response : page -> response
     ;; constructs an appropriate response, given the web page to respond with
