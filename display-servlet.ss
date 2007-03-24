@@ -343,7 +343,7 @@
            ,@(if (DISPLAY-ERRORS-OVER-WEB?)
                  `((p "The error message was: ")
                    (pre ,(let ([op (open-output-string)])
-                           (parameterize ([current-output-port op])
+                           (parameterize ([current-error-port op])
                              ((error-display-handler) (exn-message e) e))
                            (get-output-string op))))
                  '()))
