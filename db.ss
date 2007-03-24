@@ -645,13 +645,13 @@
                    ;; it doesn't have mainfiles like ../../../../etc/passwd or something
                    (let* ([basepath (car base+file)]
                           [filename (cadr base+file)]
-                          [xexpr (get-interface-xexpr (build-path basepath filename))])
+                          [sexpr (get-interface-sexpr (build-path basepath filename))])
                      (string-append
                       "INSERT INTO primary_files (package_version_id, filename, interface) "
                       "VALUES ("
                       (number->string id)", "
                       (escape-sql-string filename)", "
-                      (if xexpr (escape-sql-string (format "~s" xexpr)) "NULL")
+                      (if sexpr (escape-sql-string (format "~s" sexpr)) "NULL")
                       "); ")))
                  bases+files)]
            [query
@@ -837,10 +837,10 @@
       [(not b) (list "[no description]")]
       [else b]))
   
-  ;; get-interface-expr : path[filename] -> xexpr
+  ;; get-interface-expr : path[filename] -> (listof sexp[provide or provide/contract clause])
   ;; gets a <pre>...</pre> xexpr corresponding to the provide and provide/contract statements
   ;; in the given file, if it is a module, or a dummy otherwise.
-  (define (get-interface-xexpr file)
+  (define (get-interface-sexpr file)
     (let ([main-expr (and (file-exists? file) (with-input-from-file file read))]) ; should i check that there's nothing else following this expr?
       (cond
         [(not main-expr) `(pre "[file does not exist]")]
@@ -850,10 +850,7 @@
                     ;; is reverse sorted throughout the progream; the inner lists are verbatim
                     [provides '()])
            (cond
-             [(null? exprs)
-              (let* ([provides (reverse! provides)]
-                     [bodies (map provide-statement->string provides)])
-                `(pre ,(apply string-append bodies)))]
+             [(null? exprs) (reverse provides)]
              [else
               (match (car exprs)
                 [`(provide ,names ...)
@@ -864,7 +861,8 @@
         [else
          `(pre "[non-module file]")])))
 
-  (define (pretty-format expr)
+  #|
+(define (pretty-format expr)
     (parameterize ([pretty-print-columns 100])
       (let ([op (open-output-string)])
         (pretty-print expr op)
@@ -884,6 +882,7 @@
         (apply string-append (map format-provide clause))]
       [`(provide/contract ,clause ...)
         (apply string-append (map format-contract clause))]))
+|#
   
   
   )

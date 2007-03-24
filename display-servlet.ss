@@ -10,6 +10,8 @@
            (lib "url.ss" "net")
            (lib "cookie.ss" "net")
            (lib "date.ss")
+           (lib "pretty.ss")
+           (lib "match.ss")
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   (provide interface-version timeout start)
@@ -153,10 +155,79 @@
     ;; ============================================================
     ;; PACKAGE PAGE
     
-    (define (display-primary-file pf)
+    (define ((display-primary-file pkg pv) pf)
+      
+      (define (provide->table-rows provide)
+        (match provide
+          [`(provide ,p ...)
+            (apply append (map provide-item->table-rows p))]
+          [`(provide/contract ,pc ...)
+            (map provide/contract-item->table-row pc)]))
+      
+      (define (pretty-format i)
+        (let ([op (open-output-string)])
+          (parameterize ([pretty-print-columns 80])
+            (pretty-print i op)
+            (get-output-string op))))
+      
+      (define (provide-item->table-rows p)
+        (define (row* exprs) `((tr (td ,@exprs) (td nbsp))))
+        (define (row i) (row* (list (pretty-format i))))
+        (define (space-prefix ls)
+          (cond
+            [(null? ls) '()]
+            [else (list* " " (car ls) (space-prefix (cdr ls)))]))
+        
+        (match p
+          [(? symbol?)
+           (row p)]
+          [`(rename ,_ ,external-name)
+            (row external-name)]
+          [`(all-from ,(? string? module-filename))
+            (let ([url (url->string (combine-url/relative (string->url (source-code-url pkg pv)) module-filename))])
+              (row* `("(all-from "(a ((href ,url)) ,module-filename)")")))]
+          [`(all-from-except ,(? string? module-filename) ,id ...)
+            (let ([url (url->string (combine-url/relative (string->url (source-code-url pkg pv)) module-filename))])
+              (row* `("(all-from-except " (a ((href ,url)) ,module-filename) ,@(space-prefix (map symbol->string id))")")))]
+          [_  
+           ;; (struct ...), non-string all-from and all-from-except, (all-defined), (all-defined-except ...), 
+           ;; (prefix-all-defined p), and (prefix-all-defined-except ...)
+           (row p)]))
+      
+      (define (contract->xexpr contract)
+        `(code ,(pretty-format contract)))
+      
+      (define (provide/contract-item->table-row p)
+        (define (row* id-exprs contract-exprs) `(tr (td ,@id-exprs) (td ,@contract-exprs)))
+        (define (row id contract-expr) `(tr (td ,(format "~a" id)) (tr ,contract-expr)))
+        (match p
+          [`(struct ,id-expr ((,field ,contract) ...))
+            (row* `((code ,(pretty-format `(struct ,id-expr ,@field)))) `(nbsp))]
+          [`(rename ,_ ,id ,contract)
+            (row id (contract->xexpr contract))]
+          [`(,id ,contract)
+            (row id (contract->xexpr contract))]))  
+      
       `(div ((class "primaryFile"))
-        (div ((class "name")) ,(primary-file-name pf))
-        (div ((class "interface")) ,(or (primary-file-xexpr pf) `(i "[no interface available]")))))
+            (div ((class "name")) ,(primary-file-name pf))
+            (div ((class "interface")) 
+                 ,(cond
+                    [(primary-file-xexpr pf)
+                     `(table
+                       (thead (th "Name") (th "Contract"))
+                       ,@(apply append (map provide->table-rows (primary-file-xexpr pf))))]
+                    [else 
+                     `(i "[no interface available]")]))))
+    
+    
+    
+    
+          
+        
+      
+      
+      
+      
     
     ;; gen-package-page : package -> xexpr[xhtml]
     ;; generates the web page for a particular package
@@ -188,7 +259,7 @@
                (div ((class "packageBlurb"))
                     ,@(or (package-blurb pkg) '("[no description available]")))
                ,@(map 
-                  display-primary-file 
+                  (display-primary-file pkg (package->current-version pkg))
                   (pkgversion->primary-files (package->current-version pkg))))
          #;(td ((valign "top") (id "projectStats"))
                (h2 "Downloads")
