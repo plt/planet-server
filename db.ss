@@ -671,12 +671,15 @@
   (define (recompute-all-primary-files)
     (for-each-package-version
      (λ (_ pv)
-       (when (and
-              (pkgversion-default-file pv)
-              (file-exists? (build-path (pkgversion-src-path pv) (pkgversion-default-file pv))))
-         (reset-primary-files
-          (pkgversion-id pv)
-          (list (list (pkgversion-src-path pv) (pkgversion-default-file pv))))))))
+       (cond
+         [(and
+           (pkgversion-default-file pv)
+           (file-exists? (build-path (pkgversion-src-path pv) (pkgversion-default-file pv))))
+          (reset-primary-files
+           (pkgversion-id pv)
+           (list (list (pkgversion-src-path pv) (pkgversion-default-file pv))))]
+         [else
+         (reset-primary-files (pkgversion-id pv) '())]))))
   
   (define (sqlize-blurb xexprs)
     (if xexprs
