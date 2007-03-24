@@ -303,31 +303,53 @@
     ;; DISPATCHING APPARATUS
     
     (define (page-for-request initial-request)
-      (let* ([bindings (request-bindings req)]
-             [pkgname  (extract-bindings 'package bindings)]
-             [owner    (extract-bindings 'owner bindings)])
-        (cond
-          [(and (null? pkgname) (null? owner))
-           (gen-main-page)]
-          [(and (null? pkgname) (not (null? owner)))
-           (let ([user (get-user-record/no-password (car owner))])
-             (if (not user)
-                 (page
-                  (list (car owner))
-                  `((p "The requested user does not exist.")))
-                 (gen-user-page user)))]
-          [else
-           (let ([pkg (get-package (car owner) (car pkgname))])
-             (if (not pkg)
-                 (page
-                  (list (car owner) (car pkgname))
-                  `((p "The requested package does not exist.")))
-                 (let ([rpkg (filter-package-for-repository pkg rep)])
-                   (if (not rpkg)
-                       (page
-                        (list (car owner) (car pkgname))
-                        `((p "The requested package does not exist in this repository. Try another repository.")))
-                       (gen-package-page pkg)))))])))
+      (with-handlers ([exn:fail? (λ (e) (default-exception-handler initial-request e))])
+        (let* ([bindings (request-bindings req)]
+               [pkgname  (extract-bindings 'package bindings)]
+               [owner    (extract-bindings 'owner bindings)])
+          (cond
+            [(and (null? pkgname) (null? owner))
+             (gen-main-page)]
+            [(and (null? pkgname) (not (null? owner)))
+             (let ([user (get-user-record/no-password (car owner))])
+               (if (not user)
+                   (page
+                    (list (car owner))
+                    `((p "The requested user does not exist.")))
+                   (gen-user-page user)))]
+            [else
+             (let ([pkg (get-package (car owner) (car pkgname))])
+               (if (not pkg)
+                   (page
+                    (list (car owner) (car pkgname))
+                    `((p "The requested package does not exist.")))
+                   (let ([rpkg (filter-package-for-repository pkg rep)])
+                     (if (not rpkg)
+                         (page
+                          (list (car owner) (car pkgname))
+                          `((p "The requested package does not exist in this repository. Try another repository.")))
+                         (gen-package-page pkg)))))]))))
+    
+    (define (default-exception-handler r e)
+      (begin
+        (log-error 
+         (request-client-ip r)
+         (format "unhandled exception: ~a" (exn-message e)))
+        (mkdisplay
+         '("Error")
+         `((p 
+            "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
+            "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
+           @,(if (DISPLAY-ERRORS-OVER-WEB?)
+                 `((p "The error message was: ")
+                   (pre ,(exn-message e)))
+                 '()))
+         r)))
+            
+        
+        
+        
+        
     
     ;; build-response : page -> response
     ;; constructs an appropriate response, given the web page to respond with

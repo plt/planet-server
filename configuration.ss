@@ -11,5 +11,8 @@
   (define LOGOUT-PAGE           (make-parameter (string-append #;(URL-ROOT) #;(URL-SERVLET-BASE) "/add-servlet.ss?mode=logout")))
   (define WEB-PACKAGES-URL-ROOT (make-parameter (string-append #;(URL-ROOT) "/package-source/")))
   
-  (define DEFAULT-REPOSITORY (make-parameter 2)) ; the repository to show by default; corresponds to 3xx  
+  (define DEFAULT-REPOSITORY (make-parameter 2)) ; the repository to show by default; corresponds to 3xx
+  
+  (define DISPLAY-ERRORS-OVER-WEB? (make-parameter #t))
+  
   )
