@@ -1,0 +1,30 @@
+--
+-- PostgreSQL database dump
+--
+
+SET client_encoding = 'LATIN1';
+SET check_function_bodies = false;
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+SET search_path = public, pg_catalog;
+
+--
+-- Data for TOC entry 2 (OID 17718)
+-- Name: categories; Type: TABLE DATA; Schema: public; Owner: jacobm
+--
+
+INSERT INTO categories VALUES (1, 'Development Tools', 1, 'devtools');
+INSERT INTO categories VALUES (2, 'Networking and Protocols', 2, 'net');
+INSERT INTO categories VALUES (3, 'Graphics and Audio', 3, 'media');
+INSERT INTO categories VALUES (4, 'XML-Related', 4, 'xml');
+INSERT INTO categories VALUES (5, 'Data Structures and Algorithms', 5, 'datastructures');
+INSERT INTO categories VALUES (6, 'Input/Output and Filesystem', 6, 'io');
+INSERT INTO categories VALUES (7, 'Mathematical and Scientific', 7, 'scientific');
+INSERT INTO categories VALUES (8, 'Hardware/Operating System-Specific Tools', 8, 'system');
+INSERT INTO categories VALUES (9, 'Textual and Graphical User Interface', 9, 'ui');
+INSERT INTO categories VALUES (10, 'Metaprogramming Tools', 10, 'metaprogramming');
+INSERT INTO categories VALUES (11, 'PLaneT-Related', 11, 'planet');
+INSERT INTO categories VALUES (12, 'Miscellaneous', 12, 'misc');
+
+
