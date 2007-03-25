@@ -296,7 +296,7 @@
                       (if blurb 
                           (escape-sql-string (format "~s" blurb))
                           "NULL")", "
-                      "0" ;; dummy value that will be updated very shortly
+                      "NULL" ;; dummy value because bugtracking isn't implemented yet
                       ")")])
       (begin
         (send *db* exec query)
