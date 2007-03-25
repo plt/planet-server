@@ -2,7 +2,7 @@
   (require 
    (lib "contract.ss") (lib "servlet.ss" "web-server")
    "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
-   (file "/Users/jacobm/svn/iplt/web/common/layout.ss"))
+   (file "/local/svn/iplt/web/common/layout.ss"))
   
   (define bindings/c (listof (cons/c (union symbol? string?) string?)))
   (define title/c (or/c string? (list/c string? string?)))

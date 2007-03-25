@@ -1,8 +1,8 @@
 (module configuration mzscheme
   
   (provide (all-defined))
-  (define FILE-STORAGE-PATH     (make-parameter (build-path "/Users/jacobm/tmp/planet-files")))
-  (define WEB-PACKAGES-ROOT     (make-parameter (build-path "/Library/WebServer/Documents/package-source/")))
+  (define FILE-STORAGE-PATH     (make-parameter (build-path "/local/planet/archives")))
+  (define WEB-PACKAGES-ROOT     (make-parameter (build-path "/local/webroot/htdocs/package-source/")))
   
   (define URL-ROOT              (make-parameter "/"))
   (define URL-SERVLET-BASE      (make-parameter "/servlets"))
@@ -13,6 +13,4 @@
   
   (define DEFAULT-REPOSITORY (make-parameter 2)) ; the repository to show by default; corresponds to 3xx
   
-  (define DISPLAY-ERRORS-OVER-WEB? (make-parameter #t))
-  
-  )
+  (define DISPLAY-ERRORS-OVER-WEB? (make-parameter #t)))

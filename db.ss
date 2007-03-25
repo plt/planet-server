@@ -87,9 +87,7 @@
    
    [core-version-string->code (string? . -> . (union number? false/c))]
    [code->core-version-string (number? . -> . (union string? false/c))]
-   
    [recompute-all-primary-files (-> any)]
-   
    )
   
   (provide sql-null?)

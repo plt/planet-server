@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-SET client_encoding = 'SQL_ASCII';
+SET client_encoding = 'LATIN1';
 SET check_function_bodies = false;
 
 SET SESSION AUTHORIZATION 'postgres';
@@ -22,7 +22,7 @@ SET SESSION AUTHORIZATION 'jacobm';
 SET search_path = public, pg_catalog;
 
 --
--- TOC entry 11 (OID 17166)
+-- TOC entry 11 (OID 17692)
 -- Name: contributors; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -38,7 +38,17 @@ CREATE TABLE contributors (
 
 
 --
--- TOC entry 14 (OID 17186)
+-- TOC entry 14 (OID 17692)
+-- Name: contributors; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE contributors FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 15 (OID 17699)
 -- Name: package_versions; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -61,24 +71,19 @@ CREATE TABLE package_versions (
 
 
 --
--- TOC entry 23 (OID 17186)
+-- TOC entry 24 (OID 17699)
 -- Name: package_versions; Type: ACL; Schema: public; Owner: jacobm
 --
 
 REVOKE ALL ON TABLE package_versions FROM PUBLIC;
-REVOKE ALL ON TABLE package_versions FROM jacobm;
-SET SESSION AUTHORIZATION postgres;
 GRANT ALL ON TABLE package_versions TO postgres WITH GRANT OPTION;
-RESET SESSION AUTHORIZATION;
-SET SESSION AUTHORIZATION postgres;
 GRANT ALL ON TABLE package_versions TO GROUP planet;
-RESET SESSION AUTHORIZATION;
 
 
 SET SESSION AUTHORIZATION 'jacobm';
 
 --
--- TOC entry 24 (OID 17194)
+-- TOC entry 25 (OID 17707)
 -- Name: packages; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -95,7 +100,17 @@ CREATE TABLE packages (
 
 
 --
--- TOC entry 29 (OID 17211)
+-- TOC entry 30 (OID 17707)
+-- Name: packages; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE packages FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 31 (OID 17715)
 -- Name: dependences; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -110,7 +125,7 @@ CREATE TABLE dependences (
 
 
 --
--- TOC entry 35 (OID 17224)
+-- TOC entry 37 (OID 17718)
 -- Name: categories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -123,24 +138,19 @@ CREATE TABLE categories (
 
 
 --
--- TOC entry 38 (OID 17224)
+-- TOC entry 40 (OID 17718)
 -- Name: categories; Type: ACL; Schema: public; Owner: jacobm
 --
 
 REVOKE ALL ON TABLE categories FROM PUBLIC;
-REVOKE ALL ON TABLE categories FROM jacobm;
-SET SESSION AUTHORIZATION postgres;
 GRANT ALL ON TABLE categories TO postgres WITH GRANT OPTION;
-RESET SESSION AUTHORIZATION;
-SET SESSION AUTHORIZATION postgres;
 GRANT ALL ON TABLE categories TO GROUP planet;
-RESET SESSION AUTHORIZATION;
 
 
 SET SESSION AUTHORIZATION 'jacobm';
 
 --
--- TOC entry 39 (OID 17258)
+-- TOC entry 41 (OID 17723)
 -- Name: downloads; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -154,7 +164,17 @@ CREATE TABLE downloads (
 
 
 --
--- TOC entry 44 (OID 25462)
+-- TOC entry 46 (OID 17723)
+-- Name: downloads; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE downloads FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 47 (OID 17730)
 -- Name: package_categories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -165,27 +185,19 @@ CREATE TABLE package_categories (
 
 
 --
--- TOC entry 45 (OID 25462)
+-- TOC entry 48 (OID 17730)
 -- Name: package_categories; Type: ACL; Schema: public; Owner: jacobm
 --
 
 REVOKE ALL ON TABLE package_categories FROM PUBLIC;
-REVOKE ALL ON TABLE package_categories FROM jacobm;
-SET SESSION AUTHORIZATION postgres;
 GRANT ALL ON TABLE package_categories TO postgres WITH GRANT OPTION;
-RESET SESSION AUTHORIZATION;
-SET SESSION AUTHORIZATION postgres;
-GRANT INSERT,SELECT,UPDATE,DELETE ON TABLE package_categories TO jacobm;
-RESET SESSION AUTHORIZATION;
-SET SESSION AUTHORIZATION postgres;
 GRANT INSERT,SELECT,UPDATE,DELETE ON TABLE package_categories TO GROUP planet;
-RESET SESSION AUTHORIZATION;
 
 
 SET SESSION AUTHORIZATION 'jacobm';
 
 --
--- TOC entry 5 (OID 25501)
+-- TOC entry 5 (OID 17732)
 -- Name: package_versions_pk; Type: SEQUENCE; Schema: public; Owner: jacobm
 --
 
@@ -197,7 +209,7 @@ CREATE SEQUENCE package_versions_pk
 
 
 --
--- TOC entry 6 (OID 25503)
+-- TOC entry 6 (OID 17734)
 -- Name: packages_pk; Type: SEQUENCE; Schema: public; Owner: jacobm
 --
 
@@ -209,7 +221,7 @@ CREATE SEQUENCE packages_pk
 
 
 --
--- TOC entry 7 (OID 33645)
+-- TOC entry 7 (OID 17736)
 -- Name: contributors_pk; Type: SEQUENCE; Schema: public; Owner: jacobm
 --
 
@@ -221,7 +233,7 @@ CREATE SEQUENCE contributors_pk
 
 
 --
--- TOC entry 46 (OID 33651)
+-- TOC entry 49 (OID 17738)
 -- Name: repositories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -235,7 +247,17 @@ CREATE TABLE repositories (
 
 
 --
--- TOC entry 47 (OID 33662)
+-- TOC entry 50 (OID 17738)
+-- Name: repositories; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE repositories FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 51 (OID 17743)
 -- Name: version_repositories; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -246,11 +268,22 @@ CREATE TABLE version_repositories (
 
 
 --
--- TOC entry 8 (OID 41887)
+-- TOC entry 53 (OID 17743)
+-- Name: version_repositories; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE version_repositories FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 8 (OID 17745)
 -- Name: downloads_pk; Type: SEQUENCE; Schema: public; Owner: jacobm
 --
 
 CREATE SEQUENCE downloads_pk
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -258,7 +291,7 @@ CREATE SEQUENCE downloads_pk
 
 
 --
--- TOC entry 49 (OID 41889)
+-- TOC entry 54 (OID 17747)
 -- Name: errors; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -271,7 +304,17 @@ CREATE TABLE errors (
 
 
 --
--- TOC entry 9 (OID 41898)
+-- TOC entry 56 (OID 17747)
+-- Name: errors; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE errors FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 9 (OID 17754)
 -- Name: errors_pk; Type: SEQUENCE; Schema: public; Owner: jacobm
 --
 
@@ -283,7 +326,7 @@ CREATE SEQUENCE errors_pk
 
 
 --
--- TOC entry 51 (OID 67224)
+-- TOC entry 57 (OID 17758)
 -- Name: all_packages; Type: VIEW; Schema: public; Owner: jacobm
 --
 
@@ -292,7 +335,7 @@ CREATE VIEW all_packages AS
 
 
 --
--- TOC entry 52 (OID 67228)
+-- TOC entry 58 (OID 17762)
 -- Name: all_packages_without_repositories; Type: VIEW; Schema: public; Owner: jacobm
 --
 
@@ -301,7 +344,7 @@ CREATE VIEW all_packages_without_repositories AS
 
 
 --
--- TOC entry 53 (OID 67231)
+-- TOC entry 59 (OID 17765)
 -- Name: most_recent_packages; Type: VIEW; Schema: public; Owner: jacobm
 --
 
@@ -310,7 +353,7 @@ CREATE VIEW most_recent_packages AS
 
 
 --
--- TOC entry 54 (OID 67235)
+-- TOC entry 60 (OID 17769)
 -- Name: packages_with_categories; Type: VIEW; Schema: public; Owner: jacobm
 --
 
@@ -319,7 +362,7 @@ CREATE VIEW packages_with_categories AS
 
 
 --
--- TOC entry 55 (OID 67239)
+-- TOC entry 61 (OID 17773)
 -- Name: packages_without_categories; Type: VIEW; Schema: public; Owner: jacobm
 --
 
@@ -328,7 +371,7 @@ CREATE VIEW packages_without_categories AS
 
 
 --
--- TOC entry 56 (OID 67263)
+-- TOC entry 62 (OID 17775)
 -- Name: primary_files; Type: TABLE; Schema: public; Owner: jacobm
 --
 
@@ -341,7 +384,17 @@ CREATE TABLE primary_files (
 
 
 --
--- TOC entry 10 (OID 67280)
+-- TOC entry 65 (OID 17775)
+-- Name: primary_files; Type: ACL; Schema: public; Owner: jacobm
+--
+
+REVOKE ALL ON TABLE primary_files FROM PUBLIC;
+
+
+SET SESSION AUTHORIZATION 'jacobm';
+
+--
+-- TOC entry 10 (OID 17781)
 -- Name: primary_files_pk; Type: SEQUENCE; Schema: public; Owner: jacobm
 --
 
@@ -353,7 +406,7 @@ CREATE SEQUENCE primary_files_pk
 
 
 --
--- TOC entry 70 (OID 67253)
+-- TOC entry 77 (OID 17783)
 -- Name: downloads_time_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -361,7 +414,7 @@ CREATE INDEX downloads_time_idx ON downloads USING btree ("time");
 
 
 --
--- TOC entry 69 (OID 67254)
+-- TOC entry 76 (OID 17784)
 -- Name: downloads_pkgversion_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -369,7 +422,7 @@ CREATE INDEX downloads_pkgversion_idx ON downloads USING btree (package_version_
 
 
 --
--- TOC entry 77 (OID 67274)
+-- TOC entry 84 (OID 17785)
 -- Name: primary_files_pkgversion_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -377,7 +430,7 @@ CREATE INDEX primary_files_pkgversion_idx ON primary_files USING btree (package_
 
 
 --
--- TOC entry 61 (OID 67275)
+-- TOC entry 68 (OID 17786)
 -- Name: package_versions_pkg_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -385,7 +438,7 @@ CREATE INDEX package_versions_pkg_idx ON package_versions USING btree (package_i
 
 
 --
--- TOC entry 63 (OID 74984)
+-- TOC entry 70 (OID 17787)
 -- Name: packages_owner_idx; Type: INDEX; Schema: public; Owner: jacobm
 --
 
@@ -393,7 +446,7 @@ CREATE INDEX packages_owner_idx ON packages USING btree (owner_id);
 
 
 --
--- TOC entry 59 (OID 17169)
+-- TOC entry 66 (OID 17788)
 -- Name: contributors_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -402,7 +455,7 @@ ALTER TABLE ONLY contributors
 
 
 --
--- TOC entry 60 (OID 17192)
+-- TOC entry 67 (OID 17790)
 -- Name: package_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -411,7 +464,7 @@ ALTER TABLE ONLY package_versions
 
 
 --
--- TOC entry 64 (OID 17197)
+-- TOC entry 71 (OID 17792)
 -- Name: packages_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -420,7 +473,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 65 (OID 17213)
+-- TOC entry 72 (OID 17794)
 -- Name: dependences_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -429,7 +482,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 66 (OID 17229)
+-- TOC entry 73 (OID 17796)
 -- Name: categories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -438,7 +491,7 @@ ALTER TABLE ONLY categories
 
 
 --
--- TOC entry 68 (OID 17264)
+-- TOC entry 75 (OID 17798)
 -- Name: downloads_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -447,7 +500,7 @@ ALTER TABLE ONLY downloads
 
 
 --
--- TOC entry 73 (OID 33656)
+-- TOC entry 80 (OID 17800)
 -- Name: repositories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -456,7 +509,7 @@ ALTER TABLE ONLY repositories
 
 
 --
--- TOC entry 72 (OID 33658)
+-- TOC entry 79 (OID 17802)
 -- Name: repositories_name_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -465,7 +518,7 @@ ALTER TABLE ONLY repositories
 
 
 --
--- TOC entry 74 (OID 33664)
+-- TOC entry 81 (OID 17804)
 -- Name: version_repositories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -474,7 +527,7 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 75 (OID 41895)
+-- TOC entry 82 (OID 17806)
 -- Name: errors_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -483,7 +536,7 @@ ALTER TABLE ONLY errors
 
 
 --
--- TOC entry 67 (OID 58219)
+-- TOC entry 74 (OID 17808)
 -- Name: categories_shortname_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -492,7 +545,7 @@ ALTER TABLE ONLY categories
 
 
 --
--- TOC entry 76 (OID 67268)
+-- TOC entry 83 (OID 17810)
 -- Name: primary_files_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -501,7 +554,7 @@ ALTER TABLE ONLY primary_files
 
 
 --
--- TOC entry 71 (OID 67277)
+-- TOC entry 78 (OID 17812)
 -- Name: package_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -510,7 +563,7 @@ ALTER TABLE ONLY package_categories
 
 
 --
--- TOC entry 62 (OID 74982)
+-- TOC entry 69 (OID 17814)
 -- Name: packages_bugtrack_id_key; Type: CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -519,7 +572,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 79 (OID 17207)
+-- TOC entry 86 (OID 17816)
 -- Name: contributors_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -528,16 +581,7 @@ ALTER TABLE ONLY packages
 
 
 --
--- TOC entry 80 (OID 17216)
--- Name: this_package_version_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
---
-
-ALTER TABLE ONLY dependences
-    ADD CONSTRAINT this_package_version_fkey FOREIGN KEY (package_version_id) REFERENCES package_versions(id);
-
-
---
--- TOC entry 81 (OID 17220)
+-- TOC entry 87 (OID 17820)
 -- Name: target_package_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -546,25 +590,7 @@ ALTER TABLE ONLY dependences
 
 
 --
--- TOC entry 83 (OID 25468)
--- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
---
-
-ALTER TABLE ONLY package_categories
-    ADD CONSTRAINT "$2" FOREIGN KEY (category_id) REFERENCES categories(id);
-
-
---
--- TOC entry 78 (OID 41915)
--- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
---
-
-ALTER TABLE ONLY package_versions
-    ADD CONSTRAINT "$1" FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE;
-
-
---
--- TOC entry 85 (OID 41919)
+-- TOC entry 91 (OID 17824)
 -- Name: $3; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -573,7 +599,34 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 86 (OID 41923)
+-- TOC entry 88 (OID 17828)
+-- Name: this_package_version_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
+--
+
+ALTER TABLE ONLY dependences
+    ADD CONSTRAINT this_package_version_fkey FOREIGN KEY (package_version_id) REFERENCES package_versions(id);
+
+
+--
+-- TOC entry 90 (OID 17832)
+-- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
+--
+
+ALTER TABLE ONLY package_categories
+    ADD CONSTRAINT "$2" FOREIGN KEY (category_id) REFERENCES categories(id);
+
+
+--
+-- TOC entry 85 (OID 17836)
+-- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
+--
+
+ALTER TABLE ONLY package_versions
+    ADD CONSTRAINT "$1" FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 92 (OID 17840)
 -- Name: $2; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -582,16 +635,16 @@ ALTER TABLE ONLY version_repositories
 
 
 --
--- TOC entry 84 (OID 41927)
--- Name: $3; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
+-- TOC entry 93 (OID 17844)
+-- Name: $5; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
-ALTER TABLE ONLY package_categories
-    ADD CONSTRAINT "$3" FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE;
+ALTER TABLE ONLY version_repositories
+    ADD CONSTRAINT "$5" FOREIGN KEY (package_version_id) REFERENCES package_versions(id) ON DELETE CASCADE;
 
 
 --
--- TOC entry 82 (OID 41949)
+-- TOC entry 89 (OID 17848)
 -- Name: $1; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -600,7 +653,7 @@ ALTER TABLE ONLY downloads
 
 
 --
--- TOC entry 87 (OID 67270)
+-- TOC entry 94 (OID 17852)
 -- Name: primary_files_fkey; Type: FK CONSTRAINT; Schema: public; Owner: jacobm
 --
 
@@ -621,7 +674,7 @@ COMMENT ON SCHEMA public IS 'Standard public schema';
 SET SESSION AUTHORIZATION 'jacobm';
 
 --
--- TOC entry 12 (OID 17166)
+-- TOC entry 12 (OID 17692)
 -- Name: COLUMN contributors.email; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -629,7 +682,7 @@ COMMENT ON COLUMN contributors.email IS 'A verified email address for the contri
 
 
 --
--- TOC entry 13 (OID 17166)
+-- TOC entry 13 (OID 17692)
 -- Name: COLUMN contributors.passcode; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -637,7 +690,7 @@ COMMENT ON COLUMN contributors.passcode IS 'Automatically generated passcode use
 
 
 --
--- TOC entry 15 (OID 17186)
+-- TOC entry 16 (OID 17699)
 -- Name: COLUMN package_versions.plt_path; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -645,7 +698,7 @@ COMMENT ON COLUMN package_versions.plt_path IS 'Filesystem path to the .plt file
 
 
 --
--- TOC entry 16 (OID 17186)
+-- TOC entry 17 (OID 17699)
 -- Name: COLUMN package_versions.src_path; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -653,7 +706,7 @@ COMMENT ON COLUMN package_versions.src_path IS 'Filesystem path for the unpacked
 
 
 --
--- TOC entry 17 (OID 17186)
+-- TOC entry 18 (OID 17699)
 -- Name: COLUMN package_versions.default_file; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -661,7 +714,7 @@ COMMENT ON COLUMN package_versions.default_file IS 'The default file for this pa
 
 
 --
--- TOC entry 18 (OID 17186)
+-- TOC entry 19 (OID 17699)
 -- Name: COLUMN package_versions.release_blurb; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -669,7 +722,7 @@ COMMENT ON COLUMN package_versions.release_blurb IS 'Blurb describing this parti
 
 
 --
--- TOC entry 19 (OID 17186)
+-- TOC entry 20 (OID 17699)
 -- Name: COLUMN package_versions.version_name; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -677,7 +730,7 @@ COMMENT ON COLUMN package_versions.version_name IS 'Contributor-supplied textual
 
 
 --
--- TOC entry 20 (OID 17186)
+-- TOC entry 21 (OID 17699)
 -- Name: COLUMN package_versions.required_core_version; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -685,7 +738,7 @@ COMMENT ON COLUMN package_versions.required_core_version IS 'Any core version re
 
 
 --
--- TOC entry 21 (OID 17186)
+-- TOC entry 22 (OID 17699)
 -- Name: COLUMN package_versions.downloads; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -693,7 +746,7 @@ COMMENT ON COLUMN package_versions.downloads IS 'number of times this package ha
 
 
 --
--- TOC entry 22 (OID 17186)
+-- TOC entry 23 (OID 17699)
 -- Name: COLUMN package_versions.hidden; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -701,7 +754,7 @@ COMMENT ON COLUMN package_versions.hidden IS 'hidden package versions are not di
 
 
 --
--- TOC entry 25 (OID 17194)
+-- TOC entry 26 (OID 17707)
 -- Name: COLUMN packages.blurb; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -709,7 +762,7 @@ COMMENT ON COLUMN packages.blurb IS 'Description of the package, in xexpr format
 
 
 --
--- TOC entry 26 (OID 17194)
+-- TOC entry 27 (OID 17707)
 -- Name: COLUMN packages.homepage; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -717,7 +770,7 @@ COMMENT ON COLUMN packages.homepage IS 'URL representing the home page of the pa
 
 
 --
--- TOC entry 27 (OID 17194)
+-- TOC entry 28 (OID 17707)
 -- Name: COLUMN packages.hidden; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -725,7 +778,7 @@ COMMENT ON COLUMN packages.hidden IS 'hidden packages are not displayed on the m
 
 
 --
--- TOC entry 28 (OID 17194)
+-- TOC entry 29 (OID 17707)
 -- Name: COLUMN packages.bugtrack_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -733,7 +786,7 @@ COMMENT ON COLUMN packages.bugtrack_id IS 'ID for the id in mantis_project_table
 
 
 --
--- TOC entry 30 (OID 17211)
+-- TOC entry 32 (OID 17715)
 -- Name: COLUMN dependences.package_version_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -741,7 +794,7 @@ COMMENT ON COLUMN dependences.package_version_id IS 'The package version that ha
 
 
 --
--- TOC entry 31 (OID 17211)
+-- TOC entry 33 (OID 17715)
 -- Name: COLUMN dependences.package_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -749,7 +802,7 @@ COMMENT ON COLUMN dependences.package_id IS 'The package this package version de
 
 
 --
--- TOC entry 32 (OID 17211)
+-- TOC entry 34 (OID 17715)
 -- Name: COLUMN dependences.maj; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -757,7 +810,7 @@ COMMENT ON COLUMN dependences.maj IS 'The major version of package_id that this 
 
 
 --
--- TOC entry 33 (OID 17211)
+-- TOC entry 35 (OID 17715)
 -- Name: COLUMN dependences.min_lo; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -765,7 +818,7 @@ COMMENT ON COLUMN dependences.min_lo IS 'The lowest minor package version this p
 
 
 --
--- TOC entry 34 (OID 17211)
+-- TOC entry 36 (OID 17715)
 -- Name: COLUMN dependences.min_hi; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -773,7 +826,7 @@ COMMENT ON COLUMN dependences.min_hi IS 'The highest minor version this package 
 
 
 --
--- TOC entry 36 (OID 17224)
+-- TOC entry 38 (OID 17718)
 -- Name: COLUMN categories.sort_order; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -781,7 +834,7 @@ COMMENT ON COLUMN categories.sort_order IS 'Categories will be sorted ascending 
 
 
 --
--- TOC entry 37 (OID 17224)
+-- TOC entry 39 (OID 17718)
 -- Name: COLUMN categories.shortname; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -789,7 +842,7 @@ COMMENT ON COLUMN categories.shortname IS 'Symbol name identifying this category
 
 
 --
--- TOC entry 40 (OID 17258)
+-- TOC entry 42 (OID 17723)
 -- Name: COLUMN downloads."time"; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -797,7 +850,7 @@ COMMENT ON COLUMN downloads."time" IS 'Time at which the package was downloaded.
 
 
 --
--- TOC entry 41 (OID 17258)
+-- TOC entry 43 (OID 17723)
 -- Name: COLUMN downloads.package_version_id; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -805,7 +858,7 @@ COMMENT ON COLUMN downloads.package_version_id IS 'The package version downloade
 
 
 --
--- TOC entry 42 (OID 17258)
+-- TOC entry 44 (OID 17723)
 -- Name: COLUMN downloads.ip; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -813,7 +866,7 @@ COMMENT ON COLUMN downloads.ip IS 'IP address of the receiver.';
 
 
 --
--- TOC entry 43 (OID 17258)
+-- TOC entry 45 (OID 17723)
 -- Name: COLUMN downloads.client_version; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -821,7 +874,7 @@ COMMENT ON COLUMN downloads.client_version IS 'Client version of the receiver (e
 
 
 --
--- TOC entry 48 (OID 33662)
+-- TOC entry 52 (OID 17743)
 -- Name: TABLE version_repositories; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -829,7 +882,7 @@ COMMENT ON TABLE version_repositories IS 'relates package versions to the reposi
 
 
 --
--- TOC entry 50 (OID 41889)
+-- TOC entry 55 (OID 17747)
 -- Name: TABLE errors; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -837,7 +890,7 @@ COMMENT ON TABLE errors IS 'Log for errors';
 
 
 --
--- TOC entry 57 (OID 67263)
+-- TOC entry 63 (OID 17775)
 -- Name: TABLE primary_files; Type: COMMENT; Schema: public; Owner: jacobm
 --
 
@@ -845,7 +898,7 @@ COMMENT ON TABLE primary_files IS 'Associates package versions with primary file
 
 
 --
--- TOC entry 58 (OID 67263)
+-- TOC entry 64 (OID 17775)
 -- Name: COLUMN primary_files.interface; Type: COMMENT; Schema: public; Owner: jacobm
 --
 

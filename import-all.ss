@@ -128,7 +128,7 @@
     (list->string (build-list 8 (λ (_) (integer->char (random-int-in 32 127))))))
 
   ;; random-int-in : int int -> int
-  ;; delivers a random int in the range [lo,hi)
+  ;; delivers a random int in the range [lo,hi] 
   (define (random-int-in lo hi)
     (+ (random (- hi lo)) lo))
 
@@ -168,12 +168,14 @@
 
   (define info
     (info-fn
+     ("abromfie"     "Aleks Bromfield"         "abromfie@cs.brown.edu")
      ("ams"          "Adam Shaw"               "adamshaw@cs.uchicago.edu")
      ("cce"          "Carl Eastlund"           "cce@ccs.neu.edu")
      ("cdutchyn"     "Christopher Dutchyn"     "cdutchyn@cs.ubc.ca")
      ("clements"     "John Clements"           "clements@brinckerhoff.org")
      ("cobbe"        "Richard Cobbe"           "cobbe@ccs.neu.edu")
      ("daedalus"     "Ryan Kaulakis"           "rmk216@elvis.arl.psu.edu")
+     ("dfisher"      "David Fisher"            "dfisher@cc.gatech.edu")
      ("dfriedman"    "Dan Friedman"            "jacobm+kanren@cs.uchicago.edu")
      ("dherman"      "Dave Herman"             "dherman@ccs.neu.edu")
      ("dignatof"     "Daniel Ignatoff"         "Daniel_Ignatoff@brown.edu")
@@ -201,6 +203,7 @@
      ("soegaard"     "Jens Axel Soegaard"      "jensaxel@soegaard.net")
      ("sweeney"      "Corey Sweeney"           "corey.sweeney@gmail.com")
      ("untyped"      "Untyped"                 "noelwelsh@yahoo.com")
+     ("vyzo"         "Dimitris Vyzovitis"      "vyzo@media.mit.edu")
      ("williams"     "Douglas Williams"        "M.DOUGLAS.WILLIAMS@saic.com")
      ("wmfarr"       "Will M. Farr"            "farr@MIT.EDU")
      ("zck"          "Chongkai Zhu"            "czhu@cs.utah.edu")))
