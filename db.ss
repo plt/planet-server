@@ -88,7 +88,7 @@
    [core-version-string->code (string? . -> . (union number? false/c))]
    [code->core-version-string (number? . -> . (union string? false/c))]
    [recompute-all-primary-files (-> any)]
-   [get-n-most-recent-pkgversions (natural-number/c repository? . -> . (listof pkgversion?))])
+   [get-n-most-recent-packages (natural-number/c repository? . -> . (listof package?))])
   
   (provide sql-null?)
   
@@ -783,15 +783,26 @@
                  (f 'downloads))])
            (fn pkg pkgver))))))
   
-  ;; get-n-most-recent-pkgversions : natural-number/c repository? -> (listof pkgversion?)
-  ;; gets the n most recently-updated package versions in the given repository, sorted
-  ;; newest-first
-  (define (get-n-most-recent-pkgversions n rep)
+  ;; get-n-most-recent-packages : natural-number/c repository? -> (listof package?)
+  ;; gets the n most recently-updated packages in the given repository, sorted
+  ;; newest-first. The pkgversions field only contains the most recent
+  (define (get-n-most-recent-packages n rep)
     (let* ([query (string-append
                    "SELECT * FROM all_packages WHERE repository_id = "(number->string (repository-id rep))
                    " ORDER BY version_date DESC LIMIT "(number->string n)";")]
-           [pkgversions (send *db* map query (λ row (row->pkgversion (all_packages) row (list (repository-id rep)))))])
-      pkgversions))
+           [generate-package
+            (λ row
+              (let ([f (λ (n) (fld (all_packages) row n))])
+                (make-package
+                 (f 'package_id)
+                 (f 'username)
+                 (f 'name)
+                 (blurb-string->blurb (f 'pkg_blurb))
+                 (f 'homepage)
+                 (list (row->pkgversion (all_packages) row (list (repository-id rep))))
+                 (f 'bugtrack_id))))]
+           [packages (send *db* map query generate-package)])
+      packages))
                 
   ;; ------------------------------------------------------------
   ;; logging

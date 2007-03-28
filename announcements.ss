@@ -42,8 +42,8 @@
                (description "The newest packages available from PLaneT")
                (language "en-us")
                ,@(map
-                  (lambda (pkg+version)
-                    (let-values ([(pkg pkgversion) (apply values pkg+version)])
+                  (lambda (pkg)
+                    (let ([pkgversion (package->current-version pkg)])
                       `(item (title ,(package-name pkg))
                              (description 
                               ,(escape-xexprs-as-xml-string 
@@ -51,7 +51,7 @@
                                  (package-blurb pkg)
                                  (or (pkgversion-blurb pkgversion) '()))))
                              (link ,(url->string (pkg->url pkg))))))
-                  (get-n-most-recent-pkgversions (NUM-RSS-ITEMS) rep))))]
+                  (get-n-most-recent-packages (NUM-RSS-ITEMS) rep))))]
            [file-to-write (repository->rss-path rep)]
            [o (open-output-file file-to-write 'truncate)])
       (display "<?xml version=\"1.0\"?>\n" o)
