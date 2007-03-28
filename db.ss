@@ -787,8 +787,11 @@
   ;; gets the n most recently-updated packages in the given repository, sorted
   ;; newest-first. The pkgversions field only contains the most recent
   (define (get-n-most-recent-packages n rep)
-    (let* ([query (string-append
-                   "SELECT * FROM all_packages WHERE repository_id = "(number->string (repository-id rep))
+    (let* (;; there must be a cheaper way to do this ...
+           [query (string-append
+                   "SELECT * FROM all_packages AS ap WHERE version_date = "
+                   "(SELECT max(version_date) FROM all_packages WHERE package_id = ap.package_id) "
+                   " AND repository_id = "(number->string (repository-id rep))
                    " ORDER BY version_date DESC LIMIT "(number->string n)";")]
            [generate-package
             (λ row
