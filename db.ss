@@ -131,20 +131,20 @@
       
       (super-new)))
   
-  (define *db* #f)
-  (define (startup)
-    (unless *db* 
-      (set! *db* 
-            (new retrying-connection%
-                 [get-conn 
-                  (λ () 
-                    (let ([db (connect "localhost" 5432 "planet" "jacobm" "matrix")])
-                      (send db use-type-conversions #t)
-                      db))]))))
+  (define *db*
+    (new retrying-connection%
+         [get-conn 
+          (λ () 
+            (let ([db (connect "localhost" 5432 "planet" "jacobm" "matrix")])
+              (send db use-type-conversions #t)
+              db))]))
+  
+  ;; this should be removed eventually; it used to be useful but the functionality has been incorporated into
+  ;; the retrying-connection% class.
+  (define startup void)
+  
   (define (teardown)
-    (when *db*
-      (send *db* disconnect)
-      (set! *db* #f)))
+    (send *db* disconnect))
     
   ;; ============================================================
   ;; persistence functions
@@ -782,6 +782,16 @@
                        #f))
                  (f 'downloads))])
            (fn pkg pkgver))))))
+  
+  ;; get-n-most-recent-pkgversions : natural-number/c repository? -> (listof pkgversion?)
+  ;; gets the n most recently-updated package versions in the given repository, sorted
+  ;; newest-first
+  (define (get-n-most-recent-pkgversions n rep)
+    (let* ([query (string-append
+                   "SELECT * FROM all_packages WHERE repository_id = "(number->string (repository-id rep))
+                   " ORDER BY version_date DESC LIMIT "(number->string n)";")]
+           [pkgversions (send *db* map query (λ row (row->pkgversion row (all_packages) (list (repository-id rep)))))])
+      pkgversions))
                 
   ;; ------------------------------------------------------------
   ;; logging
@@ -870,12 +880,7 @@
                 [_ (loop (cdr exprs) provides)])]))]
         [else #f])))
   
-  (define (get-n-most-recent-pkgversions n rep)
-    (let* ([query (string-append
-                   "SELECT * FROM all_packages WHERE repository_id = "(repository-id rep)
-                   " ORDER BY version_date DESC LIMIT "(number->string n)";")]
-           [pkgversions (send *db* map query (λ row (row->pkgversion row (all_packages) (list (repository-id rep)))))])
-      pkgversions))
+  
       
     
   
