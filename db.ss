@@ -790,7 +790,7 @@
     (let* ([query (string-append
                    "SELECT * FROM all_packages WHERE repository_id = "(number->string (repository-id rep))
                    " ORDER BY version_date DESC LIMIT "(number->string n)";")]
-           [pkgversions (send *db* map query (λ row (row->pkgversion row (all_packages) (list (repository-id rep)))))])
+           [pkgversions (send *db* map query (λ row (row->pkgversion (all_packages) row (list (repository-id rep)))))])
       pkgversions))
                 
   ;; ------------------------------------------------------------
