@@ -1,16 +1,22 @@
 (module announcements mzscheme
   (require (lib "xml.ss" "xml")
-           (lib "url.ss" "net"))
+           (lib "url.ss" "net")
+           (lib "contract.ss")
+           (lib "sendmail.ss" "net")
+           (prefix mzpp: (lib "mzpp.ss" "preprocessor"))
+           (prefix srfi13: (lib "13.ss" "srfi")))
   (require "configuration.ss"
            "data-structures.ss"
            "db.ss"
-           "html.ss")
+           "html.ss"
+           "html2text.ss")
+
+  (provide/contract
+   [rebuild-rss-feed (-> repository? any)]
+   [update-email-list (package? . -> . any)])
   
   ;; ============================================================
   ;; RSS
-  #;(provide/contract
-   [rebuild-rss-feed (repository? . -> . any)])
-  (provide rebuild-rss-feed)
   
   ;; repository -> url
   ;; gets the url for the repository's rss feed
@@ -63,18 +69,7 @@
   ;; ============================================================
   ;; EMAIL
   
-  (require 
-   
-   "html2text.ss"
-   
-   (lib "contract.ss")
-   (lib "sendmail.ss" "net")
-   (lib "url.ss" "net")
-   (prefix mzpp: (lib "mzpp.ss" "preprocessor"))
-   (prefix srfi13: (lib "13.ss" "srfi")))
   
-  (provide/contract 
-   (update-email-list (package? . -> . any)))
   
   
   ;; instantiate-template : path[file] (listof (list symbol TST)) output-port -> void
