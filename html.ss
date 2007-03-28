@@ -1,8 +1,12 @@
 (module html mzscheme
   (require 
-   (lib "contract.ss") (lib "servlet.ss" "web-server")
+   (lib "contract.ss") (lib "servlet.ss" "web-server") (lib "url.ss" "net"))
+  
+  (require
    "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
-   (file "/local/svn/iplt/web/common/layout.ss"))
+   (file #;"/local/svn/iplt/web/common/layout.ss"
+         "~/svn/iplt/web/common/layout.ss"
+         ))
   
   (define bindings/c (listof (cons/c (union symbol? string?) string?)))
   (define title/c (or/c string? (list/c string? string?)))
@@ -149,7 +153,12 @@
    home-link/base
    
    source-code-url
-   source-code-url/fields)
+   source-code-url/fields
+   
+   pkgversion->docs-link
+   file-url
+   
+   repository->base-url)
   
   (define (package-link/fields username pkgname)
     (format "~a?package=~a&owner=~a" (DISPLAY-URL-ROOT) pkgname username))
@@ -179,6 +188,23 @@
                             (package-name pkg)
                             (number->string (pkgversion-maj pv))
                             (number->string (pkgversion-min pv))))
+  
+  (define (pkgversion->docs-link pkg pv failure)
+    (let ([doctxt-path (pkgversion-doctxt pv)])
+      (if doctxt-path
+          (file-url pkg pv (pkgversion-doctxt pv))
+          (failure))))
+  
+  ;; file-url : package pkgversion string -> string[url]
+  ;; generate a url for the given file in the given package and version
+  (define (file-url pkg pv file)
+    (url->string (combine-url/relative (string->url (source-code-url pkg pv)) file)))
+  
+  ;; repository -> url
+  ;; gets the base url for all static content relating to the given repository [currently just rss feed]
+  (define (repository->base-url rep)
+    (combine-url/relative (REPOSITORIES-STATIC-CONTENT-URL-ROOT) (repository-urlname rep)))
+  
   
   ;; mktitle : (listof string) -> string
   ;; makes a title with the given path

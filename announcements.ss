@@ -3,15 +3,14 @@
            (lib "url.ss" "net"))
   (require "configuration.ss"
            "data-structures.ss"
-           "db.ss")
+           "db.ss"
+           "html.ss")
   
   ;; ============================================================
   ;; RSS
-  
-  ;; repository -> url
-  ;; gets the base url for all static content relating to the given repository [currently just rss feed]
-  (define (repository->base-url rep)
-    (combine-url/relative (REPOSITORIES-STATIC-CONTENT-URL-ROOT) (repository-urlname rep)))
+  #;(provide/contract
+   [rebuild-rss-feed (repository? . -> . any)])
+  (provide rebuild-rss-feed)
   
   ;; repository -> url
   ;; gets the url for the repository's rss feed
@@ -23,12 +22,7 @@
   (define (repository->rss-path rep)
     (build-path (REPOSITORIES-STATIC-CONTENT-FILE-ROOT) (repository-urlname rep) (RSS-FILE-NAME)))
   
-  ;; pkg->url : package -> string[url]
-  ;; probably a bad idea
-  (define (pkg->url pkg)
-    (combine-url/relative 
-     (EXTERNAL-URL-ROOT)
-     (format "/users/~a/~a/" (package-owner pkg) (package-name pkg))))
+  
   
   ;; rebuild-rss-feed : repository? -> void
   ;; as a side effect, rebuilds the rss file for the given repository id
@@ -50,7 +44,7 @@
                                 (append 
                                  (or (package-blurb pkg) '())
                                  (or (pkgversion-blurb pkgversion) '()))))
-                             (link ,(url->string (pkg->url pkg))))))
+                             (link ,(url->string (package->link/base pkg))))))
                   (get-n-most-recent-packages (NUM-RSS-ITEMS) rep))))]
            [file-to-write (repository->rss-path rep)]
            [o (open-output-file file-to-write 'truncate)])
@@ -66,15 +60,11 @@
        xprs)
       (get-output-string op)))
 
-  #|
   ;; ============================================================
   ;; EMAIL
   
-
-  
   (require 
-   "repository-types.ss"
-   "server-config.ss"
+   
    "html2text.ss"
    
    (lib "contract.ss")
@@ -84,7 +74,7 @@
    (prefix srfi13: (lib "13.ss" "srfi")))
   
   (provide/contract 
-   (update-email-list notifier?))
+   (update-email-list (package? . -> . any)))
   
   
   ;; instantiate-template : path[file] (listof (list symbol TST)) output-port -> void
@@ -102,55 +92,48 @@
   
   ;; update-email-list : notifier
   ;; mails the email list with the new package
-  (define (update-email-list pkgs)
-    (if (null? pkgs)
-        (void)
-        (update-email-list/internal pkgs)))
-    
-  (define (update-email-list/internal pkgs)
-    (let ((pkg (car pkgs)))
-      (let* ([blurb (html-expr->text `(div ,@(pkg->blurb pkg)))]
-             [repositories-as-string
-              (srfi13:string-join
-               (map
-                (lambda (p) (repository-name (installed-package-repository p)))
-                pkgs)
-               ", ")]
-             [op (send-mail-message/port 
-                  (PLANET-FROM-ADDRESS)
-                  ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
-                  (TO-ADDRESSES)
-                  '()
-                  '())]
-             [shared-template-fields
-              (list
-               (list 'name          (package-name pkg))
-               (list 'owner         (package-owner pkg))
-               (list 'blurb         blurb)
-               (list 'doc-url       (url->string (pkg->doc-url pkg)))
-               (list 'url           (url->string (pkg->url pkg))))])
-        (if (null? (cdr pkgs)) ;; pkg is installed in exactly 1 repository
-            (instantiate-template (SINGLE-REPOSITORY-MAIL-TEMPLATE)
-                                  (list* 
-                                   (list 'major-version (package-maj pkg))
-                                   (list 'minor-version (package-min pkg))
-                                   shared-template-fields)
-                                  op)
-            (instantiate-template (MULTI-REPOSITORY-MAIL-TEMPLATE)
-                                  (list*
-                                   (list 'installations
-                                         (map (lambda (p) (list 
-                                                           (repository-name (installed-package-repository p))
-                                                           (package-maj p)
-                                                           (package-min p)))
-                                              pkgs))
-                                   shared-template-fields)
-                                  op))
+  (define (update-email-list pkg)
+    (let* ([pkgversion (package->current-version pkg)]
+           [blurb (html-expr->text 
+                   `(div
+                     ,@(if (package-blurb pkg)
+                           `((p "Package Description")
+                             ,@(package-blurb pkg))
+                           '())
+                     ,@(if (pkgversion-blurb pkgversion)
+                           `((p "Release Notes")
+                             ,@(pkgversion-blurb pkgversion))
+                           '())))]
+           [repositories-as-string
+            (srfi13:string-join
+             (map repository-name (pkgversion-repositories pkgversion))
+             ", ")]
+           [op (send-mail-message/port 
+                (PLANET-FROM-ADDRESS)
+                ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
+                (TO-ADDRESSES)
+                '()
+                '())]
+           [template-fields
+            (list
+             (list 'name          (package-name pkg))
+             (list 'owner         (package-owner pkg))
+             (list 'major-version (pkgversion-maj pkgversion))
+             (list 'minor-version (pkgversion-min pkgversion))
+             (list 'blurb         blurb)
+             (list 'doc-url       (url->string (pkgversion->docs-link pkg)))
+             (list 'url           (url->string (package->link/base pkg))))])
+      (begin
+        (cond
+          [(new-package? pkgversion)
+           (instantiate-template (NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)]
+          [else
+           (instantiate-template (UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)])
         (close-output-port op) ;; causes the mail to actually get sent
         )))
-
   
-  |#
-  
+  (define (new-package? pkgversion)
+    (and (= (pkgversion-maj pkgversion) 1)
+         (= (pkgversion-min pkgversion) 0)))
   
   )

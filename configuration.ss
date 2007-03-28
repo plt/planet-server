@@ -21,12 +21,12 @@
   
   ;; email
   (define PLANET-FROM-ADDRESS (make-parameter "PLaneT <planet@plt-scheme.org>"))
-  (define TO-ADDRESSES (make-parameter '("planet-announce@mailman.cs.uchicago.edu")))
+  (define TO-ADDRESSES (make-parameter '("jacobm@gmail.com")))
   (define MAIL-SUBSCRIBE-URL (make-parameter (string->url "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")))
   (define NEW-MAIL-SUBJECT
     (make-parameter (lambda (pkgname reps) (format "New PLaneT package: ~a for ~a" pkgname reps))))
-  (define SINGLE-REPOSITORY-MAIL-TEMPLATE (make-parameter "newpkg.mzpp"))
-  (define MULTI-REPOSITORY-MAIL-TEMPLATE (make-parameter "newpkg2.mzpp"))
+  (define NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE (make-parameter "newpkg.mzpp"))
+  (define UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE (make-parameter "updatedpkg.mzpp"))
     
   ;; rss feed
   (define NUM-RSS-ITEMS (make-parameter 10))

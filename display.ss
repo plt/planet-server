@@ -122,10 +122,12 @@
     ;; doc-link : pkg pkgversion (listof xexpr) -> (listof xexpr)
     ;; produces a link to the documentation of the given package, given a default "no docs exist" xexpr
     (define (doc-link pkg pv failure)
-      (if (pkgversion-doctxt pv)
+      (if (and
+           (pkgversion-doctxt pv)
+           (file-exists? (build-path (pkgversion-src-path pv) (pkgversion-doctxt pv))))
           `("[" 
-            (a ((href ,(url->string (combine-url/relative (string->url (source-code-url pkg pv)) (pkgversion-doctxt pv)))))
-               "doc.txt")
+            (a ((href ,(pkgversion->docs-link pkg pv (λ () (error 'doc-link "impossible situation")))))
+               "docs")
             "]")
           failure))
     
@@ -134,13 +136,8 @@
     ;; or the contents of failure if that file doesn't exist
     (define (file-link pkg pv file failure)
       (if (file-exists? (build-path (pkgversion-src-path pv) file))
-         `(a ((href ,(file-url pkg pv file))) ,(format "~a" file))
-         failure))
-    
-    ;; file-url : package pkgversion string -> string[url]
-    ;; generate a url for the given file in the given package and version
-    (define (file-url pkg pv file)
-      (url->string (combine-url/relative (string->url (source-code-url pkg pv)) file)))
+          `(a ((href ,(file-url pkg pv file))) ,(format "~a" file))
+          failure))
     
     ;; makes a set of table rows to present concise information about a particular version of
     ;; a given package and version.
