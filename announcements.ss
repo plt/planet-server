@@ -48,7 +48,7 @@
                              (description 
                               ,(escape-xexprs-as-xml-string 
                                 (append 
-                                 (package-blurb pkg)
+                                 (or (package-blurb pkg) '())
                                  (or (pkgversion-blurb pkgversion) '()))))
                              (link ,(url->string (pkg->url pkg))))))
                   (get-n-most-recent-packages (NUM-RSS-ITEMS) rep))))]
