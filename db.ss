@@ -88,7 +88,7 @@
    [core-version-string->code (string? . -> . (union number? false/c))]
    [code->core-version-string (number? . -> . (union string? false/c))]
    [recompute-all-primary-files (-> any)]
-   )
+   [get-n-most-recent-pkgversions (natural-number/c repository? . -> . (listof pkgversion?))])
   
   (provide sql-null?)
   
@@ -374,14 +374,10 @@
         [(eq? s (car l)) n]
         [else (loop (add1 n) (cdr l))])))
   
-  ;; row->pkgversion : (listof TST)[row] (listof symbol)[column names for the given row] -> pkgversion?
-  ;; converts row into a pkgversion structure. RUNS AN AUXILIARY DB QUERY to determine
-  ;; repositories.
+  ;; row->pkgversion : (listof TST)[row] (listof symbol?)[column names for the given row] (listof natural-number/c?) -> pkgversion?
+  ;; converts row into a pkgversion structure.
   (define (row->pkgversion columns row repositories)
     (let* ([id (fld (all_packages) row 'package_version_id)]
-           #;[repositories (send *db* map 
-                               (string-append "SELECT repository_id FROM version_repositories WHERE package_version_id = "(number->string id))
-                               (lambda (x) x))]
            [f (lambda (col) (fld columns row col))])
       (make-pkgversion
        (f 'package_version_id)
@@ -524,7 +520,7 @@
       (send *db* query-value query)))
                                         
   (define (get-all-repositories)
-    (let ([query "SELECT id, name, client_lower_bound, client_upper_bound FROM repositories ORDER BY sort_order"])
+    (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order"])
       (send *db* map query make-repository)))
   
   (define (legal-repository? n)
@@ -583,21 +579,31 @@
           (format "~a.~a" maj min))))
   
   
-  (define (add-pkgversion-to-db! user pkg maj min filename unpacked-package-path info.ss)
-    ;; safe-info : symbol (-> string) [(TST -> string)] -> string
-    ;; the safe version of info.ss, which escapes user-defined data but allows the
-    ;; default action to produce an unescaped string. The optional final argument converts
-    ;; info.ss's result into a string (which doesn't need to be escaped)
-    (define safe-info
-      (let ([missing (gensym)])
+  ;; get-safe-info : info.ss -> symbol (-> string) [(TST -> string)] -> string
+  ;; returns a 'safe' version of info.ss, which escapes user-defined data but allows the
+  ;; default action to produce an unescaped string. The optional final argument converts
+  ;; info.ss's result into a string (which will be escaped by this procedure)
+  (define (get-safe-info info.ss)
+    (let ([missing (gensym)])
+      (define safe-info
         (case-lambda
           [(s d) (safe-info s d (lambda (x) x))]
           [(s d c)
            (let ([ans (info.ss s (lambda () missing))])
              (cond
                [(eq? ans missing) (d)]
-               [else (escape-sql-string (c ans))]))])))
-    
+               [else (escape-sql-string (c ans))]))]))
+      safe-info))
+  
+  ;; add-pkgversion-to-db! : user package nat nat string path info.ss-fn -> nat
+  ;; given information about a new package version [user, package record, maj, min, name, path to unpacked
+  ;; contents, and an info.ss function] adds the new package version to the database and returns a
+  ;; database primary key for that package version
+  ;;
+  ;; [NB user isn't currently being used here. Should it be removed?]
+  ;;
+  (define (add-pkgversion-to-db! user pkg maj min filename unpacked-package-path info.ss)
+    (define safe-info (get-safe-info info.ss))
     (let* ([rc-str (info.ss 'required-core-version (λ () #f))]
            [required-core-str 
             (cond
@@ -863,6 +869,17 @@
                   (loop (cdr exprs) (cons (car exprs) provides))]
                 [_ (loop (cdr exprs) provides)])]))]
         [else #f])))
+  
+  (define (get-n-most-recent-pkgversions n rep)
+    (let* ([query (string-append
+                   "SELECT * FROM all_packages WHERE repository_id = "(repository-id rep)
+                   " ORDER BY version_date DESC LIMIT "(number->string n)";")]
+           [pkgversions (send *db* map query (λ row (row->pkgversion row (all_packages) (list (repository-id rep)))))])
+      pkgversions))
+      
+    
+  
+  
 
   #|
 (define (pretty-format expr)

@@ -19,7 +19,7 @@
                                required-core
                                downloads))
            (struct primary-file (name xexpr))
-           (struct repository (id name client-lower-bound client-upper-bound)))
+           (struct repository (id name client-lower-bound client-upper-bound urlname)))
 
   (define-struct user (id       ; nat
                        username ; string
@@ -62,7 +62,7 @@
                                ) 
     (make-inspector))
   
-  (define-struct repository (id name client-lower-bound client-upper-bound) (make-inspector))
+  (define-struct repository (id name client-lower-bound client-upper-bound urlname) (make-inspector))
 
   ;; ============================================================
   ;; UTILITY
