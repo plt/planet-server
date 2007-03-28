@@ -461,6 +461,10 @@
                     (cons (fld columns (car pkgversions) 'repository_id) reps))]))))
         (fld columns (car pkgversions) 'bugtrack_id))]))
   
+  
+  ;; get-package-version-by-id : natural-number[id] natural-number[id] -> pkgversion | #f
+  ;; gets the package version named by the given ids
+  ;; [note: why does this need the user id, when pkgversion is more specific than user id?]
   (define (get-package-version-by-id id user-id)
     (let* ([query (string-append
                    "SELECT * FROM all_packages WHERE package_version_id = "(number->string id)

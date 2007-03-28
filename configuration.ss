@@ -18,8 +18,9 @@
   
   (define DISPLAY-ERRORS-OVER-WEB? (make-parameter #t))
   (define SEND-EMAILS? (make-parameter #t))
+  (define ANNOUNCE-NEW-PACKAGES? (make-parameter #t))
   
-  ;; email
+  ;; email announcements
   (define PLANET-FROM-ADDRESS (make-parameter "PLaneT <planet@plt-scheme.org>"))
   (define TO-ADDRESSES (make-parameter '("jacobm@gmail.com")))
   (define MAIL-SUBSCRIBE-URL (make-parameter (string->url "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")))

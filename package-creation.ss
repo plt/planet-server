@@ -1,6 +1,7 @@
 (module package-creation mzscheme
   
-  (require "db.ss" "data-structures.ss" "configuration.ss" "html.ss" "scm2xexpr.scm")
+  (require "db.ss" "data-structures.ss" "configuration.ss"
+           "html.ss" "scm2xexpr.scm" "announcements.ss")
   
   (require (lib "contract.ss")
            (lib "file.ss")
@@ -162,8 +163,12 @@
                                            srcdir
                                            info.ss)])
            (for-each (λ (r) (associate-pkgversion-with-repository! id r)) repositories)
-           (code-to-html srcdir webdir username pkgname maj min)))
-       
+           (code-to-html srcdir webdir username pkgname maj min)
+           (when (ANNOUNCE-NEW-PACKAGES?)
+             (let ([pkgversion (get-package-version-by-id id (user-id user))])
+               (unless pkgversion
+                 (error 'update/internal "no pkgversion, even though we just added it!"))
+               (announce-new-pkgversion pkg pkgversion)))))
        (λ () (delete-directory* tmpdir)) ;; regardless of how we exit, clean up the tmp dir
        )))
   

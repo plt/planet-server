@@ -12,8 +12,24 @@
            "html2text.ss")
 
   (provide/contract
+   [announce-new-pkgversion (package? pkgversion? . -> . any)]
    [rebuild-rss-feed (-> repository? any)]
-   [update-email-list (package? . -> . any)])
+   [update-email-list (package? pkgversion? . -> . any)])
+  
+  
+  ;; ============================================================
+  ;; MAIN NOTIFIER
+  ;; This is what should normally get called when a package is created.
+  
+  ;; announce-new-pkgversion : package? pkgversion? -> void
+  ;; announces the new package version of the given package, using whatever
+  ;; means we've got (currently rss and email).
+  ;; This does not handle updating the web site, which is dynamically generated
+  ;; based on server contents rather than being pushed out on updates.
+  (define (announce-new-pkgversion pkg pkgversion)
+    (for-each rebuild-rss-feed (pkgversion-repositories pkgversion))
+    (when (SEND-EMAILS?)
+      (update-email-list pkg pkgversion)))
   
   ;; ============================================================
   ;; RSS
@@ -68,28 +84,10 @@
 
   ;; ============================================================
   ;; EMAIL
-  
-  
-  
-  
-  ;; instantiate-template : path[file] (listof (list symbol TST)) output-port -> void
-  ;; evaluates file, which is in mzpp format, in a namespace in which the given symbols 
-  ;; are bound to their associated values, and prints the result to port
-  (define (instantiate-template file template-vars/vals port)
-    (parameterize ((current-namespace (make-namespace))
-                   (current-output-port port))
-      (for-each
-       (lambda (x) (namespace-set-variable-value! (car x) (cadr x)))
-       template-vars/vals)
-      (let ((ip (open-input-file file)))
-        (mzpp:preprocess ip)
-        (close-input-port ip))))
-  
   ;; update-email-list : notifier
   ;; mails the email list with the new package
-  (define (update-email-list pkg)
-    (let* ([pkgversion (package->current-version pkg)]
-           [blurb (html-expr->text 
+  (define (update-email-list pkg pkgversion)
+    (let* ([blurb (html-expr->text 
                    `(div
                      ,@(if (package-blurb pkg)
                            `((p "Package Description")
@@ -127,6 +125,22 @@
         (close-output-port op) ;; causes the mail to actually get sent
         )))
   
+  ;; instantiate-template : path[file] (listof (list symbol TST)) output-port -> void
+  ;; evaluates file, which is in mzpp format, in a namespace in which the given symbols 
+  ;; are bound to their associated values, and prints the result to port
+  (define (instantiate-template file template-vars/vals port)
+    (parameterize ((current-namespace (make-namespace))
+                   (current-output-port port))
+      (for-each
+       (lambda (x) (namespace-set-variable-value! (car x) (cadr x)))
+       template-vars/vals)
+      (let ((ip (open-input-file file)))
+        (mzpp:preprocess ip)
+        (close-input-port ip))))
+  
+  
+  ;; new-package? : pkgversion -> bool
+  ;; determines if this pkg version represents a newly-created package or an update
   (define (new-package? pkgversion)
     (and (= (pkgversion-maj pkgversion) 1)
          (= (pkgversion-min pkgversion) 0)))
