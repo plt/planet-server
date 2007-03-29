@@ -123,7 +123,7 @@
                   (list 'major-version (pkgversion-maj pkgversion))
                   (list 'minor-version (pkgversion-min pkgversion))
                   (list 'blurb         blurb)
-                  (list 'doc-url       (pkgversion->docs-link pkg))
+                  (list 'doc-url       (pkgversion->docs-link pkg pkgversion "[no documentation available]"))
                   (list 'url           (package->link/base pkg)))])
            (begin
              (cond
