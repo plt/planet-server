@@ -22,6 +22,7 @@
    [log-user-out (-> user? void?)]
    [get-user-record/no-password (-> string? (union user? false/c))]
    [valid-password? (user? string? . -> . boolean?)]
+   [update-user-email (user? string? . -> . void?)]
    [update-user-password (user? string? . -> . void?)]
    [user->packages (-> user? natural-number/c (listof package?))]
    [get-category-names (-> (listof category?))]
@@ -183,6 +184,17 @@
                   "FROM contributors WHERE id = "(number->string (user-id user)))])
       (send *db* query-value query)))
   
+  
+  (define (update-user-email user newemail)
+    (let ([sql (string-append
+                "UPDATE contributors SET email = "(escape-sql-string newemail)" "
+                "WHERE id = "(number->string (user-id user)))])
+      (send *db* exec sql)
+      ; i am worried that old versions of the email address might continue to float around
+      ; even with this next line in place. The only fix seems to be to read these things from
+      ; the database each time though
+      (set-user-email! user newemail) 
+      (void)))
   
   ;; update-user-password : user string -> void
   (define (update-user-password user newpass)

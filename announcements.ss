@@ -45,8 +45,6 @@
   (define (repository->rss-path rep)
     (build-path (REPOSITORIES-STATIC-CONTENT-FILE-ROOT) (repository-urlname rep) (RSS-FILE-NAME)))
   
-  
-  
   ;; rebuild-rss-feed : repository? -> void
   ;; as a side effect, rebuilds the rss file for the given repository id
   (define (rebuild-rss-feed rep)
@@ -64,7 +62,7 @@
                  ,@(map
                     (lambda (pkg)
                       (let ([pkgversion (package->current-version pkg)])
-                        `(item (title ,(package-name pkg))
+                        `(item (title ,(string-append (package-owner pkg) "/" (package-name pkg)))
                                (description 
                                 ,(escape-xexprs-as-xml-string 
                                   (append 

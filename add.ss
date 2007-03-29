@@ -204,7 +204,7 @@
                                    "Our records indicate that that account belongs to this email address. If you really want to "
                                    "reset your password, then please visit the following URL: "
                                    ""
-                                   (string-append (URL-ROOT) k)
+                                   (url->string (combine-url/relative (EXTERNAL-URL-ROOT) k))
                                    ""
                                    "If you do not want to reset the password to your PLaneT account, then please disregard "
                                    "this message."
@@ -234,9 +234,37 @@
                                     "with PLaneT, the PLT Scheme package repository. To verify your email address, "
                                     "please visit the following URL: "
                                     ""
-                                    (string-append (URL-ROOT) k)
+                                    (url->string (combine-url/relative (EXTERNAL-URL-ROOT) k))
                                     ""
                                     "within 48 hours. If you do not want to create an account with PLaneT, then please disregard "
+                                    "this message."
+                                    ""
+                                    "Thanks,"
+                                    "PLaneT")))
+         (page
+          '("Confirm email address")
+          `(,(if (SEND-EMAILS?)
+                 `(p "To complete the email change process, please check the email account "
+                     (b ,email) " for a message telling you how to proceed.")
+                 `(p "Click " (a ((href ,k)) "here") " to continue.")))))))
+    
+    ;; this should be merged with the above
+    (define (verify-changed-address user email)
+      (send/suspend 
+       (lambda (k) 
+         (when (SEND-EMAILS?)
+           (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+                              "Please verify your email address"
+                              (list email)
+                              '()
+                              '()
+                              (list "Greetings! You (or someone claiming to be you) have requested to change the PLaneT user account "
+                                    (format "~a's email address from ~a to this address (~a)."(user-username user) (user-email user) email) 
+                                    "If this was you, please visit the following URL: "
+                                    ""
+                                    (string-append (URL-ROOT) k)
+                                    ""
+                                    "within 48 hours. If it was not you, or you do not want to change your address, then please disregard "
                                     "this message."
                                     ""
                                     "Thanks,"
@@ -366,7 +394,7 @@
                     (table ((id "yourPackages")) ,@(apply append (map package->rows packages))))])
              (section "Manage your account")
              
-             (form ((action ,k) (method "post"))
+             (form ((action ,k) (method "post") (id "changePassword"))
                    (input ((type "hidden") (name "action") (value "setpassword")))
                    (p (b "Change your password"))
                    (table
@@ -380,6 +408,24 @@
                         (td (input ((type "password") (name "newpass2")))
                             ,@(message-for 'newpass2)))
                     (tr (td ((colspan "2")) (input ((type "submit") (value "Change password")))))
+                    ,@(let ([pw-errors (message-for 'password)])
+                        (if (null? pw-errors)
+                            '()
+                            `((tr (td ((colspan "2")) ,@pw-errors)))))))
+             
+             (form ((action ,k) (method "post") (id "changeEmail"))
+                   (input ((type "hidden") (name "action") (value "setemail")))
+                   (p (b "Change your email address"))
+                   (table
+                    (tr (td "Current address:") 
+                        (td (b ,(user-email user))))
+                    (tr (td "New address:") 
+                        (td (input ((type "text") (name "newaddress")))
+                            ,@(message-for 'newaddress)))
+                    (tr (td "Password:")
+                        (td (input ((type "password") (name "password")))
+                            ,@(message-for 'password)))
+                    (tr (td ((colspan "2")) (input ((type "submit") (value "Change address")))))
                     ,@(let ([pw-errors (message-for 'password)])
                         (if (null? pw-errors)
                             '()
@@ -702,9 +748,36 @@
                     (update-user-password user (get request 'newpass1))
                     (loop '((general "Password updated."))))]
                  [else (loop problems)]))]
+            [(setemail)
+             (let* ([demands 
+                     (all-demands
+                      (field-exists 'newaddress)
+                      (fields-ascii '(newaddress))
+                      (field-constraint 
+                       (wrap-as-demand-p 
+                        email-available? 
+                        (λ (e) `(newaddress (message "The address " (b ,e) " already belongs to another account"))))
+                       'newaddress)
+                      (field-exists 'password)
+                      (field-constraint
+                       (wrap-as-demand-p
+                        (lambda (pass) (valid-password? user pass))
+                        (lambda (pass) `(password (message "Incorrect password"))))
+                       'password))]
+                    [problems (demands bindings)])
+               (cond
+                 [(null? problems)
+                  (verify-and-update-address user (get request 'newaddress))
+                  (loop '((general "Email address changed.")))]
+                 [else
+                  (loop problems)]))]
             [else
              (loop `((general ,(format "Oops! Bad action: ~a" action))))])))))
   
+  (define (verify-and-update-address user email)
+    (begin
+      (verify-changed-address user email)
+      (update-user-email user email)))
   
   ;; ============================================================
   ;; user creation stuff
