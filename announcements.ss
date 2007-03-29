@@ -27,8 +27,8 @@
   ;; This does not handle updating the web site, which is dynamically generated
   ;; based on server contents rather than being pushed out on updates.
   (define (announce-new-pkgversion pkg pkgversion)
-    (let ([reps (pkgversion-repositories pkgversion)])
-      (for-each rebuild-rss-feed (repository-ids->repositories reps))
+    (let ([reps (repository-ids->repositories (pkgversion-repositories pkgversion))])
+      (for-each rebuild-rss-feed reps)
       (when (SEND-EMAILS?)
         (update-email-list pkg pkgversion reps))))
   
