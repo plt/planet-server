@@ -808,7 +808,7 @@
                  (f 'name)
                  (blurb-string->blurb (f 'pkg_blurb))
                  (f 'homepage)
-                 (list (row->pkgversion (all_packages) row (list (repository-id rep))))
+                 (list (row->pkgversion (all_packages) row (list rep-id)))
                  (f 'bugtrack_id))))]
            [packages (send *db* map query generate-package)])
       packages))
