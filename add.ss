@@ -396,13 +396,9 @@
                         (td (input ((type "text") (name "newaddress")))
                             ,@(message-for 'newaddress)))
                     (tr (td "Password:")
-                        (td (input ((type "password") (name "password")))
-                            ,@(message-for 'password)))
-                    (tr (td ((colspan "2")) (input ((type "submit") (value "Change address")))))
-                    ,@(let ([pw-errors (message-for 'password)])
-                        (if (null? pw-errors)
-                            '()
-                            `((tr (td ((colspan "2")) ,@pw-errors)))))))))))))
+                        (td (input ((type "adrpassword") (name "password")))
+                            ,@(message-for 'adrpassword)))
+                    (tr (td ((colspan "2")) (input ((type "submit") (value "Change address")))))))))))))
     
     ;; package-update-page : package #;(listof repository) (listof problem?) -> string -> response
     (define (package-update-page pkg #;repositories problems)
@@ -688,7 +684,7 @@
                                     (format "~a's email address from ~a to this address (~a)."(user-username user) (user-email user) email) 
                                     "If this was you, please visit the following URL: "
                                     ""
-                                    (url->string (combine-url/relative (EXTERNAL-WEB-ROOT) k))
+                                    (url->string (combine-url/relative (EXTERNAL-URL-ROOT) k))
                                     ""
                                     "within 48 hours. If it was not you, or you do not want to change your address, then please disregard "
                                     "this message."
@@ -767,12 +763,12 @@
                          email-available? 
                          (λ (e) `(newaddress (message "The address " (b ,e) " already belongs to another account"))))
                         'newaddress)
-                       (field-exists 'password)
+                       (field-exists 'adrpassword)
                        (field-constraint
                         (wrap-as-demand-p
                          (lambda (pass) (valid-password? user pass))
-                         (lambda (pass) `(password (message "Incorrect password"))))
-                        'password)))]
+                         (lambda (pass) `(adrpassword (message "Incorrect password"))))
+                        'adrpassword)))]
                     [problems (demands bindings)])
                (cond
                  [(null? problems)
