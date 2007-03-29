@@ -6,19 +6,7 @@
            (lib "etc.ss")
            (prefix srfi1: (lib "1.ss" "srfi")))
   
-  (provide 
-   all-demands
-   field-exists
-   field-nonblank
-   fields-exist
-   fields-nonblank
-   fields-ascii
-   field-constraint
-   field-lengths<=
-   field-lengths-in
-   field-lengths>=
-   wrap-as-demand-p
-   problem?)
+  
   
   (define (problem? v) 
     (match v
@@ -26,13 +14,36 @@
       [`(general ,@(_ ...)) #t]
       [_ #f]))
   
+  (define demand/c (-> (listof binding?) (listof problem?)))
+  
+  (provide/contract 
+   [all-demands (-> (list-immutableof demand/c) demand/c)]
+   [field-exists (-> symbol? demand/c)]
+   [field-nonblank (-> symbol? demand/c)]
+   [fields-exist (-> (listof symbol?) demand/c)]
+   [fields-nonblank (-> (listof symbol?) demand/c)]
+   [fields-ascii (->* () (listof symbol?) (demand/c))]
+   [field-constraint ((procedure? #|should take the number of strings = to the given # of symbols, at least, and return problems|#) 
+                      (listof symbol?)
+                      . ->* .
+                      (demand/c))]
+   [field-lengths<= (->* (natural-number/c) (listof symbol?) (demand/c))]
+   [field-lengths-in (->* (natural-number/c natural-number/c) (listof symbol?) (demand/c))]
+   [field-lengths>= (->* (natural-number/c) (listof symbol?) (demand/c))]
+   ;; surely this next one is a bad api
+   [wrap-as-demand-p (;(->* () (listof string?) any) (->* () (listof string?) ((listof problem?))) ;; i want an -> that says "i'm not enforcing arity"
+                      procedure? procedure?
+                      . -> .
+                      (->* () (listof string?) ((listof problem?))))]
+   [problem? (-> any/c boolean?)]
+   [demand/c contract?])
+  
   ;; ============================================================
   ;; form validation / demand combinators
   
-  ;; demand ::= (bindings -> (listof problem)) 
   ;; the following are demand combinators
   
-  (define (all-demands . demands)
+  (define (all-demands demands)
     (lambda (b) (apply append (map (λ (d) (d b)) demands))))
   
   (define (field-exists f)

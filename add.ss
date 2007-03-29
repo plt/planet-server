@@ -150,14 +150,15 @@
       (let loop ([problems '()])
         (let ([r (send/suspend (RESET-PASSWORD-PAGE problems))])
           (let* ([demands 
-                  (all-demands 
-                   (fields-nonblank '(username))
-                   (fields-ascii 'username)
-                   (field-constraint
-                    (wrap-as-demand-p 
-                     username-taken? 
-                     (λ (n) `(username (message "No username " (b ,n) " exists"))))
-                    'username))]
+                  (all-demands
+                   (list-immutable
+                    (fields-nonblank '(username))
+                    (fields-ascii 'username)
+                    (field-constraint
+                     (wrap-as-demand-p 
+                      username-taken? 
+                      (λ (n) `(username (message "No username " (b ,n) " exists"))))
+                     'username)))]
                  [new-problems (demands (request-bindings r))])
             (cond
               [(null? new-problems)
@@ -252,10 +253,11 @@
     (define (do-passwordless-reset user)
       (let* ([demands
               (all-demands
-               (fields-ascii 'password1 'password2)
-               (field-constraint 
-                (wrap-as-demand-p string=? (lambda (a b) "Passwords did not match"))
-                'password1 'password2))]
+               (list-immutable
+                (fields-ascii 'password1 'password2)
+                (field-constraint 
+                 (wrap-as-demand-p string=? (lambda (a b) "Passwords did not match"))
+                 'password1 'password2)))]
              [PAGE (PASSWORDLESS-RESET-PAGE user)])
         (let loop ([problems '()])
           (let* ([r (send/suspend (PAGE problems))]
@@ -646,23 +648,24 @@
                     (url-host u)))))
       (define demands
         (all-demands 
-         ; no fields are required, but any that exist have to be properly formatted
-         (fields-ascii 'filename 'defaultfile 'homepage 'notes 'description)
-         (field-constraint
-          (wrap-as-demand-p
-           (blank-or legal-core-version?)
-           (λ (v) `(core (message "Must be a legal mzscheme version number"))))
-          'core)
-         (field-constraint
-          (wrap-as-demand-p
-           (blank-or (λ (filename) (file-in-package? filename pkgversion)))
-           (λ (filename) `(defaultfile (message "Must be the name of a file in your package"))))
-          'defaultfile)
-         (field-constraint
-          (wrap-as-demand-p
-           (blank-or (λ (url) (url-string? url)))
-           (λ (url) `(homepage (message "Must be a URL"))))
-          'homepage)))
+         (list-immutable
+          ; no fields are required, but any that exist have to be properly formatted
+          (fields-ascii 'filename 'defaultfile 'homepage 'notes 'description)
+          (field-constraint
+           (wrap-as-demand-p
+            (blank-or legal-core-version?)
+            (λ (v) `(core (message "Must be a legal mzscheme version number"))))
+           'core)
+          (field-constraint
+           (wrap-as-demand-p
+            (blank-or (λ (filename) (file-in-package? filename pkgversion)))
+            (λ (filename) `(defaultfile (message "Must be the name of a file in your package"))))
+           'defaultfile)
+          (field-constraint
+           (wrap-as-demand-p
+            (blank-or (λ (url) (url-string? url)))
+            (λ (url) `(homepage (message "Must be a URL"))))
+           'homepage))))
  
       (make-demand-page page-producer demands))
     
@@ -734,17 +737,18 @@
                (loop '()))]
             [(setpassword)
              (let* ([demands (all-demands 
-                              (fields-exist '(oldpass newpass1 newpass2))
-                              (fields-ascii 'oldpass 'newpass1 'newpass2)
-                              (field-lengths>= 5 'newpass1 'newpass2)
-                              (field-constraint
-                               (wrap-as-demand-p
-                                (lambda (pass) (valid-password? user pass))
-                                (lambda (pass) `(oldpass (message "Incorrect password"))))
-                               'oldpass)
-                              (field-constraint
-                               (wrap-as-demand-p string=? (lambda (p1 p2) `(password (message "New passwords did not match"))))
-                               'newpass1 'newpass2))]
+                              (list-immutable
+                               (fields-exist '(oldpass newpass1 newpass2))
+                               (fields-ascii 'oldpass 'newpass1 'newpass2)
+                               (field-lengths>= 5 'newpass1 'newpass2)
+                               (field-constraint
+                                (wrap-as-demand-p
+                                 (lambda (pass) (valid-password? user pass))
+                                 (lambda (pass) `(oldpass (message "Incorrect password"))))
+                                'oldpass)
+                               (field-constraint
+                                (wrap-as-demand-p string=? (lambda (p1 p2) `(password (message "New passwords did not match"))))
+                                'newpass1 'newpass2)))]
                     [problems (demands bindings)])
                (cond
                  [(null? problems)
@@ -755,19 +759,20 @@
             [(setemail)
              (let* ([demands 
                      (all-demands
-                      (field-exists 'newaddress)
-                      (fields-ascii '(newaddress))
-                      (field-constraint 
-                       (wrap-as-demand-p 
-                        email-available? 
-                        (λ (e) `(newaddress (message "The address " (b ,e) " already belongs to another account"))))
-                       'newaddress)
-                      (field-exists 'password)
-                      (field-constraint
-                       (wrap-as-demand-p
-                        (lambda (pass) (valid-password? user pass))
-                        (lambda (pass) `(password (message "Incorrect password"))))
-                       'password))]
+                      (list-immutable
+                       (field-exists 'newaddress)
+                       (fields-ascii '(newaddress))
+                       (field-constraint 
+                        (wrap-as-demand-p 
+                         email-available? 
+                         (λ (e) `(newaddress (message "The address " (b ,e) " already belongs to another account"))))
+                        'newaddress)
+                       (field-exists 'password)
+                       (field-constraint
+                        (wrap-as-demand-p
+                         (lambda (pass) (valid-password? user pass))
+                         (lambda (pass) `(password (message "Incorrect password"))))
+                        'password)))]
                     [problems (demands bindings)])
                (cond
                  [(null? problems)
@@ -790,25 +795,26 @@
   
   (define user-creation-demands
     (all-demands
-     (fields-nonblank '(username realname email password1 password2))
-     (fields-ascii 'username 'realname 'email 'password1 'password2)
-     (field-constraint (wrap-as-demand-p
-                        string=? 
-                        (λ (a b) '(password1 (message "Passwords did not match"))))
-                       'password1 'password2)
-     (field-lengths>= 5 'password1 'password2)
-     (field-constraint 
-      (wrap-as-demand-p 
-       email-available? 
-       (λ (e) `(email (message "The address " (b ,e) " has already been taken"))))
-      'email)
-     (field-constraint 
-      (wrap-as-demand-p 
-       username-available? 
-       (λ (u) `(username (message "The user name " (b ,u) " has already been taken"))))
-      'username)
-     (field-lengths-in 2 63 'username 'realname)
-     (field-lengths<= 128 'email)))
+     (list-immutable
+      (fields-nonblank '(username realname email password1 password2))
+      (fields-ascii 'username 'realname 'email 'password1 'password2)
+      (field-constraint (wrap-as-demand-p
+                         string=? 
+                         (λ (a b) '(password1 (message "Passwords did not match"))))
+                        'password1 'password2)
+      (field-lengths>= 5 'password1 'password2)
+      (field-constraint 
+       (wrap-as-demand-p 
+        email-available? 
+        (λ (e) `(email (message "The address " (b ,e) " has already been taken"))))
+       'email)
+      (field-constraint 
+       (wrap-as-demand-p 
+        username-available? 
+        (λ (u) `(username (message "The user name " (b ,u) " has already been taken"))))
+       'username)
+      (field-lengths-in 2 63 'username 'realname)
+      (field-lengths<= 128 'email))))
   
   ;; get-problems-and-defaults : request -> (values (listof problem) (listof problem))
   ;; gets the problems with this request as a request for a new user account, and 
