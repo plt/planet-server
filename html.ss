@@ -4,8 +4,8 @@
   
   (require
    "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
-   (file "/local/svn/iplt/web/common/layout.ss"
-         #;"~/svn/iplt/web/common/layout.ss"
+   (file #;"/local/svn/iplt/web/common/layout.ss"
+         "~/svn/iplt/web/common/layout.ss"
          ))
   
   (define bindings/c (listof (cons/c (union symbol? string?) string?)))
@@ -158,31 +158,39 @@
    pkgversion->docs-link
    file-url
    
-   repository->base-url)
+   repository->base-url
+   use-full-urls?)
+
+  (define use-full-urls? (make-parameter #f))
+  
+  (define (fix-url str)
+    (if (use-full-urls?)
+        (url->string
+         (combine-url/relative
+          (combine-url/relative (EXTERNAL-URL-ROOT) (URL-ROOT))
+          str))
+        str))
   
   (define (package-link/fields username pkgname)
-    (format "~a?package=~a&owner=~a" (DISPLAY-URL-ROOT) pkgname username))
+    (fix-url (format "~a?package=~a&owner=~a" (DISPLAY-URL-ROOT) pkgname username)))
   (define (package->link/base pkg)
     (package-link/fields (package-owner pkg) (package-name pkg)))
   
-    
   (define (owner-link/fields username)
-    (format "~a?owner=~a" (DISPLAY-URL-ROOT) username))
+    (fix-url (format "~a?owner=~a" (DISPLAY-URL-ROOT) username)))
   (define (package->owner-link/base pkg)
     (owner-link/fields (package-owner pkg)))
   (define (user->link/base user)
     (owner-link/fields (user-username user)))
-  
+
   (define home-link/base 
-    (format "~a?" (DISPLAY-URL-ROOT)))
-    
+    (fix-url (format "~a?" (DISPLAY-URL-ROOT))))
   (define (source-code-url/fields owner name majstr minstr)
-    (string-append (WEB-PACKAGES-URL-ROOT) "/"
-                   owner "/" 
-                   name "/"
-                   majstr "/"
-                   minstr "/"))
-  
+    (fix-url (string-append (WEB-PACKAGES-URL-ROOT) "/"
+                        owner "/" 
+                        name "/"
+                        majstr "/"
+                        minstr "/")))
   (define (source-code-url  pkg pv)
     (source-code-url/fields (package-owner pkg)
                             (package-name pkg)
@@ -198,13 +206,16 @@
   ;; file-url : package pkgversion string -> string[url]
   ;; generate a url for the given file in the given package and version
   (define (file-url pkg pv file)
-    (url->string (combine-url/relative (string->url (source-code-url pkg pv)) file)))
+    (fix-url (url->string (combine-url/relative (string->url (source-code-url pkg pv)) file))))
   
-  ;; repository -> url
+  ;; repository -> string
   ;; gets the base url for all static content relating to the given repository [currently just rss feed]
   (define (repository->base-url rep)
-    (combine-url/relative (REPOSITORIES-STATIC-CONTENT-URL-ROOT) (repository-urlname rep)))
-  
+    (fix-url 
+     (url->string
+      (combine-url/relative 
+       (REPOSITORIES-STATIC-CONTENT-URL-ROOT)
+       (repository-urlname rep)))))
   
   ;; mktitle : (listof string) -> string
   ;; makes a title with the given path

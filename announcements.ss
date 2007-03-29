@@ -49,30 +49,31 @@
   ;; rebuild-rss-feed : repository? -> void
   ;; as a side effect, rebuilds the rss file for the given repository id
   (define (rebuild-rss-feed rep)
-    (let* ([new-rss-xexpr
-            `(rss 
-              ((version "2.0"))
-              (channel
-               (title "New PLaneT Packages")
-               (link ,(url->string (EXTERNAL-URL-ROOT)))
-               (description "The newest packages available from PLaneT")
-               (language "en-us")
-               ,@(map
-                  (lambda (pkg)
-                    (let ([pkgversion (package->current-version pkg)])
-                      `(item (title ,(package-name pkg))
-                             (description 
-                              ,(escape-xexprs-as-xml-string 
-                                (append 
-                                 (or (package-blurb pkg) '())
-                                 (or (pkgversion-blurb pkgversion) '()))))
-                             (link ,(url->string (package->link/base pkg))))))
-                  (get-n-most-recent-packages (NUM-RSS-ITEMS) rep))))]
-           [file-to-write (repository->rss-path rep)]
-           [o (open-output-file file-to-write 'truncate)])
-      (display "<?xml version=\"1.0\"?>\n" o)
-      (write-xml/content (xexpr->xml new-rss-xexpr) o)
-      (close-output-port o)))
+    (parameterize ([use-full-urls? #t])
+      (let* ([new-rss-xexpr
+              `(rss 
+                ((version "2.0"))
+                (channel
+                 (title "New PLaneT Packages")
+                 (link ,(url->string (EXTERNAL-URL-ROOT)))
+                 (description "The newest packages available from PLaneT")
+                 (language "en-us")
+                 ,@(map
+                    (lambda (pkg)
+                      (let ([pkgversion (package->current-version pkg)])
+                        `(item (title ,(package-name pkg))
+                               (description 
+                                ,(escape-xexprs-as-xml-string 
+                                  (append 
+                                   (or (package-blurb pkg) '())
+                                   (or (pkgversion-blurb pkgversion) '()))))
+                               (link ,(package->link/base pkg)))))
+                    (get-n-most-recent-packages (NUM-RSS-ITEMS) rep))))]
+             [file-to-write (repository->rss-path rep)]
+             [o (open-output-file file-to-write 'truncate)])
+        (display "<?xml version=\"1.0\"?>\n" o)
+        (write-xml/content (xexpr->xml new-rss-xexpr) o)
+        (close-output-port o))))
   
   ;; escape-xexprs-as-xml-string : (listof xexpr) -> string
   (define (escape-xexprs-as-xml-string xprs)
@@ -87,44 +88,45 @@
   ;; update-email-list : notifier
   ;; mails the email list with the new package
   (define (update-email-list pkg pkgversion)
-    (let* ([blurb (html-expr->text 
-                   `(div
-                     ,@(if (package-blurb pkg)
-                           `((p "Package Description")
-                             ,@(package-blurb pkg))
-                           '())
-                     ,@(if (pkgversion-blurb pkgversion)
-                           `((p "Release Notes")
-                             ,@(pkgversion-blurb pkgversion))
-                           '())))]
-           [repositories-as-string
-            (srfi13:string-join
-             (map repository-name (pkgversion-repositories pkgversion))
-             ", ")]
-           [op (send-mail-message/port 
-                (PLANET-FROM-ADDRESS)
-                ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
-                (TO-ADDRESSES)
-                '()
-                '())]
-           [template-fields
-            (list
-             (list 'name          (package-name pkg))
-             (list 'owner         (package-owner pkg))
-             (list 'major-version (pkgversion-maj pkgversion))
-             (list 'minor-version (pkgversion-min pkgversion))
-             (list 'blurb         blurb)
-             (list 'doc-url       (url->string (pkgversion->docs-link pkg)))
-             (list 'url           (url->string (package->link/base pkg))))])
-      (begin
-        (cond
-          [(new-package? pkgversion)
-           (instantiate-template (NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)]
-          [else
-           (instantiate-template (UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)])
-        (close-output-port op) ;; causes the mail to actually get sent
-        )))
-  
+    (parameterize ([use-full-urls? #t])
+      (let* ([blurb (html-expr->text 
+                     `(div
+                       ,@(if (package-blurb pkg)
+                             `((p "Package Description")
+                               ,@(package-blurb pkg))
+                             '())
+                       ,@(if (pkgversion-blurb pkgversion)
+                             `((p "Release Notes")
+                               ,@(pkgversion-blurb pkgversion))
+                             '())))]
+             [repositories-as-string
+              (srfi13:string-join
+               (map repository-name (pkgversion-repositories pkgversion))
+               ", ")]
+             [op (send-mail-message/port 
+                  (PLANET-FROM-ADDRESS)
+                  ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
+                  (TO-ADDRESSES)
+                  '()
+                  '())]
+             [template-fields
+              (list
+               (list 'name          (package-name pkg))
+               (list 'owner         (package-owner pkg))
+               (list 'major-version (pkgversion-maj pkgversion))
+               (list 'minor-version (pkgversion-min pkgversion))
+               (list 'blurb         blurb)
+               (list 'doc-url       (pkgversion->docs-link pkg))
+               (list 'url           (package->link/base pkg)))])
+        (begin
+          (cond
+            [(new-package? pkgversion)
+             (instantiate-template (NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)]
+            [else
+             (instantiate-template (UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)])
+          (close-output-port op) ;; causes the mail to actually get sent
+          ))))
+    
   ;; instantiate-template : path[file] (listof (list symbol TST)) output-port -> void
   ;; evaluates file, which is in mzpp format, in a namespace in which the given symbols 
   ;; are bound to their associated values, and prints the result to port
