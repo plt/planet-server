@@ -55,6 +55,7 @@
    [get-all-repositories (-> (listof repository?))]
    [repository-ids->repositories (-> (listof natural-number/c) (listof repository?))]
    [legal-repository? (-> number? boolean?)]
+   [legal-language? (-> string? boolean?)]
    [startup (-> void?)]
    [teardown (-> void?)]
    [add-pkgversion-to-db!
@@ -547,8 +548,6 @@
                 "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories "
                 "WHERE id IN ("(srfi13:string-join (map number->string r-ids) ", ")");")])
           (send *db* map query make-repository))))
-          
-  
   
   (define (legal-repository? n)
     (and (integer? n) 
@@ -597,6 +596,20 @@
                         (or (string->number (caddr parsed-rc)) 0)
                         0)])
            (+ (* maj 10000) min))])))
+  
+  ;; legal-language? : determine whether the database serves this particular plt scheme
+  (define (legal-language? rc-str)
+    (let ([code (core-version-string->code rc-str)])
+      (cond
+        [(not code) #f]
+        [else
+         (let* ([cstr (number->string code)]
+                [query
+                 (string-append
+                  "SELECT count(*) FROM repositories WHERE client_lower_bound <= "cstr
+                  " AND client_upper_bound > "cstr";")]
+                [response (send *db* query-value query)])
+           (> response 0))])))
   
   (define (code->core-version-string code)
     (let ([maj (quotient code 10000)]
