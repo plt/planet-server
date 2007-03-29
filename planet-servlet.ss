@@ -79,8 +79,6 @@
               [min-lo           (get 'min-lo nat-or-false?)]
               [min-hi           (get 'min-hi nat-or-false?)]
               [path             (get 'path list-of-strings?)])
-          (unless (legal-language? language-version)
-            (transmit-failure/exit #f 'illegal-language (format "Illegal language: ~s" language-version)))
           (let ([; transmit-file : (pkgversion? path? . -> . any)
                  ; transmits the given package to the client.
                  transmit-file/exit

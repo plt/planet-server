@@ -14,8 +14,8 @@
           [proceeds 0]
           [stops 0])
       (handle-one-request lv spec 
-                          (λ (f) (set! tfiles (append tfiles (list f))))
-                          (λ (f) (set! tfails (append tfails (list f))))
+                          (λ (_ f) (set! tfiles (append tfiles (list f))))
+                          (λ (spec sym str) (set! tfails (append tfails (list (list spec sym str)))))
                           (λ () (set! proceeds (add1 proceeds)))
                           (λ () (set! stops (add1 stops))))
       (list tfiles tfails proceeds stops)))
