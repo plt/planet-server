@@ -396,7 +396,7 @@
                         (td (input ((type "text") (name "newaddress")))
                             ,@(message-for 'newaddress)))
                     (tr (td "Password:")
-                        (td (input ((type "adrpassword") (name "password")))
+                        (td (input ((type "password") (name "adrpassword")))
                             ,@(message-for 'adrpassword)))
                     (tr (td ((colspan "2")) (input ((type "submit") (value "Change address")))))))))))))
     
