@@ -14,7 +14,7 @@
   (provide/contract
    [announce-new-pkgversion (package? pkgversion? . -> . any)]
    [rebuild-rss-feed (-> repository? any)]
-   [update-email-list (package? pkgversion? . -> . any)])
+   [update-email-list ((package? pkgversion?) ((listof repository?)) . opt-> . any)])
   
   
   ;; ============================================================
@@ -27,9 +27,10 @@
   ;; This does not handle updating the web site, which is dynamically generated
   ;; based on server contents rather than being pushed out on updates.
   (define (announce-new-pkgversion pkg pkgversion)
-    (for-each rebuild-rss-feed (repository-ids->repositories (pkgversion-repositories pkgversion)))
-    (when (SEND-EMAILS?)
-      (update-email-list pkg pkgversion)))
+    (let ([reps (pkgversion-repositories pkgversion)])
+      (for-each rebuild-rss-feed (repository-ids->repositories reps))
+      (when (SEND-EMAILS?)
+        (update-email-list pkg pkgversion reps))))
   
   ;; ============================================================
   ;; RSS
@@ -49,6 +50,8 @@
   ;; rebuild-rss-feed : repository? -> void
   ;; as a side effect, rebuilds the rss file for the given repository id
   (define (rebuild-rss-feed rep)
+    (unless (repository? rep)
+      (error 'rebuild-rss-feed "got non-repostory" rep))
     (parameterize ([use-full-urls? #t])
       (let* ([new-rss-xexpr
               `(rss 
@@ -87,46 +90,50 @@
   ;; EMAIL
   ;; update-email-list : notifier
   ;; mails the email list with the new package
-  (define (update-email-list pkg pkgversion)
-    (parameterize ([use-full-urls? #t])
-      (let* ([blurb (html-expr->text 
-                     `(div
-                       ,@(if (package-blurb pkg)
-                             `((p "Package Description")
-                               ,@(package-blurb pkg))
-                             '())
-                       ,@(if (pkgversion-blurb pkgversion)
-                             `((p "Release Notes")
-                               ,@(pkgversion-blurb pkgversion))
-                             '())))]
-             [repositories-as-string
-              (srfi13:string-join
-               (map repository-name (pkgversion-repositories pkgversion))
-               ", ")]
-             [op (send-mail-message/port 
-                  (PLANET-FROM-ADDRESS)
-                  ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
-                  (TO-ADDRESSES)
-                  '()
-                  '())]
-             [template-fields
-              (list
-               (list 'name          (package-name pkg))
-               (list 'owner         (package-owner pkg))
-               (list 'major-version (pkgversion-maj pkgversion))
-               (list 'minor-version (pkgversion-min pkgversion))
-               (list 'blurb         blurb)
-               (list 'doc-url       (pkgversion->docs-link pkg))
-               (list 'url           (package->link/base pkg)))])
-        (begin
-          (cond
-            [(new-package? pkgversion)
-             (instantiate-template (NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)]
-            [else
-             (instantiate-template (UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)])
-          (close-output-port op) ;; causes the mail to actually get sent
-          ))))
-    
+  (define update-email-list
+    (case-lambda
+      [(pkg pkgversion)
+       (update-email-list pkg pkgversion (repository-ids->repositories (pkgversion-repositories pkgversion)))]
+      [(pkg pkgversion reps)
+       (parameterize ([use-full-urls? #t])
+         (let* ([blurb (html-expr->text 
+                        `(div
+                          ,@(if (package-blurb pkg)
+                                `((p "Package Description")
+                                  ,@(package-blurb pkg))
+                                '())
+                          ,@(if (pkgversion-blurb pkgversion)
+                                `((p "Release Notes")
+                                  ,@(pkgversion-blurb pkgversion))
+                                '())))]
+                [repositories-as-string
+                 (srfi13:string-join
+                  (map repository-name reps)
+                  ", ")]
+                [op (send-mail-message/port 
+                     (PLANET-FROM-ADDRESS)
+                     ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
+                     (TO-ADDRESSES)
+                     '()
+                     '())]
+                [template-fields
+                 (list
+                  (list 'name          (package-name pkg))
+                  (list 'owner         (package-owner pkg))
+                  (list 'major-version (pkgversion-maj pkgversion))
+                  (list 'minor-version (pkgversion-min pkgversion))
+                  (list 'blurb         blurb)
+                  (list 'doc-url       (pkgversion->docs-link pkg))
+                  (list 'url           (package->link/base pkg)))])
+           (begin
+             (cond
+               [(new-package? pkgversion)
+                (instantiate-template (NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)]
+               [else
+                (instantiate-template (UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE) template-fields op)])
+             (close-output-port op) ;; causes the mail to actually get sent
+             )))]))
+
   ;; instantiate-template : path[file] (listof (list symbol TST)) output-port -> void
   ;; evaluates file, which is in mzpp format, in a namespace in which the given symbols 
   ;; are bound to their associated values, and prints the result to port
