@@ -791,7 +791,7 @@
   ;; gets the n most recently-updated packages in the given repository, sorted
   ;; newest-first. The pkgversions field only contains the most recent
   (define (get-n-most-recent-packages n rep)
-    (let* ([rep-id (if (number? rep) rep (repository-id re))]
+    (let* ([rep-id (if (number? rep) rep (repository-id rep))]
             
             ;; there must be a cheaper way to do this ...
            [query (string-append
