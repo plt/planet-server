@@ -688,7 +688,7 @@
                                     (format "~a's email address from ~a to this address (~a)."(user-username user) (user-email user) email) 
                                     "If this was you, please visit the following URL: "
                                     ""
-                                    (string-append (URL-ROOT) k)
+                                    (url->string (combine-url/relative (EXTERNAL-WEB-ROOT) k))
                                     ""
                                     "within 48 hours. If it was not you, or you do not want to change your address, then please disregard "
                                     "this message."
