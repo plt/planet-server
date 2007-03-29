@@ -33,25 +33,32 @@
     (startup)
     (cond
       [(legal-language? language-version)
-       (let ([cache-pkg-list (get-matching-packages language-version
-                                                     (car (pkg-spec-path pkg-spec))
-                                                     (pkg-spec-name pkg-spec)
-                                                     (pkg-spec-maj pkg-spec)
-                                                     (pkg-spec-minor-lo pkg-spec)
-                                                     (pkg-spec-minor-hi pkg-spec))])
-          (if (pair? cache-pkg-list)
-              (let* ([cache-pkg (car cache-pkg-list)]
-                     [file (pkgversion-plt-path cache-pkg)])
-                (if (file-exists? file)
-                    (begin
-                      (transmit-file cache-pkg file)
-                      (proceed-k))
-                    (begin
-                      (transmit-failure pkg-spec 'not-found "Internal error: inconsistent server state")
-                      (stop-k))))
-              (begin
-                (transmit-failure pkg-spec 'not-found "No package matched the specified criteria")
-                (proceed-k))))]
+       (let-values ([(cache-pkg-list client-too-old?)
+                     (get-matching-packages language-version
+                                            (car (pkg-spec-path pkg-spec))
+                                            (pkg-spec-name pkg-spec)
+                                            (pkg-spec-maj pkg-spec)
+                                            (pkg-spec-minor-lo pkg-spec)
+                                            (pkg-spec-minor-hi pkg-spec))])
+          (cond
+            [(pair? cache-pkg-list)
+             (let* ([cache-pkg (car cache-pkg-list)]
+                    [file (pkgversion-plt-path cache-pkg)])
+               (if (file-exists? file)
+                   (begin
+                     (transmit-file cache-pkg file)
+                     (proceed-k))
+                   (begin
+                     (transmit-failure pkg-spec 'not-found "Internal error: inconsistent server state")
+                     (stop-k))))]
+            [else
+             (begin
+               (transmit-failure pkg-spec 
+                                 'not-found
+                                 (if client-too-old?
+                                     "Your version PLT Scheme is too old to run the specified package"
+                                     "No package matched the specified criteria"))
+               (proceed-k))]))]
       [(regexp-match #rx"^20.+" language-version)
        ;; hack to continue to support 20x series PLT Scheme even though the relation between
        ;; repositories and packages has changed. [It used to be that case that each repository

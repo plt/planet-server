@@ -30,10 +30,9 @@
     (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
    [get-package-listing (natural-number/c . -> . (listof category?))]
    [get-matching-packages
-    (string? string? string? (union natural-number/c false/c)
-     natural-number/c (union natural-number/c false/c)
+    (string? string? string? (union natural-number/c false/c) natural-number/c (union natural-number/c false/c)
      . -> .
-     (listof pkgversion?))]
+     (values (listof pkgversion?) boolean?))]
    [get-package
     (opt-> (string? string?) (boolean?)
            (union package? false/c))]
@@ -335,11 +334,28 @@
                                       (if minhi (string-append " AND min <= "(number->string minhi)) ""))
                        "")
                    " AND repository_id = "(number->string (DEFAULT-REPOSITORY))
-                   " ORDER BY hidden, maj DESC, min DESC;")])
-      (send *db* map query 
-            (lambda row 
-              (let ([rep (fld (all_packages) row 'repository_id)])
-                (row->pkgversion (all_packages) row (list rep)))))))
+                   " ORDER BY hidden, maj DESC, min DESC;")]
+           [ans (send *db* map query 
+                      (lambda row 
+                        (let ([rep (fld (all_packages) row 'repository_id)])
+                          (row->pkgversion (all_packages) row (list rep)))))])
+      (cond
+        [(not (null? ans))
+         (values ans #f)]
+        [else
+         ;; this query and the previous should be in a transaction
+         (let* ([query (string-append
+                        "SELECT count(*) FROM all_packages "
+                        " WHERE (required_core_version > "rc-version
+                        " AND name = "(escape-sql-string pkgname)
+                        " AND username = "(escape-sql-string pkgowner)
+                        (if maj 
+                            (string-append " AND maj = "(number->string maj)" AND min >= "(number->string minlo)
+                                          (if minhi (string-append " AND min <= "(number->string minhi)) ""))
+                            "")
+                        " AND repository_id = "(number->string (DEFAULT-REPOSITORY))"; ")]
+                [resl (send *db* query-value query)])
+           (values '() (> resl 0)))])))
   
   ;; ----------------------------------------
   ;; table defs
