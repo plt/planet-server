@@ -346,7 +346,7 @@
          ;; this query and the previous should be in a transaction
          (let* ([query (string-append
                         "SELECT count(*) FROM all_packages "
-                        " WHERE (required_core_version > "rc-version
+                        " WHERE required_core_version > "rc-version
                         " AND name = "(escape-sql-string pkgname)
                         " AND username = "(escape-sql-string pkgowner)
                         (if maj 
