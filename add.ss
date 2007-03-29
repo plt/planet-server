@@ -697,9 +697,9 @@
                                     "PLaneT")))
          (page
           '("Confirm email address")
-          `((p "Thank you for creating an account!")
+          `((p "You are chaging your email address from " (b ,(user-email user)) " to " (b ,email))
             ,(if (SEND-EMAILS?)
-                 `(p "To complete the registration process, please check the email account "
+                 `(p "To complete the process, please check the email account "
                      (b ,email) " for a message telling you how to proceed.")
                  `(p "Click " (a ((href ,k)) "here") " to continue.")))))))
     
@@ -776,7 +776,7 @@
                     [problems (demands bindings)])
                (cond
                  [(null? problems)
-                  (verify-and-update-address user (get request 'newaddress))
+                  (verify-and-update-address (get request 'newaddress))
                   (loop '((general "Email address changed.")))]
                  [else
                   (loop problems)]))]

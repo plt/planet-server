@@ -6,6 +6,10 @@
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   
+  (define (kv-pair? p)
+    (and (pair? p)
+         (symbol? (car p))
+         (string? (cdr p))))
   
   (define (problem? v) 
     (match v
@@ -13,7 +17,7 @@
       [`(general ,@(_ ...)) #t]
       [_ #f]))
   
-  (define demand/c (-> (listof binding?) (listof problem?)))
+  (define demand/c (-> (listof kv-pair?) (listof problem?)))
   
   (provide/contract 
    [all-demands (-> (list-immutableof demand/c) demand/c)]
