@@ -248,35 +248,6 @@
                      (b ,email) " for a message telling you how to proceed.")
                  `(p "Click " (a ((href ,k)) "here") " to continue.")))))))
     
-    ;; this should be merged with the above
-    (define (verify-changed-address user email)
-      (send/suspend 
-       (lambda (k) 
-         (when (SEND-EMAILS?)
-           (send-mail-message "PLaneT <planet@plt-scheme.org>" 
-                              "Please verify your email address"
-                              (list email)
-                              '()
-                              '()
-                              (list "Greetings! You (or someone claiming to be you) have requested to change the PLaneT user account "
-                                    (format "~a's email address from ~a to this address (~a)."(user-username user) (user-email user) email) 
-                                    "If this was you, please visit the following URL: "
-                                    ""
-                                    (string-append (URL-ROOT) k)
-                                    ""
-                                    "within 48 hours. If it was not you, or you do not want to change your address, then please disregard "
-                                    "this message."
-                                    ""
-                                    "Thanks,"
-                                    "PLaneT")))
-         (page
-          '("Confirm email address")
-          `((p "Thank you for creating an account!")
-            ,(if (SEND-EMAILS?)
-                 `(p "To complete the registration process, please check the email account "
-                     (b ,email) " for a message telling you how to proceed.")
-                 `(p "Click " (a ((href ,k)) "here") " to continue.")))))))
-    
     ;; do-passwordless-reset : user -> void 
     (define (do-passwordless-reset user)
       (let* ([demands
@@ -695,6 +666,39 @@
  
       (make-demand-page page-producer demands))
     
+    (define (verify-and-update-address email)
+      (begin
+        (verify-changed-address email)
+        (update-user-email user email)))
+    
+    ;; this should be merged with the above
+    (define (verify-changed-address email)
+      (send/suspend 
+       (lambda (k) 
+         (when (SEND-EMAILS?)
+           (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+                              "Please verify your email address"
+                              (list email)
+                              '()
+                              '()
+                              (list "Greetings! You (or someone claiming to be you) have requested to change the PLaneT user account "
+                                    (format "~a's email address from ~a to this address (~a)."(user-username user) (user-email user) email) 
+                                    "If this was you, please visit the following URL: "
+                                    ""
+                                    (string-append (URL-ROOT) k)
+                                    ""
+                                    "within 48 hours. If it was not you, or you do not want to change your address, then please disregard "
+                                    "this message."
+                                    ""
+                                    "Thanks,"
+                                    "PLaneT")))
+         (page
+          '("Confirm email address")
+          `((p "Thank you for creating an account!")
+            ,(if (SEND-EMAILS?)
+                 `(p "To complete the registration process, please check the email account "
+                     (b ,email) " for a message telling you how to proceed.")
+                 `(p "Click " (a ((href ,k)) "here") " to continue.")))))))
     
     (let loop ([problems '()])
       (with-handlers 
@@ -774,10 +778,7 @@
             [else
              (loop `((general ,(format "Oops! Bad action: ~a" action))))])))))
   
-  (define (verify-and-update-address user email)
-    (begin
-      (verify-changed-address user email)
-      (update-user-email user email)))
+  
   
   ;; ============================================================
   ;; user creation stuff
