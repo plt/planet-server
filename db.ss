@@ -5,10 +5,9 @@
   (require (lib "string.ss"))
   (require (lib "contract.ss"))
   (require (lib "xml.ss" "xml"))
-  (require (lib "list.ss"))
   (require (lib "etc.ss"))
   (require (lib "match.ss"))
-  (require (lib "pretty.ss"))
+  (require (prefix srfi13: (lib "13.ss" "srfi")))
   
   (require "data-structures.ss" "configuration.ss")
 
@@ -53,6 +52,7 @@
    [pkgversion->primary-files (pkgversion? . -> . (listof primary-file?))]
    [downloads-this-week (pkgversion? . -> . natural-number/c)]
    [get-all-repositories (-> (listof repository?))]
+   [repository-ids->repositories (-> (listof natural-number/c) (listof repository?))]
    [legal-repository? (-> number? boolean?)]
    [startup (-> void?)]
    [teardown (-> void?)]
@@ -522,10 +522,21 @@
                   "WHERE time > (current_timestamp - interval '7 days') "
                   "AND package_version_id = "(number->string (pkgversion-id pv))"; ")])
       (send *db* query-value query)))
-                                        
+  
   (define (get-all-repositories)
     (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order"])
       (send *db* map query make-repository)))
+  
+  (define (repository-ids->repositories r-ids)
+    (if (null? r-ids)
+        '()
+        (let ([query
+               (string-append
+                "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories "
+                "WHERE id IN ("(srfi13:string-join (map number->string r-ids) ", ")");")])
+          (send *db* map query make-repository))))
+          
+  
   
   (define (legal-repository? n)
     (and (integer? n) 
