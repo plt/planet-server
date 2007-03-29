@@ -2,7 +2,6 @@
   (require (lib "servlet.ss" "web-server")
            (lib "contract.ss")
            (lib "match.ss")
-           (lib "xml.ss" "xml")
            (lib "etc.ss")
            (prefix srfi1: (lib "1.ss" "srfi")))
   
@@ -63,10 +62,10 @@
   
   
   (define (fields-exist fields)
-    (apply all-demands (map field-exists fields)))
+    (all-demands (map-i field-exists fields)))
   
   (define (fields-nonblank fields)
-    (apply all-demands (map field-nonblank fields)))
+    (all-demands (map-i field-nonblank fields)))
   
   (define (field-constraint okay? . fields)
     (lambda (b)
@@ -177,6 +176,12 @@
              [value-for (extractor 'value value-formatter)]
              [message-for (extractor 'message message-formatter)])
         (finisher general-error-messages value-for message-for))))
+  
+  ;; ============================================================
+  ;; utility
+  
+  (define (map-i f args)
+    (apply list-immutable (map f args)))
   
   
   )

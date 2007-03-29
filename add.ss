@@ -761,7 +761,7 @@
                      (all-demands
                       (list-immutable
                        (field-exists 'newaddress)
-                       (fields-ascii '(newaddress))
+                       (fields-ascii 'newaddress)
                        (field-constraint 
                         (wrap-as-demand-p 
                          email-available? 
