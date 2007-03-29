@@ -37,7 +37,7 @@
       (make-pkg-spec pkg maj min-lo min-hi (list owner) #f requester)))
   
   (define (file owner name maj min)
-    (build-path (FILE-STORAGE-PATH) name (number->string maj) (number->string min) name))
+    (build-path (FILE-STORAGE-PATH) owner name (number->string maj) (number->string min) name))
   
   (define (file* owner name maj min)
     (list (list (file owner name maj min)) '() 1 0))
