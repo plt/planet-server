@@ -9,7 +9,7 @@
   (require (only "planet-server.ss" handle-one-request)
            "db.ss"
            "data-structures.ss"
-           (lib "planet-shared.ss" "planet" "private")
+           (all-except (lib "planet-shared.ss" "planet" "private") legal-language?)
 
            (lib "servlet.ss" "web-server")
            (lib "response.ss" "web-server")
