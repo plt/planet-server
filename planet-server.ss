@@ -56,7 +56,7 @@
                (transmit-failure pkg-spec 
                                  'not-found
                                  (if client-too-old?
-                                     "Your version PLT Scheme is too old to run the specified package"
+                                     "Your version of PLT Scheme is too old to run the specified package"
                                      "No package matched the specified criteria"))
                (proceed-k))]))]
       [(regexp-match #rx"^20.+" language-version)

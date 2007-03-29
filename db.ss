@@ -136,7 +136,7 @@
     (new retrying-connection%
          [get-conn 
           (λ () 
-            (let ([db (connect "localhost" 5432 "planet" "jacobm" "matrix")])
+            (let ([db (apply connect (DATABASE-CONNECT-ARGUMENTS))])
               (send db use-type-conversions #t)
               db))]))
   
