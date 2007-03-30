@@ -3,11 +3,16 @@
   (require "../planet-server.ss"
            "../configuration.ss"
            (lib "planet-shared.ss" "planet" "private")
-           (lib "match.ss"))
+           (lib "match.ss")
+           (lib "stxparam.ss"))
+           
   (require (planet "test.ss" ("schematics" "schemeunit.plt" 2 5)))
   (require-for-syntax (lib "list.ss"))
   
   (provide (all-defined))
+  
+  (define-syntax-parameter current-tester (syntax-rules () [(current-tester) n]))
+  (define-syntax-parameter current-file* (syntax-rules () [(current-file*) file*]))
   
   (define (natural-number? n) (and (integer? n) (>= n 0)))
   
@@ -48,13 +53,19 @@
   (define (file owner name maj min)
     (build-path (FILE-STORAGE-PATH) owner name (number->string maj) (number->string min) name))
   
+  (define (old-file owner name maj min)
+    (build-path "/" "local" "planet" "20x" owner name (number->string maj) (number->string min) name))
+  
   (define (file* owner name maj min)
     (list (list (file owner name maj min)) '() 1 0))
+  
+  (define (old-file* owner name maj min)
+    (list (list (old-file owner name maj min)) '() 1 0))
   
   (define (normal-error* sym message)
     (list '() `((,sym ,message)) 1 0))
 
-  (define-syntax (package-test-suite stx)
+  (define-syntax (package-test-suite* stx)
     
     (define ((numbers->tests ownerV nameV) majV highest-minV)
       (with-syntax ([owner ownerV]
@@ -71,15 +82,15 @@
                                   (syntax-object->datum nameV)
                                   majV
                                   ictr)
-                        (n owner name maj i)
+                        ((current-tester) owner name maj i)
                         (normal-error* 'not-found "No package matched the specified criteria"))
                      #`(test-equal?
                         #,(format "(~a ~a ~a #f)"
                                   (syntax-object->datum ownerV)
                                   (syntax-object->datum nameV)
                                   majV)
-                        (n owner name maj #f)
-                        (file* owner name maj highest-min)))]
+                        ((current-tester) owner name maj #f)
+                        ((current-file*)  owner name maj highest-min)))]
               [else
                (list* #`(test-equal? 
                          #,(format "(~a ~a ~a ~a)"
@@ -87,24 +98,24 @@
                                    (syntax-object->datum nameV)
                                    majV
                                    ictr)
-                         (n owner name maj i)
-                         (file* owner name maj highest-min))
+                         ((current-tester) owner name maj i)
+                         ((current-file*)  owner name maj highest-min))
                       #`(test-equal?
                          #,(format "(~a ~a ~a (= ~a))"
                                    (syntax-object->datum ownerV)
                                    (syntax-object->datum nameV)
                                    majV
                                    ictr)
-                         (n owner name maj `(= ,i))
-                         (file* owner name maj i))
+                         ((current-tester) owner name maj `(= ,i))
+                         ((current-file*)  owner name maj i))
                       #`(test-equal?
                          #,(format "(~a ~a ~a (- ~a))"
                                    (syntax-object->datum ownerV)
                                    (syntax-object->datum nameV)
                                    majV
                                    ictr)
-                         (n owner name maj `(- ,i))
-                         (file* owner name maj i))
+                         ((current-tester) owner name maj `(- ,i))
+                         ((current-file*)  owner name maj i))
                       (loop (add1 ictr)))])))))
 
     (syntax-case stx ()
@@ -119,8 +130,21 @@
                            (syntax-object->datum #'(maj ...))
                            (syntax-object->datum #'(highest-min ...))))
             (test-equal? #,(format "(~a ~a #f #f)" (syntax-object->datum #'owner) (syntax-object->datum #'name))
-                         (n owner name #f #f)
-                         (file* owner name #,very-highest-maj #,very-highest-min))))]))
+                         ((current-tester) owner name #f #f)
+                         ((current-file*) owner name #,very-highest-maj #,very-highest-min))))]))
+  
+  (define-syntax (package-test-suite stx)
+    (syntax-case stx ()
+      [(_ o p (maj min) ...)
+       #'(package-test-suite* o p (maj min) ...)]
+      [(_ o p v (maj min) ...)
+       (let ([version (syntax-object->datum #'v)])
+         #`(let ([run-test (λ (owner name mj mn) (n* owner name mj mn v))])
+             (syntax-parameterize ([current-tester (syntax-rules () [(current-tester) run-test])]
+                                   #,@(if (regexp-match #rx"^2" version)
+                                         (list #`[current-file* (syntax-rules () [(current-file*) old-file*])])
+                                         '()))
+                (package-test-suite* o p (maj min) ...))))]))
   
   (define manual-tests
     (test-suite
@@ -163,8 +187,21 @@
      
      ))
   
+  (define automatic-20x-tests
+    (test-suite
+     "backwards-compatibility tests for 20x packages"
+     (package-test-suite "planet" "test-connection.plt" "207.1"
+                         (1 0))
+     (package-test-suite "soegaard" "galore.plt" "207.1"
+                         (1 1))
+     (package-test-suite "dherman" "io.plt" "207.1"
+                         (1 1))
+     (package-test-suite "dherman" "zip.plt" "207.1"
+                         (1 2))))
+  
   (define all-tests
     (test-suite "all tests"
                 manual-tests
-                automatic-tests))
+                automatic-tests
+                automatic-20x-tests))
   )

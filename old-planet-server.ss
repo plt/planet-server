@@ -8,8 +8,7 @@
   
   (provide handle-one-request)
   
-  (define base (build-path "/" "local" "planet" "20x"))
-  (define PLANET-SERVER-REPOSITORY (make-parameter (build-path base "rep")))
+  (define PLANET-SERVER-REPOSITORY (make-parameter (build-path "/" "local" "planet" "20x")))
   
   ;; ============================================================
   ;; BASIC SERVER MECHANISMS
