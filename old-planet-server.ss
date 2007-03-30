@@ -23,10 +23,7 @@
   ;; void
   (define (handle-one-request language-version pkg-spec transmit-file transmit-failure proceed-k stop-k)
     (if (legal-language? language-version)
-        (let* ([repository (build-path 
-                            (PLANET-SERVER-REPOSITORY) 
-                            (language-version->repository language-version))]
-               [cache-pkg (parameterize ((CACHE-DIR repository))
+        (let ([cache-pkg (parameterize ((CACHE-DIR (PLANET-SERVER-REPOSITORY)))
                             (lookup-package pkg-spec))])
           (if cache-pkg
               (let* ([path (pkg-path cache-pkg)]
@@ -35,7 +32,7 @@
                      [file (build-path path (pkg-spec-name pkg-spec))])
                 (if (file-exists? file)
                     (begin
-                      (transmit-file cache-pkg maj min file)
+                      (transmit-file (list maj min) file)
                       (proceed-k))
                     (begin
                       (transmit-failure pkg-spec 'not-found "Internal error: inconsistent server state")

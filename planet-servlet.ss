@@ -83,21 +83,27 @@
                  ; transmits the given package to the client.
                  transmit-file/exit
                  (lambda (thepkgver file)
-                   (log-download (request-client-ip initial-request) thepkgver language-version)
-                   (send/finish
-                    (make-response/full
-                     200
-                     "Okay"
-                     (current-seconds)
-                     #"text/plain"
-                     `((Content-Length . ,(number->string (file-size file)))
-                       (Package-Major-Version . ,(number->string (pkgversion-maj thepkgver)))
-                       (Package-Minor-Version . ,(number->string (pkgversion-min thepkgver))))
-
-                     (let ([file-port (open-input-file file)])
-                       (begin0
-                         (list (read-bytes (file-size file) file-port))
-                         (close-input-port file-port))))))])
+                   (let-values ([(maj min)
+                                 (if (pkgversion? thepkgver)
+                                     (values (pkgversion-maj thepkgver)
+                                             (pkgversion-min thepkgver))
+                                     (apply values thepkgver))])
+                     (when (pkgversion? thepkgver)
+                       (log-download (request-client-ip initial-request) thepkgver language-version))
+                     (send/finish
+                      (make-response/full
+                       200
+                       "Okay"
+                       (current-seconds)
+                       #"text/plain"
+                       `((Content-Length . ,(number->string (file-size file)))
+                         (Package-Major-Version . ,(number->string (pkgversion-maj thepkgver)))
+                         (Package-Minor-Version . ,(number->string (pkgversion-min thepkgver))))
+                       
+                       (let ([file-port (open-input-file file)])
+                         (begin0
+                           (list (read-bytes (file-size file) file-port))
+                           (close-input-port file-port)))))))])
             (handle-one-request
              language-version
              (make-pkg-spec name maj min-lo min-hi path #f language-version)

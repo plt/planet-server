@@ -11,7 +11,7 @@
    [handle-one-request
     (string?
      pkg-spec?
-     (pkgversion? path? . -> . any)
+     ((union pkgversion? (list/c natural-number/c natural-number/c)) path? . -> . any)
      (pkg-spec? symbol? string? . -> . any)
      (-> any)
      (-> any)
