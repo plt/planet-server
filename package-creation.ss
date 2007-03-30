@@ -285,8 +285,19 @@
   (define-struct file-info (path modify-seconds size) (make-inspector))
   (define-struct dir-info  (path modify-seconds subdirs files) (make-inspector))
   
+  ;; the (string-append "/") business here is to hack around a problem
+  ;; with apache configuration that i haven't figured out how to fix yet
+  ;; the problem is that coach.cs is configured at the firewall level to redirect
+  ;; traffic from port 80 to port 8080; this makes apache confused about how
+  ;; to tell the world about where it lives. That's not a problem unless it
+  ;; generates a redirect, at which point it erroneously puts a bad port number
+  ;; in, so to fix that we make sure that it doesn't have to generate redirects.
+  ;; the most common redirect is from http://www/foo to http://www/foo/, so we
+  ;; must be sure to put / marks at the end of each path. This is good practice
+  ;; anyway.
   (define (path->link path text)
-    `(a ((href ,(path->string path))) ,text))
+    `(a ((href ,(string-append (path->string path) "/"))) ,text))
+  
   
   (define (path<? path1 path2)
     (string<? (path->string path1)
