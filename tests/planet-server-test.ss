@@ -191,7 +191,7 @@
     (test-suite
      "backwards-compatibility tests for 20x packages"
      (package-test-suite "planet" "test-connection.plt" "207.1"
-                         (1 0))
+                         (1 1))
      (package-test-suite "soegaard" "galore.plt" "207.1"
                          (1 1))
      (package-test-suite "dherman" "io.plt" "207.1"
