@@ -178,10 +178,14 @@
         (let ([op (open-output-string)])
           (parameterize ([pretty-print-columns 80])
             (pretty-print i op)
-            (get-output-string op))))
+            (let* ([str (get-output-string op)]
+                   [ans (regexp-match #rx"(.*)\n$" str)])
+              (if ans
+                  (cadr ans)
+                  str)))))
       
       (define (provide-item->table-rows p)
-        (define (row* exprs) `((tr (td (tt ,@exprs)) (td mdash))))
+        (define (row* exprs) `((tr (td ((valign "top")) (tt ,@exprs)) (td ((valign "top")) mdash))))
         (define (row i) (row* (list (pretty-format i))))
         (define (space-prefix ls)
           (cond
@@ -205,11 +209,11 @@
            (row p)]))
       
       (define (contract->xexpr contract)
-        `(code ,(pretty-format contract)))
+        `(pre ,(pretty-format contract)))
       
       (define (provide/contract-item->table-row p)
-        (define (row* id-exprs contract-exprs) `(tr (td (tt ,@id-exprs)) (td ,@contract-exprs)))
-        (define (row id contract-expr) `(tr (td (tt ,(format "~a" id))) (td ,contract-expr)))
+        (define (row* id-exprs contract-exprs) `(tr (td ((valign "top")) (tt ,@id-exprs)) (td ((valign "top")) ,@contract-exprs)))
+        (define (row id contract-expr) `(tr (td ((valign "top")) (tt ,(format "~a" id))) (td ((valign "top")) ,contract-expr)))
         (match p
           [`(struct ,id-expr ((,field ,contract) ...))
             (row* `((code ,(pretty-format `(struct ,id-expr ,@field)))) `(nbsp))]
