@@ -87,7 +87,7 @@
                       `("logged in as " (b ,(user-username user)) nbsp "|" nbsp
                                         ,@(item (ADD-URL-ROOT) "manage packages") nbsp "|" nbsp
                                         ,@(item (LOGOUT-PAGE) "log out"))
-                      (item (ADD-URL-ROOT) "contribute a package"))))
+                      (item (ADD-URL-ROOT) "contribute a package / log in"))))
           ,@contents))]))
   
   (define (mkdisplay titles contents req)
