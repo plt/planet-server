@@ -62,7 +62,11 @@
                  ,@(map
                     (lambda (pkg)
                       (let ([pkgversion (package->current-version pkg)])
-                        `(item (title ,(string-append (package-owner pkg) "/" (package-name pkg)))
+                        `(item (title ,(format "~a/~a ~a.~a" 
+                                               (package-owner pkg) 
+                                               (package-name pkg)
+                                               (pkgversion-maj pkgversion)
+                                               (pkgversion-min pkgversion)))
                                (description 
                                 ,(escape-xexprs-as-xml-string 
                                   (append 

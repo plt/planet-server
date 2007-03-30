@@ -181,7 +181,7 @@
             (get-output-string op))))
       
       (define (provide-item->table-rows p)
-        (define (row* exprs) `((tr (td ,@exprs) (td mdash))))
+        (define (row* exprs) `((tr (td (tt ,@exprs)) (td mdash))))
         (define (row i) (row* (list (pretty-format i))))
         (define (space-prefix ls)
           (cond
@@ -208,8 +208,8 @@
         `(code ,(pretty-format contract)))
       
       (define (provide/contract-item->table-row p)
-        (define (row* id-exprs contract-exprs) `(tr (td ,@id-exprs) (td ,@contract-exprs)))
-        (define (row id contract-expr) `(tr (td ,(format "~a" id)) (td ,contract-expr)))
+        (define (row* id-exprs contract-exprs) `(tr (td (tt ,@id-exprs)) (td ,@contract-exprs)))
+        (define (row id contract-expr) `(tr (td (tt ,(format "~a" id))) (td ,contract-expr)))
         (match p
           [`(struct ,id-expr ((,field ,contract) ...))
             (row* `((code ,(pretty-format `(struct ,id-expr ,@field)))) `(nbsp))]
@@ -219,13 +219,12 @@
             (row id (contract->xexpr contract))]))  
       
       `(div ((class "primaryFile"))
-            (div ((class "name")) 
-                 ,(file-link pkg pv (primary-file-name pf) (primary-file-name pf)))
+            (div ((class "name")) ,(file-link pkg pv (primary-file-name pf) (primary-file-name pf)))
             (div ((class "interface")) 
                  ,(cond
                     [(primary-file-xexpr pf)
-                     `(table ((width "60%"))
-                       (thead (th ((width "30%")) "Name") (th ((width "*")) "Contract"))
+                     `(table ((class "interface"))
+                       (tr (td (b "Name")) (td (b "Contract")))
                        ,@(apply append (map provide->table-rows (primary-file-xexpr pf))))]
                     [else 
                      `(i "[no interface available]")]))))
@@ -245,36 +244,29 @@
                     ,@(if (package-homepage pkg)
                           `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
                           '())
-                    (br)
-                    "To load: " (tt ,(load-current pkg (package->current-version pkg)))
-                    (br)
-                    "Downloads this week: " ,(number->string (downloads-this-week (package->current-version pkg)))
-                    (br)
-                    "Total downloads: " ,(number->string 
-                                          (apply + 
-                                                 (cons 
-                                                  (pkgversion-downloads (package->current-version pkg))
-                                                  (map pkgversion-downloads (package->old-versions pkg)))))
-                    (br)
-                    ) 
-               (div ((class "packageBlurb"))
-                    ,@(or (package-blurb pkg) '("[no description available]")))
-               ,@(map 
-                  (display-primary-file pkg (package->current-version pkg))
-                  (pkgversion->primary-files (package->current-version pkg))))
-         #;(td ((valign "top") (id "projectStats"))
-               (h2 "Downloads")
-               (table
-                (tr
-                 (td "This week:") 
-                 (td ,(number->string (downloads-this-week (package->current-version pkg)))))
-                (tr
-                 (td "Total:") 
-                 (td ,(number->string 
-                       (apply + 
-                              (cons 
-                               (pkgversion-downloads (package->current-version pkg))
-                               (map pkgversion-downloads (package->old-versions pkg)))))))))
+                    (table ((width "95%"))
+                     (tr
+                      (td "To load: ")
+                      (td (tt ,(load-current pkg (package->current-version pkg)))))
+                     (tr 
+                      (td ((valign "top")) "Package description: ")
+                      (td ((class "packageBlurb"))
+                          ,@(or (package-blurb pkg) '("[no description available]"))))
+                     (tr
+                      (td "Downloads this week: ")
+                      (td ,(number->string (downloads-this-week (package->current-version pkg)))))
+                     (tr
+                      (td "Total downloads: ")
+                      (td ,(number->string 
+                            (apply + 
+                                   (cons 
+                                    (pkgversion-downloads (package->current-version pkg))
+                                    (map pkgversion-downloads (package->old-versions pkg)))))))
+                     (tr
+                      (td ((valign "top")) "Primary files: ")
+                      (td ,@(map 
+                             (display-primary-file pkg (package->current-version pkg))
+                             (pkgversion->primary-files (package->current-version pkg))))))))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])

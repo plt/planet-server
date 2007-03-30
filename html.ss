@@ -4,8 +4,8 @@
   
   (require
    "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
-   (file "/local/svn/iplt/web/common/layout.ss"
-         #;"~/svn/iplt/web/common/layout.ss"
+   (file #;"/local/svn/iplt/web/common/layout.ss"
+         "~/svn/iplt/web/common/layout.ss"
          ))
   
   (define bindings/c (listof (cons/c (union symbol? string?) string?)))
