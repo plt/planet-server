@@ -8,8 +8,8 @@
   
   (require
    "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
-   (file #;"/local/svn/iplt/web/common/layout.ss"
-         "~/svn/iplt/web/common/layout.ss"
+   (file "/local/svn/iplt/web/common/layout.ss"
+         #;"~/svn/iplt/web/common/layout.ss"
          ))
   
   (define bindings/c (listof (cons/c (union symbol? string?) string?)))
@@ -155,10 +155,11 @@
        (let ([xexpr (response k)])
          (make-response/full 200 
                              "Okay"
-                             "text/html" 
+                             (current-seconds)
+                             #"text/html" 
                              '((Cache-Control . "no-cache")
                                (Pragma . "no-cache"))
-                             (xexpr->string xexpr))))))
+                             (list (xexpr->string xexpr)))))))
   
   ;; ----------------------------------------
   ;; url builders (for packages, users)
