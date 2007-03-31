@@ -296,7 +296,7 @@
     
     (define (logged-out-actions)
       (let loop ([problems '()])
-        (let ([r (send/suspend (LOGIN-PAGE problems))])
+        (let ([r (send/suspend/nocache (LOGIN-PAGE problems))])
           (if (not (exists-binding? 'mode (request-bindings r)))
               (loop '((general "Your browser did not submit the " (b "mode") " binding, which is necessary")))
               (case (string->symbol (get r 'mode))
@@ -707,7 +707,7 @@
             (λ (e) 
               ((error-display-handler) (format "~a:\n ~a" (current-date-string) (exn-message e)) e)
               (loop `((general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))))])
-        (let* ([request (send/suspend (main-loop-page problems))]
+        (let* ([request (send/suspend/nocache (main-loop-page problems))]
                [bindings (request-bindings request)]
                [action (get request 'action)])
           (case (string->symbol action)
