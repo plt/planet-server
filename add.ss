@@ -368,7 +368,7 @@
              (section "Manage your account")
              (table ((width "95%"))
               (tr 
-               (td
+               (td ((valign "top"))
                 (form ((action ,k) (method "post") (id "changePassword"))
                       (input ((type "hidden") (name "action") (value "setpassword")))
                       (p (b "Change your password"))
@@ -387,7 +387,7 @@
                            (if (null? pw-errors)
                                '()
                                `((tr (td ((colspan "2")) ,@pw-errors))))))))
-               (td
+               (td ((valign "top"))
                 (form ((action ,k) (method "post") (id "changeEmail"))
                       (input ((type "hidden") (name "action") (value "setemail")))
                       (p (b "Change your email address"))
