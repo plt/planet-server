@@ -118,10 +118,10 @@
      ; "PLaneT Package Repository", but that doesn't appear to be possible with tall-page right now 
      #;(apply string-append "PLaneT Package Repository : " (join '(" > ") (map title->string titles)))
      "PLaneT Package Repository" 
-     #:head-stuff `(#;(link ((rel "alternate")
+     #:head-stuff `((link ((rel "alternate")
                            (type "application/rss+xml")
                            (title "RSS")
-                           (href ,(url->string (repository->rss-url rep)))))
+                           (href "/300/planet.rss")))
                     (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
                     (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
                     (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; "))

@@ -73,7 +73,10 @@
                  "Do not require from PLaneT any packages you do not trust.")
               (p "For more about how to use PLaneT and for instructions on turning your own code into"
                  " packages, look up PLaneT in the DrScheme Help Desk.")
-              (p "This page shows the latest versions of all available packages, sorted by category. "))
+              (p "This page shows the latest versions of all available packages, sorted by category. ")
+              (p "You can be notified when new packages are added by subscribing to the "
+                 (a ((href "/300/planet.rss")) "RSS feed") " or to the "
+                 (a ((href "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")) "PLaneT-Announce mailing list")"."))
          (section "Available packages")
          (table ,@(srfi1:append-map summary-table-rows (get-package-listing rep))))))
      
@@ -200,11 +203,17 @@
           [`(all-from ,(? string? module-filename))
             (let ([url (file-link pkg pv module-filename module-filename)])
               (row* `("(all-from " ,url ")")))]
+          [`(all-from (file ,(? string? module-filename)))
+            (let ([url (file-link pkg pv module-filename module-filename)])
+              (row* `("(all-from (file \"" ,url "\"))")))]
           [`(all-from-except ,(? string? module-filename) ,id ...)
             (let ([url (file-link pkg pv module-filename module-filename)])
               (row* `("(all-from-except " ,url ,@(space-prefix (map symbol->string id))")")))]
+          [`(all-from-except (file ,(? string? module-filename)) ,id ...)
+            (let ([url (file-link pkg pv module-filename module-filename)])
+              (row* `("(all-from-except (file \"" ,url "\" " ,@(space-prefix (map symbol->string id))")")))]
           [_  
-           ;; (struct ...), non-string all-from and all-from-except, (all-defined), (all-defined-except ...), 
+           ;; (struct ...), non-string-or-file all-from and all-from-except, (all-defined), (all-defined-except ...), 
            ;; (prefix-all-defined p), and (prefix-all-defined-except ...)
            (row p)]))
       
