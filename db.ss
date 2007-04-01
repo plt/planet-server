@@ -7,6 +7,7 @@
   (require (lib "xml.ss" "xml"))
   (require (lib "etc.ss"))
   (require (lib "match.ss"))
+  (require (lib "list.ss"))
   (require (prefix srfi13: (lib "13.ss" "srfi")))
   
   (require "data-structures.ss" "configuration.ss")
@@ -89,7 +90,11 @@
    [core-version-string->code (string? . -> . (union number? false/c))]
    [code->core-version-string (number? . -> . (union string? false/c))]
    [recompute-all-primary-files (-> any)]
-   [get-n-most-recent-packages (natural-number/c (union natural-number/c repository?) . -> . (listof package?))])
+   [get-n-most-recent-packages (natural-number/c (union natural-number/c repository?) . -> . (listof package?))]
+   
+   [blurb->xexprs (any/c . -> . (union (listof xexpr?) false/c))]
+    
+   )
   
   (provide sql-null?)
   
@@ -669,7 +674,14 @@
                  (cond
                    [(not required-core) "NULL"]
                    [else (number->string required-core)]))])]
-           [mainfile (info.ss 'primary-file (λ () #f))]
+           [main-files
+            (let* ([pf-field (info.ss 'primary-file (λ () '()))]
+                   [pre-main-files
+                    (cond
+                      [(not pf-field) '()]
+                      [(string? pf-field) (list pf-field)]
+                      [(list? pf-field) pf-field])])
+              (filter (λ (file) (file-exists? (build-path unpacked-package-path file))) pre-main-files))]
            [id (send *db* query-value "SELECT nextval('package_versions_pk')")]
            [query
             (string-append 
@@ -684,17 +696,23 @@
              (number->string min) ", "
              (escape-sql-string (path->string filename)) ", "
              (escape-sql-string (path->string unpacked-package-path)) ", "
-             (safe-info 'primary-file (lambda () "NULL") (λ (x) (format "~a" x))) ", "
+             (if (null? main-files)
+                 "NULL"
+                 (escape-sql-string (car main-files)))", "
              (safe-info 'doc.txt (lambda () "NULL") (λ (x) (format "~a" x))) ", "
-             (safe-info 'release-blurb 
-                        (lambda () "NULL") 
-                        (lambda (v)
-                          (apply string-append (map xexpr->string (blurb->xexprs v))))) ", "
+             (let/ec return
+               (safe-info 'release-notes 
+                          (lambda () "NULL") 
+                          (λ (v) 
+                            (let ([xprs (blurb->xexprs v)])
+                              (if xprs
+                                  (format "~s" xprs)
+                                  (return "NULL")))))) ", "
              (safe-info 'version (lambda () "NULL") (λ (x) (format "~a" x))) ", "
              required-core-str", "
              "0)")])
       (send *db* exec query)
-      (when mainfile (reset-primary-files id (list (list unpacked-package-path mainfile))))
+      (reset-primary-files id (map (λ (f) (list unpacked-package-path f)) main-files))
       id))
   
   ;; the association between package versions and primary files is one-to-many even
@@ -926,8 +944,8 @@
   (define (blurb->xexprs b)
     (cond
       [(string? b) (list b)]
-      [(not b) (list "[no description]")]
-      [else b]))
+      [(and (list? b) (andmap xexpr? b)) b]
+      [else #f]))
   
   ;; get-interface-expr : path[filename] -> (listof sexp[provide or provide/contract clause])
   ;; gets a <pre>...</pre> xexpr corresponding to the provide and provide/contract statements

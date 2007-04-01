@@ -7,11 +7,10 @@
   (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss" "configuration.ss")
   (require (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
-           (lib "url.ss" "net")
            (lib "cookie.ss" "net")
-           (lib "date.ss")
            (lib "pretty.ss")
            (lib "match.ss")
+           (lib "list.ss")
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   (provide interface-version timeout start)
@@ -259,7 +258,7 @@
                           '())
                     (table ((width "95%"))
                      (tr
-                      (td "To load: ")
+                      (td ((width "18%")) "To load: ")
                       (td (tt ,(load-current pkg (package->current-version pkg)))))
                      (tr 
                       (td ((valign "top")) "Package description: ")
@@ -279,7 +278,9 @@
                       (td ((valign "top")) "Primary files: ")
                       (td ,@(map 
                              (display-primary-file pkg (package->current-version pkg))
-                             (pkgversion->primary-files (package->current-version pkg))))))))
+                             (sort
+                              (pkgversion->primary-files (package->current-version pkg))
+                              (λ (a b) (string<? (primary-file-name a) (primary-file-name b))))))))))
          (section "Current version")
          ,(pvs->table pkg (list (package->current-version pkg)) load-current)
          ,@(let ([old-versions (package->old-versions pkg)])

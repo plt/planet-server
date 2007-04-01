@@ -285,7 +285,7 @@
   (define-struct file-info (path modify-seconds size) (make-inspector))
   (define-struct dir-info  (path modify-seconds subdirs files) (make-inspector))
   
-  ;; the (string-append "/") business here is to hack around a problem
+  ;; the "/" business here is to hack around a problem
   ;; with apache configuration that i haven't figured out how to fix yet
   ;; the problem is that coach.cs is configured at the firewall level to redirect
   ;; traffic from port 80 to port 8080; this makes apache confused about how
@@ -295,8 +295,12 @@
   ;; the most common redirect is from http://www/foo to http://www/foo/, so we
   ;; must be sure to put / marks at the end of each path. This is good practice
   ;; anyway.
-  (define (path->link path text)
-    `(a ((href ,(string-append (path->string path) "/"))) ,text))
+  (define (path->linker suffix)
+    (λ (path text)
+      `(a ((href ,(string-append (path->string path) suffix))) ,text)))
+  
+  (define path->link (path->linker ""))
+  (define path->link/ (path->linker "/"))
   
   
   (define (path<? path1 path2)
@@ -474,8 +478,8 @@
                                 ".."))))
           ,@(list-ec (: subdir (mergesort subdirs dir-info<?))
                      (:let path (dir-info-path subdir))
-                     `(li ,(path->link (dir-info-path subdir) 
-                                       (path->link-text (dir-info-path subdir)))))))]
+                     `(li ,(path->link/ (dir-info-path subdir) 
+                                        (path->link-text (dir-info-path subdir)))))))]
       [else
        (error di)]))
   

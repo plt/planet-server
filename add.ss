@@ -413,7 +413,12 @@
                 ((action ,k) (method "post") (enctype "multipart/form-data"))
                 (table 
                  (tr (td "Package to use: ") (td (input ((type "file") (name "file")))))
-                 (tr (td "Backwards-compatible update?") (td (input ((type "checkbox") (name "minor")))))
+                 (tr (td "Backwards-compatible update?") 
+                     (td 
+                      (select ((name "minor"))
+                              (option " ")
+                              (option ((value "t")) "Yes")
+                              (option ((value "f")) "No"))))
                  
                  #|
                  (tr (td "Which repositories is this update compatible with?") (td ""))
@@ -449,7 +454,7 @@
         (let loop ([problems '()])
           (let* ([request (send/suspend (package-update-page pkg #;repositories problems))] 
                  [file-contents (get request 'file)]
-                 [minor-update? (exists-binding? 'minor (request-bindings request))]
+                 [minor-update?/list (get-all request 'minor)]
 
                  #;[repository-id-strings (extract-bindings 'repository (request-bindings request))]
                  [repository-ids (list (DEFAULT-REPOSITORY)) #;(map string->number repository-id-strings)])
@@ -458,15 +463,25 @@
                (loop `((general "Please select at least one repository for your package")))]
               [(not (andmap (lambda (x) (memv x valid-ids)) repository-ids))
                (loop `((general "Illegal repository selected")))]
+              [(not (and (pair? minor-update?/list) 
+                         (null? (cdr minor-update?/list))
+                         (member (car minor-update?/list) '("t" "f"))))
+               (loop `((general 
+                        ,(string-append "Please select whether you are submitting a minor "
+                                        "or a major update (see the PLT Scheme Help Desk "
+                                        "for more discussion of the difference between minor "
+                                        "and major updates)"))))]                    
               [else
-               (update-package user pkg minor-update? file-contents 
-                               ;; the map below converts repository ids to repository data structures
-                               (map 
-                                (lambda (id) 
-                                  (srfi1:find 
-                                   (lambda (r) (= id (repository-id r)))
-                                   repositories))
-                                repository-ids))])))))
+               (let ([minor-update? (string=? (car minor-update?/list) "t")])
+                 (with-handlers ([exn:fail:bad-package? (λ (e) (loop `((general (span ,@(exn:fail:bad-package-xexprs e))))))])
+                   (update-package user pkg minor-update? file-contents 
+                                   ;; the map below converts repository ids to repository data structures
+                                   (map 
+                                    (lambda (id) 
+                                      (srfi1:find 
+                                       (lambda (r) (= id (repository-id r)))
+                                       repositories))
+                                    repository-ids))))])))))
     
     
           
