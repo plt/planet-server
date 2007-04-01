@@ -37,6 +37,9 @@
    [get-package
     (opt-> (string? string?) (boolean?)
            (union package? false/c))]
+   [get-package-version
+    (opt-> (string? string? natural-number/c natural-number/c) (boolean?)
+           (union pkgversion? false/c))]
    [get-package-by-id
     (-> natural-number/c natural-number/c
         (union package? false/c))]
@@ -449,6 +452,31 @@
                " ORDER BY maj DESC, min DESC")]
              [pkgversions (send *db* map query list)])
         (version-rows->package (all_packages) pkgversions))))
+  
+  (define get-package-version
+    (opt-lambda (owner name maj min (include-hidden? #f))
+      (let* ([query
+              (string-append
+               "SELECT * FROM all_packages "
+               " WHERE username = "(escape-sql-string owner)
+               " AND name = "(escape-sql-string name)
+               " AND maj = "(number->string maj)
+               " AND min = "(number->string min)
+               (if include-hidden?
+                   ""
+                   " AND hidden = false")
+               ";")])
+        (let ([pkgver-list 
+               (send *db* map query 
+                     (λ row (row->pkgversion
+                             (all_packages)
+                             row
+                             (list 2) ;; of course this should not be just 2, but for now it works
+                             )))])
+          (cond
+            [(null? pkgver-list) #f]
+            [(null? (cdr pkgver-list)) (car pkgver-list)]
+            [else (error 'get-package-version "too many packages!")])))))
   
   ;; get-package-by-id : nat nat -> (union package #f)
   ;; gets the given package id, but only if its owner is the given owner
