@@ -4,6 +4,8 @@
            (lib "list.ss")
            (lib "date.ss"))
   
+  (provide (all-defined))
+  
   (define (read-all ip)
     (let-values ([(pipe-in pipe-out) (make-pipe)])
       (thread 
