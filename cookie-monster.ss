@@ -136,11 +136,12 @@
             (error (lambda (a b c) (error 'assoc-list-parser "Malformed cookie: ~v ~v ~v" a b c)))))
 
   (define (do-parse str)
-    (let ([ip (open-input-string str)])
-      (dynamic-wind
-       void
-       (λ () (raw->cookies (assoc-list-parser (λ () (cookie-lexer ip)))))
-       (λ () (close-input-port ip)))))
+    (with-handlers ([exn:fail? (λ () '())])
+      (let ([ip (open-input-string str)])
+        (dynamic-wind
+         void
+         (λ () (raw->cookies (assoc-list-parser (λ () (cookie-lexer ip)))))
+         (λ () (close-input-port ip))))))
 
   ;; raw->cookies : flat-property-list -> (listof cookie)
   (define (raw->cookies associations)
