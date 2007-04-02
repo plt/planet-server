@@ -136,7 +136,7 @@
             (error (lambda (a b c) (error 'assoc-list-parser "Malformed cookie: ~v ~v ~v" a b c)))))
 
   (define (do-parse str)
-    (with-handlers ([exn:fail? (λ () '())])
+    (with-handlers ([exn:fail? (λ (e) '())])
       (let ([ip (open-input-string str)])
         (dynamic-wind
          void
