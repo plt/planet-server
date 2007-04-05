@@ -311,7 +311,9 @@
                [pkgname  (extract-bindings 'package bindings)]
                [owner    (extract-bindings 'owner bindings)])
           (cond
-            [(and (null? pkgname) (null? owner))
+            [(null? owner)
+             ;; ideally there would be a separate page saying you can't do that, but for now I just 
+             ;; want to stop the internal error
              (gen-main-page)]
             [(and (null? pkgname) (not (null? owner)))
              (let ([user (get-user-record/no-password (car owner))])

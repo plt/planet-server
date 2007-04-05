@@ -8,7 +8,8 @@
   (require (lib "etc.ss"))
   (require (lib "match.ss"))
   (require (lib "list.ss"))
-  (require (prefix srfi13: (lib "13.ss" "srfi")))
+  (require (prefix srfi13: (lib "13.ss" "srfi"))
+           (prefix srfi1: (lib "1.ss" "srfi")))
   
   (require "data-structures.ss" "configuration.ss")
 
@@ -112,16 +113,25 @@
       (init-field get-conn)
       
       (define/public (perform-action query action)
-        ;; the commented lines are timing data --- i really should figure out some
-        ;; good way to log this all the time
-        (let* (;[_ (printf "~s\n" query)]
-               ;[start-time (current-milliseconds)]
+        (let* ([start-time (current-milliseconds)]
                [conn (get-conn)])
           (begin0
             (action conn)
             (send conn disconnect)
-            ;(printf "~a milliseconds\n\n" (- (current-milliseconds) start-time))
+            (timing-log query (- (current-milliseconds) start-time))
             )))
+      
+      (define timing-log
+        (let ([c (make-channel)])
+          (thread 
+           (λ ()
+             (let loop ()
+               (let-values ([(q t) (apply values (channel-get c))])
+                 (with-output-to-file "/local/planet/logs/timing-log.ss"
+                   (λ () (write (list q t)) (newline))
+                   'append)
+                 (loop)))))
+          (λ (q t) (channel-put c (list q t)))))
         
       (define/public (query-value q . args)
         (perform-action q (λ (c) (send/apply c query-value q args))))
@@ -684,6 +694,37 @@
                [else (escape-sql-string (c ans))]))]))
       safe-info))
   
+  
+  (define (pred->projection pred)
+    (λ (y) (if (pred y) y #f)))
+  (define >file (pred->projection file-exists?))
+  
+  ;; html-docs-paths : path (listof string) -> (listof path)
+  ;; gets all the files that Help Desk would consider valid html documentation paths
+  ;; (using the criteria listed in Help Desk's documentation: either index.htm, index.html,
+  ;; or <jobname>.html where <jobname>-Z-H-1.html also exists)
+  (provide/contract
+   [html-docs-paths (path? (listof string?) . -> . (listof path?))])
+  (define (html-docs-paths root potentials)
+    (parameterize ([current-directory root])
+      (let ()
+        (define (get-doc-path p)
+          (cond
+            [(>file (build-path p "index.htm"))]
+            [(>file (build-path p "index.html"))]
+            [else
+             (with-handlers ([exn:fail? (λ (e) #f)])
+               (let ([zh1s (srfi1:filter-map 
+                            (λ (f) (regexp-match #rx"(.*)-Z-H-1.html$" (path->bytes f))) 
+                            (directory-list (build-path root p)))])
+                 (ormap 
+                  (λ (x) (let ([file (build-path p (bytes->path (bytes-append (cadr x) #".html")))])
+                           (>file file)))
+                  zh1s)))]))
+        (srfi1:filter-map get-doc-path potentials))))
+    
+    
+    
   ;; add-pkgversion-to-db! : user package nat nat string path info.ss-fn -> nat
   ;; given information about a new package version [user, package record, maj, min, name, path to unpacked
   ;; contents, and an info.ss function] adds the new package version to the database and returns a
@@ -710,11 +751,16 @@
                       [(string? pf-field) (list pf-field)]
                       [(list? pf-field) pf-field])])
               (filter (λ (file) (file-exists? (build-path unpacked-package-path file))) pre-main-files))]
+           
+           ;[html-docs-potential-paths (info.ss 'html-docs (λ () '()))]
+           ;[html-docs-paths (html-docs-paths unpacked-package-path html-docs-potential-paths)]
+           
            [id (send *db* query-value "SELECT nextval('package_versions_pk')")]
            [query
             (string-append 
              "INSERT INTO package_versions "
              "(id, package_id, maj, min, plt_path, src_path, "
+             ;" default_file, doctxt, html_docs, release_blurb, version_name, required_core_version, downloads)"
              " default_file, doctxt, release_blurb, version_name, required_core_version, downloads)"
              " VALUES "
              "("
@@ -728,6 +774,11 @@
                  "NULL"
                  (escape-sql-string (car main-files)))", "
              (safe-info 'doc.txt (lambda () "NULL") (λ (x) (format "~a" x))) ", "
+             ;; note to jacob: don't check this in until you can add the column html_docs
+             ;; to package_versions and rebuild all the views. PAIN!
+             #|(if (null? html-docs-paths)
+                 "NULL"
+                 (escape-sql-string (car html-docs-paths)))", " |#
              (let/ec return
                (safe-info 'release-notes 
                           (lambda () "NULL") 
