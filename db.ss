@@ -128,7 +128,7 @@
              (let loop ()
                (let-values ([(q t) (apply values (channel-get c))])
                  (with-output-to-file "/local/planet/logs/timing-log.ss"
-                   (λ () (write (list q t)) (newline))
+                   (λ () (write (list q t (current-seconds))) (newline))
                    'append)
                  (loop)))))
           (λ (q t) (channel-put c (list q t)))))
