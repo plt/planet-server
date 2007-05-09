@@ -47,7 +47,9 @@
   ;; get-first : (X -> bool) (listof X) -> (union X #f)
   (define (get-first p l) (ormap (lambda (x) (and (p x) x)) l))
       
-  (define (login r fail-with)
+  (define (start initial-request)
+    
+    (define (login r fail-with)
       (let ([login (get r 'login)]
             [pw    (get r 'pw)])
         (cond
@@ -61,11 +63,9 @@
                              k 
                              (list (build-cookie "username" login #:path "/") 
                                    (build-cookie "passcode" passcode #:path "/")))))])
-               (start req)))]
+               (logged-in-actions u req)))]
           [else 
            (fail-with `((password  (message "Incorrect username or password.")) (login (value ,login))))])))
-  
-  (define (start initial-request)
     
     (define (page titles bodies)
       (mkdisplay titles bodies initial-request))
