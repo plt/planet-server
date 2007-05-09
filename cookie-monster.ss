@@ -6,7 +6,8 @@
            (lib "xml.ss" "xml")
            (lib "contract.ss"))
 
-  (define-struct client-cookie (name value domain path))
+  (print-struct #t)
+  (define-struct client-cookie (name value domain path) (make-inspector))
   (provide build-cookie
            request-cookies
            (struct client-cookie (name value domain path)))
@@ -76,10 +77,6 @@
                         (list
                          (xexpr->string `(html (body "Resource redirected to " (a ((href ,url)) ,url)))))))
 
-
-
-
-
   ;; ============================================================
   ;; utilities for retrieving cookies
 
@@ -136,7 +133,8 @@
             (error (lambda (a b c) (error 'assoc-list-parser "Malformed cookie: ~v ~v ~v" a b c)))))
 
   (define (do-parse str)
-    (with-handlers ([exn:fail? (λ (e) '())])
+    (with-handlers ([exn:fail? 
+                     (λ (e) '())])
       (let ([ip (open-input-string str)])
         (dynamic-wind
          void
@@ -178,7 +176,12 @@
            ; though firefox seems to always do so
            [cookie-strs (extract-bindings 'cookie (request-headers req))]
            [cookies (apply append (map do-parse cookie-strs))])
-      cookies))
+      (begin
+        (printf "cookie-strs:\n")
+        (for-each (λ (s) (printf "    ~s\n" s)) cookie-strs)
+        (printf "cookies:\n")
+        (for-each (λ (c) (printf "    ~s\n" c)) cookies)
+        cookies)))
 
   ;; request-cookies : request -> env
   (define (request-cookies req)
