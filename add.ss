@@ -414,8 +414,7 @@
            `(,@general-error-messages  
              
              (script
-              ,(make-pcdata #f #f
-                            (format
+              ,(format
                              "
 var minor = \"~a\";
 var major = \"~a\";
@@ -429,7 +428,7 @@ function update(status) {
 
 "            
                              major-revision
-                             minor-revision)))
+                             minor-revision))
                 
                 
              (form 
@@ -459,7 +458,7 @@ function update(status) {
                     repositories)
                  |#
                  (tr (td ((colspan "2")) (input ((type "submit") (value "Update package")))))))
-             (script (make-pcdata "update(false);"))
+             (script "update(false);")
              
              )))))
     
