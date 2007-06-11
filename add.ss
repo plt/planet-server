@@ -428,7 +428,7 @@ function update(status) {
    if (status == 't') {
       labelNode.innerHTML = \"The new package will be version\";
       outputNode.innerHTML = minor;
-   } else if {status == 'f') {
+   } else if (status == 'f') {
       labelNode.innerHTML = \"The new package will be version\";
       outputNode.innerHTML = major;
    } else {
