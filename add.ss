@@ -470,7 +470,7 @@ function update(status) {
                     repositories)
                  |#
                  (tr (td ((colspan "2")) (input ((type "submit") (value "Update package")))))))
-             (script "update(false);")
+             (script "update(null);")
              
              )))))
     
