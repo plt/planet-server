@@ -421,8 +421,19 @@ var major = \"~a\";
 
 function update(status) {
    var outputNode = document.getElementById('ver');
+   var labelNode = docuement.getElementById('verLabel');
    if (outputNode != null) {
-      outputNode.innerHTML = status ? major : minor;
+
+   // status is either 't', 'f', or null
+   if (status == 't') {
+      labelNode.innerHTML = \"The new package will be version\";
+      outputNode.innerHTML = minor;
+   } else if {status == 'f') {
+      labelNode.innerHTML = \"The new package will be version\";
+      outputNode.innerHTML = major;
+   } else {
+      labelNode.innerHTML = '';
+      outputNode.innerHTML = '';
    }      
 }
 
@@ -438,11 +449,12 @@ function update(status) {
                  (tr (td "Backwards-compatible update?") 
                      (td 
                       (select ((name "minor")
-                               (onchange "update(this.options[this.selectedIndex].value == 't');"))
+                               (onchange "update(this.options[this.selectedIndex].value);"))
                               (option " ")
                               (option ((value "t")) "Yes")
                               (option ((value "f")) "No"))))
-                 (tr (td "The new package will be version") (td (span ((id "ver")) nbsp)))
+                 (tr (td (span ((id "verLabel")) nbsp))
+                     (td (b (span ((id "verVal")) nbsp))))
                  
                  
                  
