@@ -404,21 +404,48 @@
        
     ;; package-update-page : package #;(listof repository) (listof problem?) -> string -> response
     (define (package-update-page pkg #;repositories problems)
-      (let ([general-error-messages (strings->error-xhtml (extract 'general problems))])
+      (let* ([general-error-messages (strings->error-xhtml (extract 'general problems))]
+             [pv (package->current-version pkg)]
+             [major-revision (format "~a.0" (add1 (pkgversion-maj pv)))]
+             [minor-revision (format "~a.~a" (pkgversion-maj pv) (add1 (pkgversion-min pv)))])
         (lambda (k)
           (page
            (list "update" (package-name pkg))
            `(,@general-error-messages  
-               (form 
+             
+             (script
+              ,(make-pcdata #f #f
+                            (format
+                             "
+var minor = \"~a\";
+var major = \"~a\";
+
+function update(status) {
+   var outputNode = document.getElementById('ver');
+   if (outputNode != null) {
+      outputNode.innerHTML = status ? major : minor;
+   }      
+}
+
+"            
+                             major-revision
+                             minor-revision)))
+                
+                
+             (form 
                 ((action ,k) (method "post") (enctype "multipart/form-data"))
                 (table 
                  (tr (td "Package to use: ") (td (input ((type "file") (name "file")))))
                  (tr (td "Backwards-compatible update?") 
                      (td 
-                      (select ((name "minor"))
+                      (select ((name "minor")
+                               (onchange "update(this.options[this.selectedIndex].value == 't');"))
                               (option " ")
                               (option ((value "t")) "Yes")
                               (option ((value "f")) "No"))))
+                 (tr (td "The new package will be version") (td (span ((id "ver")) nbsp)))
+                 
+                 
                  
                  #|
                  (tr (td "Which repositories is this update compatible with?") (td ""))
@@ -431,7 +458,10 @@
                                        ,(repository-name rep))))
                     repositories)
                  |#
-                 (tr (td ((colspan "2")) (input ((type "submit") (value "Update package"))))))))))))
+                 (tr (td ((colspan "2")) (input ((type "submit") (value "Update package")))))))
+             (script (make-pcdata "update(false);"))
+             
+             )))))
     
     (define (do-add-package request)
         (let* ([valid-categories (get-category-names)]
