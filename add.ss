@@ -421,7 +421,7 @@ var major = \"~a\";
 
 function update(status) {
    var outputNode = document.getElementById('ver');
-   var labelNode = docuement.getElementById('verLabel');
+   var labelNode = document.getElementById('verLabel');
    if (outputNode != null) {
 
      // status is either 't', 'f', or null
