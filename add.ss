@@ -420,7 +420,7 @@ var minor = \"~a\";
 var major = \"~a\";
 
 function update(status) {
-   var outputNode = document.getElementById('ver');
+   var outputNode = document.getElementById('verVal');
    var labelNode = document.getElementById('verLabel');
    if (outputNode != null) {
 
