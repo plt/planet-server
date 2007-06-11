@@ -424,19 +424,19 @@ function update(status) {
    var labelNode = docuement.getElementById('verLabel');
    if (outputNode != null) {
 
-   // status is either 't', 'f', or null
-   if (status == 't') {
-      labelNode.innerHTML = \"The new package will be version\";
-      outputNode.innerHTML = minor;
-   } else if (status == 'f') {
-      labelNode.innerHTML = \"The new package will be version\";
-      outputNode.innerHTML = major;
-   } else {
-      labelNode.innerHTML = '';
-      outputNode.innerHTML = '';
-   }      
+     // status is either 't', 'f', or null
+     if (status == 't') {
+        labelNode.innerHTML = \"The new package will be version\";
+        outputNode.innerHTML = minor;
+     } else if (status == 'f') {
+        labelNode.innerHTML = \"The new package will be version\";
+        outputNode.innerHTML = major;
+     } else {
+        labelNode.innerHTML = '';
+        outputNode.innerHTML = '';
+     }      
+   }
 }
-
 "            
                              major-revision
                              minor-revision))
