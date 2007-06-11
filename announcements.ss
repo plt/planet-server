@@ -114,7 +114,12 @@
                   ", ")]
                 [op (send-mail-message/port 
                      (PLANET-FROM-ADDRESS)
-                     ((NEW-MAIL-SUBJECT) (package-name pkg) repositories-as-string)
+                     ((if (new-package? pkgversion)
+                          (NEW-MAIL-SUBJECT)
+                          (UPDATED-MAIL-SUBJECT))
+                      (package-owner pkg)
+                      (package-name pkg) 
+                      repositories-as-string)
                      (TO-ADDRESSES)
                      '()
                      '())]
@@ -125,7 +130,7 @@
                   (list 'major-version (pkgversion-maj pkgversion))
                   (list 'minor-version (pkgversion-min pkgversion))
                   (list 'blurb         blurb)
-                  (list 'doc-url       (pkgversion->docs-link pkg pkgversion "[no documentation available]"))
+                  (list 'doc-url       (pkgversion->docs-link pkg pkgversion (λ () "[no documentation available]")))
                   (list 'url           (package->link/base pkg)))])
            (begin
              (cond

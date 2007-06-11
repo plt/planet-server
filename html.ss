@@ -2,14 +2,13 @@
   (require 
    (lib "contract.ss") 
    (lib "servlet.ss" "web-server")
-   (lib "response-structs.ss" "web-server")
    (lib "xml.ss" "xml")
    (lib "url.ss" "net"))
   
   (require
    "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
-   (file "/local/svn/iplt/web/common/layout.ss"
-         #;"~/svn/iplt/web/common/layout.ss"
+   (file #;"/local/svn/iplt/web/common/layout.ss"
+         "~/svn/iplt/web/common/layout.ss"
          ))
   
   (define bindings/c (listof (cons/c (union symbol? string?) string?)))
@@ -30,6 +29,7 @@
   
   ;; request->repository : req -> (values number[id of a repository] boolean)
   (define (request->repository req)
+    (printf "request->repository!")
     (bindings->repository (request-bindings req) (request-cookies req)))
   
   ;; given a set of bindings, determines the repository to which it refers

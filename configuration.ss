@@ -26,7 +26,9 @@
   (define TO-ADDRESSES (make-parameter '("jacobm@gmail.com")))
   (define MAIL-SUBSCRIBE-URL (make-parameter (string->url "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")))
   (define NEW-MAIL-SUBJECT
-    (make-parameter (lambda (pkgname reps) (format "New PLaneT package: ~a for ~a" pkgname reps))))
+    (make-parameter (lambda (owner pkgname reps) (format "New PLaneT package: ~a/~a for ~a" owner pkgname reps))))
+  (define UPDATED-MAIL-SUBJECT
+    (make-parameter (lambda (owner pkgname reps) (format "Updated PLaneT package: ~a/a for ~a" owner pkgname reps))))
   (define NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE (make-parameter "newpkg.mzpp"))
   (define UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE (make-parameter "updatedpkg.mzpp"))
     

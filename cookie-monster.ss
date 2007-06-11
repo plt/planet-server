@@ -1,7 +1,6 @@
 (module cookie-monster mzscheme
   (require (lib "cookie.ss" "net")
            (lib "kw.ss")
-           (lib "response-structs.ss" "web-server")
            (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
            (lib "contract.ss"))
@@ -176,12 +175,16 @@
            ; though firefox seems to always do so
            [cookie-strs (extract-bindings 'cookie (request-headers req))]
            [cookies (apply append (map do-parse cookie-strs))])
-      (begin
-        (printf "cookie-strs:\n")
-        (for-each (λ (s) (printf "    ~s\n" s)) cookie-strs)
-        (printf "cookies:\n")
-        (for-each (λ (c) (printf "    ~s\n" c)) cookies)
-        cookies)))
+      (with-output-to-file "~/debugging-cookies"
+        (λ ()
+          (printf "request-headers: ~s\n" (request-headers req))
+          
+          (printf "cookie-strs:\n")
+          (for-each (λ (s) (printf "    ~s\n" s)) cookie-strs)
+          (printf "cookies:\n")
+          (for-each (λ (c) (printf "    ~s\n" c)) cookies))
+        'append)
+      cookies))
 
   ;; request-cookies : request -> env
   (define (request-cookies req)
