@@ -54,7 +54,7 @@
   ;; cookie->env-binding : cookie -> (cons Symbol String)
   ;; gets the environment binding that will set the given cookie
   (define (cookie->env-binding cookie)
-    (make-header 'Set-Cookie (print-cookie cookie)))
+    (make-header #"Set-Cookie" (string->bytes/utf-8 (print-cookie cookie))))
 
   ;; build-cookie-response : xexpr[xhtml] (listof cookie) -> response
   (define (build-cookie-response xexpr cookies)
@@ -71,7 +71,7 @@
                         (current-seconds)
                         TEXT/HTML-MIME-TYPE
                         (cons
-                         (make-header 'Location url)
+                         (make-header #"Location" (string->bytes/utf-8 url))
                          (map cookie->env-binding cookies))
                         (list
                          (xexpr->string `(html (body "Resource redirected to " (a ((href ,url)) ,url)))))))

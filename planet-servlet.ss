@@ -96,9 +96,9 @@
                        (current-seconds)
                        #"text/plain"
                        (list
-                        (make-header 'Content-Length (number->string (file-size file)))
-                        (make-header 'Package-Major-Version (number->string (pkgversion-maj thepkgver)))
-                        (make-header 'Package-Minor-Version (number->string (pkgversion-min thepkgver))))
+                        (make-header #"Content-Length" (string->bytes/utf-8 (number->string (file-size file))))
+                        (make-header #"Package-Major-Version" (string->bytes/utf-8 (number->string (pkgversion-maj thepkgver))))
+                        (make-header #"Package-Minor-Version" (string->bytes/utf-8 (number->string (pkgversion-min thepkgver)))))
                        
                        (let ([file-port (open-input-file file)])
                          (begin0

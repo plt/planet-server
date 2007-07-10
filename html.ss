@@ -158,8 +158,8 @@
                              (current-seconds)
                              #"text/html" 
                              (list
-                              (make-header 'Cache-Control "no-cache")
-                              (make-header 'Pragma "no-cache"))
+                              (make-header #"Cache-Control" #"no-cache")
+                              (make-header #"Pragma" #"no-cache"))
                              (list (xexpr->string xexpr)))))))
   
   ;; ----------------------------------------
