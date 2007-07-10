@@ -12,7 +12,6 @@
            (all-except (lib "planet-shared.ss" "planet" "private") legal-language?)
 
            (lib "servlet.ss" "web-server")
-           (lib "response.ss" "web-server")
            (lib "string.ss"))
 
   (provide interface-version timeout start)
@@ -96,9 +95,10 @@
                        "Okay"
                        (current-seconds)
                        #"text/plain"
-                       `((Content-Length . ,(number->string (file-size file)))
-                         (Package-Major-Version . ,(number->string (pkgversion-maj thepkgver)))
-                         (Package-Minor-Version . ,(number->string (pkgversion-min thepkgver))))
+                       (list
+                        (make-header 'Content-Length (number->string (file-size file)))
+                        (make-header 'Package-Major-Version (number->string (pkgversion-maj thepkgver)))
+                        (make-header 'Package-Minor-Version (number->string (pkgversion-min thepkgver))))
                        
                        (let ([file-port (open-input-file file)])
                          (begin0
