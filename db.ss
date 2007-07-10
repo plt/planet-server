@@ -280,10 +280,7 @@
   ;; package insertion/management
   (define (blurb-string->blurb b)
     (if b
-        (let ([ip (open-input-string b)])
-          (begin0
-            (read ip)
-            (close-input-port ip)))
+        (with-handlers ([exn:fail? (λ (e) #f)]) (read-from-string b))
         #f))
   
   (define (blurb->blurb-string b)
@@ -1026,28 +1023,30 @@
       [(and (list? b) (andmap xexpr? b)) b]
       [else #f]))
   
-  ;; get-interface-expr : path[filename] -> (listof sexp[provide or provide/contract clause])
+  ;; get-interface-expr : path[filename] -> (listof sexp[provide or provide/contract clause]) or #f
   ;; gets a <pre>...</pre> xexpr corresponding to the provide and provide/contract statements
   ;; in the given file, if it is a module, or a dummy otherwise.
   (define (get-interface-sexpr file)
-    (let ([main-expr (and (file-exists? file) (with-input-from-file file read))]) ; should i check that there's nothing else following this expr?
-      (cond
-        [(not main-expr) #f]
-        [(and (pair? main-expr) (eq? (car main-expr) 'module))
-         (let loop ([exprs (cdr main-expr)]
-                    ;; holds a list of provide and provide/contract statements. the outer list
-                    ;; is reverse sorted throughout the progream; the inner lists are verbatim
-                    [provides '()])
-           (cond
-             [(null? exprs) (reverse provides)]
-             [else
-              (match (car exprs)
-                [`(provide ,names ...)
-                  (loop (cdr exprs) (cons (car exprs) provides))]
-                [`(provide/contract ,clauses ...)
-                  (loop (cdr exprs) (cons (car exprs) provides))]
-                [_ (loop (cdr exprs) provides)])]))]
-        [else #f])))
+    (with-handlers ([exn:fail? (λ (e) #f)])
+      ; should i check that there's nothing else following this expr?
+      (let ([main-expr (and (file-exists? file) (with-input-from-file file read))])
+        (cond
+          [(not main-expr) #f]
+          [(and (pair? main-expr) (eq? (car main-expr) 'module))
+           (let loop ([exprs (cdr main-expr)]
+                      ;; holds a list of provide and provide/contract statements. the outer list
+                      ;; is reverse sorted throughout the progream; the inner lists are verbatim
+                      [provides '()])
+             (cond
+               [(null? exprs) (reverse provides)]
+               [else
+                (match (car exprs)
+                  [`(provide ,names ...)
+                   (loop (cdr exprs) (cons (car exprs) provides))]
+                  [`(provide/contract ,clauses ...)
+                   (loop (cdr exprs) (cons (car exprs) provides))]
+                  [_ (loop (cdr exprs) provides)])]))]
+          [else #f]))))
   
   
       
