@@ -416,8 +416,8 @@
              (script
               ,(format
                              "
-var minor = \"~a\";
 var major = \"~a\";
+var minor = \"~a\";
 
 function update(status) {
    var outputNode = document.getElementById('verVal');
