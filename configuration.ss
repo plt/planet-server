@@ -28,7 +28,7 @@
   (define NEW-MAIL-SUBJECT
     (make-parameter (lambda (owner pkgname reps) (format "New PLaneT package: ~a/~a for ~a" owner pkgname reps))))
   (define UPDATED-MAIL-SUBJECT
-    (make-parameter (lambda (owner pkgname reps) (format "Updated PLaneT package: ~a/a for ~a" owner pkgname reps))))
+    (make-parameter (lambda (owner pkgname reps) (format "Updated PLaneT package: ~a/~a for ~a" owner pkgname reps))))
   (define NEW-PACKAGE-ANNOUNCEMENT-TEMPLATE (make-parameter "newpkg.mzpp"))
   (define UPDATED-PACKAGE-ANNOUNCEMENT-TEMPLATE (make-parameter "updatedpkg.mzpp"))
     
