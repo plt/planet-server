@@ -213,6 +213,23 @@
      (build-path (create-package-directory user package maj min) "contents")
      (create-web-directory user package maj min)
      user package maj min))
+  
+  ;; rebuild-all-autoinstallers : -> void
+  ;; creates the appropriate autoinstaller for every package version
+  (define (rebuild-all-autoinstallers)
+    (for-each-package-version
+     (λ (pkg pv)
+       (let ([user (package-owner pkg)]
+             [name (package-name pkg)]
+             [maj (pkgversion-maj pv)]
+             [min (pkgversion-min pv)])
+         (let ([autoinstaller-dir (create-autoinstaller-directory user name maj min)])
+           (printf "deleting ~s\n" autoinstaller-dir)
+           (delete-directory* autoinstaller-dir)
+           (printf "building autoinstaller for ~a/~a ~a.~a\n" user name maj min)
+           (setup-autoinstaller (pkgversion-src-path pv)
+                                user name maj min))))))
+  
                   
   (define (make-creator root-dir-param)
     (lambda (usr pkgname maj min)
