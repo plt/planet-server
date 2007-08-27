@@ -40,6 +40,8 @@
      . -> .
      void?)]
    [rebuild-all-code-pages
+    (-> any)]
+   [rebuild-all-autoinstallers
     (-> any)])
     
   ;; planet-file-name? : any -> boolean
