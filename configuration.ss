@@ -5,6 +5,7 @@
   (define FILE-STORAGE-PATH     (make-parameter (build-path "/local/planet/archives")))
   (define STATIC-CONTENT-ROOT   (make-parameter (build-path "/local/webroot/htdocs/")))
   (define WEB-PACKAGES-ROOT     (make-parameter (build-path (STATIC-CONTENT-ROOT) "package-source")))
+  (define AUTOINSTALLERS-ROOT   (make-parameter (build-path (STATIC-CONTENT-ROOT) "autoinstallers")))
   
   (define EXTERNAL-URL-ROOT     (make-parameter (string->url "http://planet.plt-scheme.org/")))
   (define URL-ROOT              (make-parameter "/"))

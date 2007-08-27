@@ -148,7 +148,6 @@
                 [pkgdir (create-package-directory username pkgname maj min)]
                 [permanent-file-path (build-path pkgdir pkgname)] 
                 [srcdir (build-path pkgdir "contents")]
-                [webdir (create-web-directory username pkgname maj min)]
                 [_ (copy-file tmpfilepath permanent-file-path)]
                 [_ (rename-file-or-directory tmpsrcdir srcdir)]
                 
@@ -163,7 +162,7 @@
                                            srcdir
                                            info.ss)])
            (for-each (λ (r) (associate-pkgversion-with-repository! id r)) repositories)
-           (code-to-html srcdir webdir username pkgname maj min)
+           (for-each (λ (task) (task srcdir username pkgname maj min)) *post-install-tasks*)
            (when (ANNOUNCE-NEW-PACKAGES?)
              (let ([pkgversion (get-package-version-by-id id (user-id user))])
                (unless pkgversion
@@ -172,6 +171,25 @@
        (λ () (delete-directory* tmpdir)) ;; regardless of how we exit, clean up the tmp dir
        )))
   
+  (define (setup-source-code-html srcdir username pkgname maj min)
+    (let ([webdir (create-web-directory username pkgname maj min)])
+      (code-to-html srcdir webdir username pkgname maj min)))
+  
+  (define (setup-autoinstaller srcdir username pkgname maj min)
+    (let ([info.ss (get-metainfo srcdir)]
+          [autoinstall-dir (create-autoinstaller-directory username pkgname maj min)]
+          [prefix (regexp-match #rx"^(.*)\\.plt$" pkgname)])
+      (unless prefix (error "package name did not have expected shape"))
+      (let* ([pkgname-prefix (cadr prefix)]
+             [autoinstaller-name (format "~a-~a-~a-~a.plt" username pkgname-prefix maj min)]
+             [autoinstaller-path (build-path autoinstall-dir autoinstaller-name)]
+             
+             [package-description (format "~a" (info.ss 'name (λ () pkgname)))])
+        
+        (build-autoinstaller autoinstaller-path package-description username pkgname maj min))))                  
+  
+  (define *post-install-tasks* (list setup-source-code-html setup-autoinstaller))
+    
   ;; rebuild-all-code-pages : -> void
   ;; rebuilds the entire code pages site.
   (define (rebuild-all-code-pages)
@@ -203,6 +221,7 @@
         dir)))
   (define create-package-directory (make-creator FILE-STORAGE-PATH))
   (define create-web-directory (make-creator WEB-PACKAGES-ROOT))
+  (define create-autoinstaller-directory (make-creator AUTOINSTALLERS-ROOT))
   
   ;; unpack-planet-package : path? path? -> void
   ;; unpacks the given package (specified by its path) into the given directory
@@ -497,6 +516,30 @@
       [else
        (error di)]))
   
+  ;; ============================================================
+  ;; Autoinstaller stuff
+  
+  (require (lib "pack.ss" "setup"))
+  
+  ;; build-autoinstaller : path[full path to plt file]
+  ;;                       string[package description]
+  ;;                       string[owner]
+  ;;                       string[package]
+  ;;                     -> void
+  ;; SIDE EFFECT: writes an autoinstaller to path.
+  (define (build-autoinstaller plt-filename package-name owner pkgname maj min)
+    (define spec `(require "dummy-file.ss" (,owner ,pkgname ,maj ,min)))
+    (pack-plt plt-filename
+              (format "~a (PLaneT package version ~a.~a auto-installation bundle)" package-name maj min)
+              '()
+              #:unpack-unit
+              `(unit (import collects-dir unmztar)
+                     (export)
+                     (begin
+                       (let ([get (dynamic-require `(lib "resolver.ss" "planet") 'get-planet-module-path/pkg)])
+                         (get ',spec #f #f))
+                       (void))
+                     (list))))
   
   ;; ============================================================
   ;; misc utility
