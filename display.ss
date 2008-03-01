@@ -156,9 +156,9 @@
                 ,(number->string (pkgversion-downloads pv)))
             (td ((width "8em") (valign "top") (class "docs"))
                 ,@(doc-link pkg pv `("[none]")))
-            (td ((width "8em") (valign "top") (class "requiredcore"))
+            (td ((width "8em") (valign "top") (class "pv"))
                 ,(or (pkgversion-required-core pv) "[none]"))
-            (td ((width "*") (valign "top") (class "toload")) 
+            (td ((width "*") (valign "top") (class "toload"))
                 (tt ,(to-load-fn pkg pv))))
             
         (tr (td ((colspan "4") (class "blurb"))
