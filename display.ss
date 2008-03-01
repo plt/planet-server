@@ -102,7 +102,7 @@
     (define (pvs->table pkg pvs to-load-fn)
       `(table ((width "100%"))
               (thead
-               (th "Package version") (th "Version") (th "Source") (th "DLs") (th "Docs") (th "To load"))
+               (th "Package version") (th "Version") (th "Source") (th "DLs") (th "Docs") (th "Required PLT") (th "To load"))
               ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
     
     (define (load-current pkg pv)
@@ -156,6 +156,8 @@
                 ,(number->string (pkgversion-downloads pv)))
             (td ((width "8em") (valign "top") (class "docs"))
                 ,@(doc-link pkg pv `("[none]")))
+            (td ((width "8em") (valign "top") (class "requiredcore"))
+                ,(or (pkgversion-required-core pv) "[none]"))
             (td ((width "*") (valign "top") (class "toload")) 
                 (tt ,(to-load-fn pkg pv))))
             
