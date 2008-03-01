@@ -102,7 +102,7 @@
     (define (pvs->table pkg pvs to-load-fn)
       `(table ((width "100%"))
               (thead
-               (th "Package version") (th "Version") (th "Source") (th "DLs") (th "Docs") (th "Required PLT") (th "To load"))
+               (th "Package version") (th "Version") (th "Source") (th "DLs") (th "Docs") (th "Req. PLT") (th "To load"))
               ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
     
     (define (load-current pkg pv)
