@@ -260,6 +260,9 @@
                      (tr
                       (td ((width "18%")) "To load: ")
                       (td (tt ,(load-current pkg (package->current-version pkg)))))
+                     (tr
+                      (td ((width "18%")) "Required PLT Scheme version: ")
+                      (td (tt ,(pkgversion-required-core (package->current-version pkg)))))
                      (tr 
                       (td ((valign "top")) "Package description: ")
                       (td ((class "packageBlurb"))
