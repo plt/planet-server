@@ -1,6 +1,6 @@
 (module db mzscheme
   
-  (require (planet "spgsql.ss" ("schematics" "spgsql.plt" 1 2)))
+  (require (planet "spgsql.ss" ("schematics" "spgsql.plt" 2 3)))
   (require (lib "class.ss"))
   (require (lib "string.ss"))
   (require (lib "contract.ss"))
@@ -76,7 +76,7 @@
         void?)]
    [associate-pkgversion-with-repository! (natural-number/c (union repository? natural-number/c) . -> . void?)]
    [get-next-version-number
-    (-> package? boolean? (cons-immutable/c natural-number/c natural-number/c))]
+    (-> package? boolean? (cons/c natural-number/c natural-number/c))]
    
    [log-download
     (string?  ; ip address
@@ -113,23 +113,23 @@
       (init-field get-conn)
       
       (define/public (perform-action query action)
-        (let* ([start-time (current-milliseconds)]
+        (let* (#;[start-time (current-milliseconds)]
                [conn (get-conn)])
           (begin0
             (action conn)
             (send conn disconnect)
-            (timing-log query (- (current-milliseconds) start-time))
+            #;(timing-log query (- (current-milliseconds) start-time))
             )))
       
-      (define timing-log
+      #;(define timing-log
         (let ([c (make-channel)])
           (thread 
            (λ ()
              (let loop ()
                (let-values ([(q t) (apply values (channel-get c))])
                  (with-output-to-file "/local/planet/logs/timing-log.ss"
-                   (λ () (write (list q t (current-seconds))) (newline))
-                   'append)
+                     (λ () (write (list q t (current-seconds))) (newline))
+                     'append)
                  (loop)))))
           (λ (q t) (channel-put c (list q t)))))
         
@@ -187,49 +187,49 @@
     (let ([id (send *db* query-value "SELECT nextval('contributors_pk')")])
       (begin
         (send *db* exec
-              (string-append
+              (concat-sql
                "INSERT INTO contributors (id, username, realname, email, password) VALUES ("
-               (number->string id)", "
-               (escape-sql-string username)", "
-               (escape-sql-string realname)", "
-               (escape-sql-string email)", "
-               "md5("(escape-sql-string password)"))"))
+               [integer id]", "
+               [varchar username]", "
+               [varchar realname]", "
+               [varchar email]", "
+               "md5("
+               [varchar password]"));"))
         (make-user id username realname email))))
   
   (define (valid-password? user pass)
-    (let ([query (string-append
-                  "SELECT (password = md5("(escape-sql-string pass)")) AS valid "
-                  "FROM contributors WHERE id = "(number->string (user-id user)))])
+    (let ([query (concat-sql
+                  "SELECT (password = md5("[varchar pass]")) AS valid "
+                  "FROM contributors WHERE id = "[integer (user-id user)]";")])
       (send *db* query-value query)))
   
   
   (define (update-user-email user newemail)
-    (let ([sql (string-append
-                "UPDATE contributors SET email = "(escape-sql-string newemail)" "
-                "WHERE id = "(number->string (user-id user)))])
+    (let ([sql (concat-sql
+                "UPDATE contributors SET email = "[varchar newemail]" "
+                "WHERE id = "[integer (user-id user)]";")])
       (send *db* exec sql)
       ; i am worried that old versions of the email address might continue to float around
       ; even with this next line in place. The only fix seems to be to read these things from
       ; the database each time though
-      (set-user-email! user newemail) 
+      (set-user-email! user newemail)
       (void)))
   
   ;; update-user-password : user string -> void
   (define (update-user-password user newpass)
-    (let ([sql (string-append
-                "UPDATE contributors SET password = md5("(escape-sql-string newpass)") "
-                "WHERE id = "(number->string (user-id user)))])
+    (let ([sql (concat-sql
+                "UPDATE contributors SET password = md5("[varchar  newpass]") "
+                "WHERE id = "[integer (user-id user)]";")])
       (send *db* exec sql)
       (void)))
-  
   
   ;; gets the user record corresponding to the given username and password,
   ;; or #f if the username/password combination is invalid
   (define (get-user-record username password)
-    (let ([query (string-append
+    (let ([query (concat-sql
                   " SELECT id, username, realname, email FROM contributors "
-                  " WHERE username = "(escape-sql-string username)
-                  " AND password = md5("(escape-sql-string password)")")])
+                  " WHERE username = "[varchar username]
+                  " AND password = md5("[varchar password]");")])
       (let ([result (send *db* map query make-user)])
         (if (null? result)
             #f
@@ -239,10 +239,10 @@
   ;; gets the user record for a user after validating the user's passcode, a one-time
   ;; code handed out to the user after login
   (define (get-logged-in-user-from-passcode username passcode)
-    (let ([query (string-append
+    (let ([query (concat-sql
                   " SELECT id, username, realname, email FROM contributors "
-                  " WHERE username = "(escape-sql-string username)
-                  " AND passcode = "(escape-sql-string passcode))])
+                  " WHERE username = "[varchar username]
+                  " AND passcode = "[varchar passcode]";")])
       (let ([result (send *db* map query make-user)])
         (if (null? result)
             #f
@@ -252,25 +252,25 @@
   ;; creates a passcode for the given user and returns it
   (define (log-user-in u)
     (let* ([passcode (number->string (random 999999999))]
-           [query (string-append
-                   "UPDATE contributors SET passcode = "(escape-sql-string passcode)
-                   " WHERE id = "(number->string (user-id u)))])
+           [query (concat-sql
+                   "UPDATE contributors SET passcode = "[varchar passcode]
+                   " WHERE id = "[integer (user-id u)]";")])
       (send *db* exec query)
       passcode))
   
   ;; log-user-out : user? -> void
   (define (log-user-out u)
-    (let ([query (string-append
-                  "UPDATE contributors SET passcode = NULL WHERE id = "(number->string (user-id u)))])
+    (let ([query (concat-sql
+                  "UPDATE contributors SET passcode = NULL WHERE id = "[integer (user-id u)]";")])
       (send *db* exec query)
       (void)))
   
   ;; like get-user-record, but does not require a password. For use with
   ;; passwordless authentication (e.g., resetting password with email confirmation)
   (define (get-user-record/no-password username)
-    (let ([query (string-append
+    (let ([query (concat-sql
                   " SELECT id, username, realname, email FROM contributors "
-                  " WHERE username = "(escape-sql-string username))])
+                  " WHERE username = "[varchar username]";")])
       (let ([result (send *db* map query make-user)])
         (if (null? result)
             #f
@@ -287,10 +287,10 @@
     (format "~s" b))
   
   (define (user->packages u rep)
-    (let* ([query (string-append "SELECT * FROM packages_without_categories "
-                                 " WHERE contributor_id = "(number->string (user-id u))
-                                 " AND repository_id = "(number->string rep)
-                                 " ORDER BY name")]
+    (let* ([query (concat-sql "SELECT * FROM packages_without_categories "
+                              " WHERE contributor_id = "[integer (user-id u)]
+                              " AND repository_id = "[integer rep]
+                              " ORDER BY name")]
            [results (send *db* map query
                           (lambda row
                             (let ([f (λ (n) (fld (packages_without_categories) row n))])
@@ -308,21 +308,22 @@
   ;; produces the current list of all available categories and their corresponding ids,
   ;; sorted in presentation order
   (define (get-category-names)
-    (let ([query "SELECT name, shortname, id FROM categories ORDER BY sort_order"])
+    (let ([query "SELECT name, shortname, id FROM categories ORDER BY sort_order;"])
       (send *db* map query (lambda (name shortname id) (make-category id name (string->symbol shortname) #f)))))
   
   ;; add-package-to-db! : user string (or (listof xexpr) #f) -> package?
   ;; adds a record for the given package information, and returns a stub
   (define (add-package-to-db! user package-name blurb homepage)
     (let* ([id (send *db* query-value "SELECT nextval('packages_pk') AS pk")]
-           [query (string-append 
+           [query (concat-sql
                    "INSERT INTO packages (id, owner_id, name, blurb, bugtrack_id) VALUES "
-                   "("(number->string id)", "
-                      (number->string (user-id user))", "
-                      (escape-sql-string package-name)", "
-                      (if blurb 
-                          (escape-sql-string (format "~s" blurb))
-                          "NULL")", "
+                   "("[integer id]", "
+                      [integer (user-id user)]", "
+                      [varchar package-name]", "
+                      [#:sql
+                       (if blurb 
+                           (concat-sql [varchar (format "~s" blurb)])
+                           "NULL")]", "
                       "NULL" ;; dummy value because bugtracking isn't implemented yet
                       ")")])
       (begin
@@ -338,17 +339,19 @@
   ;; [note that ordering by hidden means that all the entries where hidden = true are after all the ones where
   ;;  it is false; this means that hidden packages are only selected if no non-hidden packages fit the request]
   (define (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)
-    (let* ([rc-version (number->string (core-version-string->code requester-core-version))]
-           [query (string-append
+    (let* ([rc-version (core-version-string->code requester-core-version)]
+           [query (concat-sql
                    "SELECT * FROM all_packages "
-                   " WHERE (required_core_version <= "rc-version" OR required_core_version IS NULL) "
-                   " AND name = "(escape-sql-string pkgname)
-                   " AND username = "(escape-sql-string pkgowner)
-                   (if maj 
-                       (string-append " AND maj = "(number->string maj)" AND min >= "(number->string minlo)
-                                      (if minhi (string-append " AND min <= "(number->string minhi)) ""))
-                       "")
-                   " AND repository_id = "(number->string (DEFAULT-REPOSITORY))
+                   " WHERE (required_core_version <= " [integer rc-version]
+                   " OR required_core_version IS NULL) "
+                   " AND name = "[varchar pkgname]
+                   " AND username = "[varchar pkgowner]
+                   [#:sql (if maj 
+                              (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
+                                          [#:sql
+                                           (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
+                              "")]
+                   " AND repository_id = "[integer (DEFAULT-REPOSITORY)]
                    " ORDER BY hidden, maj DESC, min DESC;")]
            [ans (send *db* map query 
                       (lambda row 
@@ -359,16 +362,17 @@
          (values ans #f)]
         [else
          ;; this query and the previous should be in a transaction
-         (let* ([query (string-append
+         (let* ([query (concat-sql
                         "SELECT count(*) FROM all_packages "
-                        " WHERE required_core_version > "rc-version
-                        " AND name = "(escape-sql-string pkgname)
-                        " AND username = "(escape-sql-string pkgowner)
-                        (if maj 
-                            (string-append " AND maj = "(number->string maj)" AND min >= "(number->string minlo)
-                                          (if minhi (string-append " AND min <= "(number->string minhi)) ""))
-                            "")
-                        " AND repository_id = "(number->string (DEFAULT-REPOSITORY))"; ")]
+                        " WHERE required_core_version > "[integer rc-version]
+                        " AND name = "[varchar pkgname]
+                        " AND username = "[varchar pkgowner]
+                        [#:sql 
+                         (if maj 
+                             (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
+                                         [#:sql (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
+                             "")]
+                        " AND repository_id = "[integer (DEFAULT-REPOSITORY)]"; ")]
                 [resl (send *db* query-value query)])
            (values '() (> resl 0)))])))
   
@@ -381,10 +385,10 @@
   ;; get-column-names : symbol -> listof symbol
   ;; gets the names of all columns in the named table
   (define (get-column-names table-name)
-    (let ([query (string-append "SELECT c.attname FROM pg_attribute c, pg_class t "
-                                "WHERE c.attrelid = t.oid AND t.relname = "(escape-sql-string (symbol->string table-name))
-                                "AND c.attisdropped = false and c.attnum >= 1 "
-                                "ORDER BY c.attnum;")])
+    (let ([query (concat-sql "SELECT c.attname FROM pg_attribute c, pg_class t "
+                             "WHERE c.attrelid = t.oid AND t.relname = "[varchar (symbol->string table-name)]
+                             "AND c.attisdropped = false and c.attnum >= 1 "
+                             "ORDER BY c.attnum;")])
       (send *db* map query string->symbol)))
   
   (define (lazy tbl)
@@ -449,29 +453,31 @@
   (define get-package
     (opt-lambda (owner name [include-hidden? #f])
       (let* ([query
-              (string-append
+              (concat-sql
                "SELECT * FROM all_packages "
-               " WHERE username = "(escape-sql-string owner)
-               " AND name = "(escape-sql-string name)
-               (if include-hidden?
-                   ""
-                   " AND hidden = false")
-               " ORDER BY maj DESC, min DESC")]
+               " WHERE username = "[varchar owner]
+               " AND name = "[varchar name]
+               [#:sql 
+                (if include-hidden?
+                    ""
+                    " AND hidden = false")]
+               " ORDER BY maj DESC, min DESC;")]
              [pkgversions (send *db* map query list)])
         (version-rows->package (all_packages) pkgversions))))
   
   (define get-package-version
     (opt-lambda (owner name maj min (include-hidden? #f))
       (let* ([query
-              (string-append
+              (concat-sql
                "SELECT * FROM all_packages "
-               " WHERE username = "(escape-sql-string owner)
-               " AND name = "(escape-sql-string name)
-               " AND maj = "(number->string maj)
-               " AND min = "(number->string min)
-               (if include-hidden?
-                   ""
-                   " AND hidden = false")
+               " WHERE username = "[varchar owner]
+               " AND name = "[varchar name]
+               " AND maj = "[integer maj]
+               " AND min = "[integer min]
+               [#:sql
+                (if include-hidden?
+                    ""
+                    " AND hidden = false")]
                ";")])
         (let ([pkgver-list 
                (send *db* map query 
@@ -489,10 +495,10 @@
   ;; gets the given package id, but only if its owner is the given owner
   (define (get-package-by-id pkg-id user-id)
     (let* ([query 
-            (string-append
-             "SELECT * FROM all_packages WHERE contributor_id = "(number->string user-id)
-             " AND package_id = "(number->string pkg-id)
-             " ORDER BY maj DESC, min DESC")]
+            (concat-sql
+             "SELECT * FROM all_packages WHERE contributor_id = "[integer user-id]
+             " AND package_id = "[integer pkg-id]
+             " ORDER BY maj DESC, min DESC;")]
            [pkgversions (send *db* map query list)])
       (version-rows->package (all_packages) pkgversions)))
          
@@ -535,9 +541,9 @@
   ;; gets the package version named by the given ids
   ;; [note: why does this need the user id, when pkgversion is more specific than user id?]
   (define (get-package-version-by-id id user-id)
-    (let* ([query (string-append
-                   "SELECT * FROM all_packages WHERE package_version_id = "(number->string id)
-                   " AND contributor_id = "(number->string user-id)";")]
+    (let* ([query (concat-sql
+                   "SELECT * FROM all_packages WHERE package_version_id = "[integer id]
+                   " AND contributor_id = "[integer user-id]";")]
            [resls (send *db* map query list)])
       (cond
         [(null? resls) #f]
@@ -547,53 +553,54 @@
     
   (define (reassociate-package-with-categories pkg categories)
     (let ([query
-           (string-append 
+           (concat-sql
             "BEGIN TRANSACTION; "
-            "DELETE FROM package_categories WHERE package_id = "(number->string (package-id pkg))"; "
-            (apply string-append
-                   (map (λ (c)
-                          (string-append
-                           "INSERT INTO package_categories (package_id, category_id) "
-                           "VALUES ("
-                           (number->string (package-id pkg))", " 
-                           (number->string (if (number? c) c (category-id c)))"); "))
-                        categories))
+            "DELETE FROM package_categories WHERE package_id = "[integer (package-id pkg)]"; "
+            [#:sql
+             (apply string-append
+                    (map (λ (c)
+                           (concat-sql
+                            "INSERT INTO package_categories (package_id, category_id) "
+                            "VALUES ("
+                            [integer (package-id pkg)]", " 
+                            [integer (if (number? c) c (category-id c))]"); "))
+                         categories))]
             "COMMIT TRANSACTION;")])
       (send *db* exec query)
       (void)))
   
   (define (associate-package-with-category pkg category)
-    (let ([query (string-append
+    (let ([query (concat-sql
                   "INSERT INTO package_categories (package_id, category_id) "
-                  "VALUES ("(number->string (package-id pkg))", "
-                            (if (number? category)
-                                category
-                                (number->string (category-id category)))")")])
+                  "VALUES ("[integer (package-id pkg)]", "
+                  [integer (if (number? category)
+                               category
+                               (category-id category))]");")])
       (send *db* exec query)
       (void)))
   
   (define (get-package-categories pkg)
-    (let ([query (string-append
+    (let ([query (concat-sql
                   "SELECT c.id, c.name, c.shortname  FROM categories AS c, package_categories pc "
                   "WHERE pc.category_id = c.id "
-                  " AND pc.package_id = "(number->string (package-id pkg)) "; ")])
+                  " AND pc.package_id = "[integer (package-id pkg)] "; ")])
       (send *db* map query (λ (i n s) (make-category i n s #f)))))
   
   (define (pkgversion->primary-files pv)
-    (let ([query (string-append
-                  "SELECT filename, interface FROM primary_files WHERE package_version_id = "(number->string (pkgversion-id pv))
+    (let ([query (concat-sql
+                  "SELECT filename, interface FROM primary_files WHERE package_version_id = "[integer (pkgversion-id pv)]
                   " ORDER BY filename; ")])
       (send *db* map query (λ (f x) (make-primary-file f (if (sql-null? x) #f (read-from-string x)))))))
   
   (define (downloads-this-week pv)
-    (let ([query (string-append
+    (let ([query (concat-sql
                   "SELECT count(*) FROM downloads "
                   "WHERE time > (current_timestamp - interval '7 days') "
-                  "AND package_version_id = "(number->string (pkgversion-id pv))"; ")])
+                  "AND package_version_id = "[integer (pkgversion-id pv)]"; ")])
       (send *db* query-value query)))
   
   (define (get-all-repositories)
-    (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order"])
+    (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order;"])
       (send *db* map query make-repository)))
   
   (define (repository-ids->repositories r-ids)
@@ -613,7 +620,7 @@
              
   ;; nat -> results
   (define (get-package-listing repository)
-    (let* ([query (format "SELECT * FROM most_recent_packages WHERE repository_id = ~a" repository)]
+    (let* ([query (format "SELECT * FROM most_recent_packages WHERE repository_id = ~a;" repository)]
            [rsl 
             (send *db* map query
                   (lambda row
@@ -643,15 +650,47 @@
   ;; summing it with 10000*maj. Alternately I could keep two separate fields, required-core-maj
   ;; and required-core-min, but then comparison would be more awkward.
   (define (core-version-string->code rc-str)
-    (let ([parsed-rc (regexp-match #px"^([0-9]+)(?:\\.([0-9]{0,4}))?$" rc-str)])
+    (cond
+      ;; v200 --- v372  version numbers
+      [(regexp-match #px"^([23][0-9]{2})(?:\\.([0-9]{0,4}))?$" rc-str)
+       => (λ (parsed-rc)
+            (let ([maj (string->number (cadr parsed-rc))]
+                  [min (if (caddr parsed-rc)
+                           (or (string->number (caddr parsed-rc)) 0)
+                           0)])
+              (+ (* maj 10000) min)))]
+      ;; v3.99.0.0 and above version numbers. assume the first part is at most 2 digits long
+      ;; to avoid collision with the above regexp
+      [(regexp-match #px"^([1-9][0-9]?)\\.([0-9]*)(?:\\.([0-9]{1,4})(?:\\.([0-9]{1,4}))?)?$" rc-str)
+       =>
+       (λ (parsed-rc)
+         (let-values ([(x y z w) (apply values (map (λ (x) (if x (string->number x) 0)) (cdr parsed-rc)))])
+           (+ w
+              (* z 100)
+              (* y 10000)
+              (* x 1000000))))]
+      [else #f]))
+           
+  (define (code->core-version-string code)
+    (let ([maj (quotient code 10000)]
+          [min (remainder code 10000)])
       (cond
-        [(not parsed-rc) #f]
+        [(< maj 399)
+         (if (= min 0)
+             (number->string maj)
+             (format "~a.~a" maj min))]
         [else
-         (let ([maj (string->number (cadr parsed-rc))]
-               [min (if (caddr parsed-rc)
-                        (or (string->number (caddr parsed-rc)) 0)
-                        0)])
-           (+ (* maj 10000) min))])))
+         (let ([x (modulo maj 100)]
+               [y (remainder maj 100)]
+               [z (modulo min 100)]
+               [w (remainder min 100)])
+           (cond
+             [(and (zero? z) (zero? w))
+              (format "~a.~a" x y)]
+             [(zero? w)
+              (format "~a.~a.~a" x y z)]
+             [else
+              (format "~a.~a.~a.~a" x y z w)]))])))
   
   ;; legal-language? : determine whether the database serves this particular plt scheme
   (define (legal-language? rc-str)
@@ -659,21 +698,12 @@
       (cond
         [(not code) #f]
         [else
-         (let* ([cstr (number->string code)]
-                [query
-                 (string-append
-                  "SELECT count(*) FROM repositories WHERE client_lower_bound <= "cstr
-                  " AND client_upper_bound > "cstr";")]
+         (let* ([query
+                 (concat-sql
+                  "SELECT count(*) FROM repositories WHERE client_lower_bound <= "[integer code]
+                  " AND client_upper_bound > "[integer code]";")]
                 [response (send *db* query-value query)])
            (> response 0))])))
-  
-  (define (code->core-version-string code)
-    (let ([maj (quotient code 10000)]
-          [min (remainder code 10000)])
-      (if (= min 0)
-          (number->string maj)
-          (format "~a.~a" maj min))))
-  
   
   ;; get-safe-info : info.ss -> symbol (-> string) [(TST -> string)] -> string
   ;; returns a 'safe' version of info.ss, which escapes user-defined data but allows the
@@ -688,7 +718,7 @@
            (let ([ans (info.ss s (lambda () missing))])
              (cond
                [(eq? ans missing) (d)]
-               [else (escape-sql-string (c ans))]))]))
+               [else (concat-sql [varchar (c ans)])]))]))
       safe-info))
   
   
@@ -754,39 +784,41 @@
            
            [id (send *db* query-value "SELECT nextval('package_versions_pk')")]
            [query
-            (string-append 
+            (concat-sql 
              "INSERT INTO package_versions "
              "(id, package_id, maj, min, plt_path, src_path, "
              ;" default_file, doctxt, html_docs, release_blurb, version_name, required_core_version, downloads)"
              " default_file, doctxt, release_blurb, version_name, required_core_version, downloads)"
              " VALUES "
              "("
-             (number->string id) ", "
-             (number->string (package-id pkg)) ", "
-             (number->string maj) ", "
-             (number->string min) ", "
-             (escape-sql-string (path->string filename)) ", "
-             (escape-sql-string (path->string unpacked-package-path)) ", "
-             (if (null? main-files)
-                 "NULL"
-                 (escape-sql-string (car main-files)))", "
-             (safe-info 'doc.txt (lambda () "NULL") (λ (x) (format "~a" x))) ", "
+             [integer id] ", "
+             [integer (package-id pkg)] ", "
+             [integer maj] ", "
+             [integer min] ", "
+             [varchar (path->string filename)] ", "
+             [varchar (path->string unpacked-package-path)] ", "
+             [#:sql 
+              (if (null? main-files)
+                  "NULL"
+                  (concat-sql [varchar (car main-files)]))]", "
+             [#:sql (safe-info 'doc.txt (lambda () "NULL") (λ (x) (format "~a" x)))] ", "
              ;; note to jacob: don't check this in until you can add the column html_docs
              ;; to package_versions and rebuild all the views. PAIN!
              #|(if (null? html-docs-paths)
                  "NULL"
                  (escape-sql-string (car html-docs-paths)))", " |#
-             (let/ec return
-               (safe-info 'release-notes 
-                          (lambda () "NULL") 
-                          (λ (v) 
-                            (let ([xprs (blurb->xexprs v)])
-                              (if xprs
-                                  (format "~s" xprs)
-                                  (return "NULL")))))) ", "
-             (safe-info 'version (lambda () "NULL") (λ (x) (format "~a" x))) ", "
-             required-core-str", "
-             "0)")])
+             [#:sql
+              (let/ec return
+                (safe-info 'release-notes 
+                           (lambda () "NULL") 
+                           (λ (v) 
+                             (let ([xprs (blurb->xexprs v)])
+                               (if xprs
+                                   (format "~s" xprs)
+                                   (return "NULL"))))))] ", "
+             [#:sql (safe-info 'version (lambda () "NULL") (λ (x) (format "~a" x)))] ", "
+             [#:sql required-core-str]", "
+             "0);")])
       (send *db* exec query)
       (reset-primary-files id (map (λ (f) (list unpacked-package-path f)) main-files))
       id))
@@ -803,19 +835,19 @@
                    (let* ([basepath (car base+file)]
                           [filename (cadr base+file)]
                           [sexpr (get-interface-sexpr (build-path basepath filename))])
-                     (string-append
+                     (concat-sql
                       "INSERT INTO primary_files (package_version_id, filename, interface) "
                       "VALUES ("
-                      (number->string id)", "
-                      (escape-sql-string filename)", "
-                      (if sexpr (escape-sql-string (format "~s" sexpr)) "NULL")
+                      [integer id]", "
+                      [varchar filename]", "
+                      [#:sql (if sexpr (concat-sql [varchar (format "~s" sexpr)]) "NULL")]
                       "); ")))
                  bases+files)]
            [query
-            (string-append
+            (concat-sql
              "BEGIN TRANSACTION; "
-             "DELETE FROM primary_files WHERE package_version_id = "(number->string id)"; "
-             (apply string-append inserts)
+             "DELETE FROM primary_files WHERE package_version_id = "[integer id]"; "
+             [#:sql (apply string-append inserts)]
              "COMMIT TRANSACTION; ")])
       (send *db* exec query)))
 
@@ -837,7 +869,7 @@
   
   (define (sqlize-blurb xexprs)
     (if xexprs
-        (escape-sql-string (blurb->blurb-string xexprs))
+        (concat-sql [varchar (blurb->blurb-string xexprs)])
         "NULL"))
   
   (define (update-package-fields! pkg pkgversion blurb homepage notes default-file required-core)
@@ -847,19 +879,19 @@
               [(core-version-string->code required-core) => number->string]
               [else "NULL"])]
            [pkgversion-update-statement
-            (string-append 
+            (concat-sql
              "UPDATE package_versions SET "
-             "release_blurb = "(sqlize-blurb notes)", "
-             "default_file = "(if default-file
-                                  (escape-sql-string default-file)
-                                  "NULL")", "
-             "required_core_version = "rc-str
-             " WHERE id = "(number->string (pkgversion-id pkgversion)) ";")]
+             "release_blurb = "[#:sql (sqlize-blurb notes)]", "
+             "default_file = "[#:sql (if default-file
+                                         (concat-sql [varchar default-file])
+                                         "NULL")]", "
+             "required_core_version = "[#:sql rc-str]
+             " WHERE id = "[integer (pkgversion-id pkgversion)] ";")]
           [package-update-statement
-           (string-append
-            "UPDATE packages SET blurb = "(sqlize-blurb blurb)", "
-            " homepage = "(if homepage (escape-sql-string homepage) "NULL")
-            " WHERE id = "(number->string (package-id pkg))"; ")])
+           (concat-sql
+            "UPDATE packages SET blurb = "[#:sql (sqlize-blurb blurb)]", "
+            " homepage = "[#:sql (if homepage (concat-sql [varchar homepage]) "NULL")]
+            " WHERE id = "[integer (package-id pkg)]"; ")])
       (send *db* exec pkgversion-update-statement)
       (send *db* exec package-update-statement)
       (void)))
@@ -868,11 +900,11 @@
     (let* ([rep-id (if (number? repository/repository-id)
                        repository/repository-id
                        (repository-id repository/repository-id))]
-           [q (string-append
+           [q (concat-sql
                "INSERT INTO version_repositories (package_version_id, repository_id) "
                "VALUES ("
-               (number->string pkgversion-id) ", "
-               (number->string rep-id) ")")])
+               [integer pkgversion-id] ", "
+               [integer rep-id] ")")])
       (send *db* exec q)
       (void)))
   
@@ -883,15 +915,15 @@
   ;;    - is a major update is minor-update? is false
   (define (get-next-version-number pkg minor-update?)
     (let* ([query 
-            (string-append
+            (concat-sql
              "SELECT maj, min FROM package_versions WHERE package_id = "
-             (number->string (package-id pkg))
+             [integer (package-id pkg)]
              "ORDER BY maj DESC, min DESC LIMIT 1")]
            [maj/min-vector (send *db* query-tuple query)]) 
       (if minor-update?
-          (cons-immutable (vector-ref maj/min-vector 0)
-                          (add1 (vector-ref maj/min-vector 1)))
-          (cons-immutable (add1 (vector-ref maj/min-vector 0))
+          (cons (vector-ref maj/min-vector 0)
+                (add1 (vector-ref maj/min-vector 1)))
+          (cons (add1 (vector-ref maj/min-vector 0))
                 0))))
   
   ;; for-each-package-version : (package-stub pkgversion -> X) -> X
@@ -940,11 +972,11 @@
     (let* ([rep-id (if (number? rep) rep (repository-id rep))]
             
             ;; there must be a cheaper way to do this ...
-           [query (string-append
+           [query (concat-sql
                    "SELECT * FROM all_packages AS ap WHERE version_date = "
                    "(SELECT max(version_date) FROM all_packages WHERE package_id = ap.package_id) "
-                   " AND repository_id = "(number->string rep-id)
-                   " ORDER BY version_date DESC LIMIT "(number->string n)";")]
+                   " AND repository_id = "[integer rep-id]
+                   " ORDER BY version_date DESC LIMIT "[#:sql (format "~a" n)]";")]
            [generate-package
             (λ row
               (let ([f (λ (n) (fld (all_packages) row n))])
@@ -963,35 +995,32 @@
   ;; logging
   (define (log-download ip-addr pkgver client-core-version)
     (let ([query1
-           (string-append
+           (concat-sql
             "INSERT INTO downloads (package_version_id, ip, client_version) "
             " VALUES ("
-            (number->string (pkgversion-id pkgver))", "
-            (escape-sql-string ip-addr)", "
-            (escape-sql-string client-core-version)")")]
+            [integer (pkgversion-id pkgver)]", "
+            [varchar ip-addr]", "
+            [varchar client-core-version]")")]
           [query2
-           (string-append
+           (concat-sql
             "UPDATE package_versions SET downloads = downloads + 1 WHERE id = "
-            (number->string (pkgversion-id pkgver)))])
+            [#:sql (number->string (pkgversion-id pkgver))])])
       (send *db* exec query1)
       (send *db* exec query2)
       (void)))
                                       
   (define (log-error ip-addr message)
     (let ([query
-           (string-append
+           (concat-sql
             "INSERT INTO errors (ip, message) "
             "VALUES ("
-            (escape-sql-string ip-addr)", "
-            (escape-sql-string message)")")])
+            [varchar ip-addr]", "
+            [varchar message]")")])
       (send *db* exec query)
       (void)))
   
   ;; ============================================================
   ;; MISC
-  
-  (define (escape-sql-string s) 
-    (sql-marshal 'varchar s))
   
   ;; group  : {listof X} (X -> (values Y Z) -> (listof (list Y (listof Z)))
   ;; groups l into contiguous stripes that give the same answer to f
@@ -1004,7 +1033,7 @@
                    [other-cats '()])
           (cond
             [(null? l) 
-             (reverse! (cons (list cat (reverse! rs-in-cat)) other-cats))]
+             (reverse (cons (list cat (reverse rs-in-cat)) other-cats))]
             [else
              (let ([newcat (c (car l))])
                (if (equal? cat newcat)
@@ -1015,7 +1044,7 @@
                    (loop (cdr l)
                          newcat
                          (list (r (car l)))
-                         (cons (list cat (reverse! rs-in-cat)) other-cats))))]))))
+                         (cons (list cat (reverse rs-in-cat)) other-cats))))]))))
   
   (define (blurb->xexprs b)
     (cond
@@ -1047,35 +1076,5 @@
                    (loop (cdr exprs) (cons (car exprs) provides))]
                   [_ (loop (cdr exprs) provides)])]))]
           [else #f]))))
-  
-  
-      
-    
-  
-  
-
-  #|
-(define (pretty-format expr)
-    (parameterize ([pretty-print-columns 100])
-      (let ([op (open-output-string)])
-        (pretty-print expr op)
-        (get-output-string op))))
-  
-  (define (format-provide expr)
-    (string-append (pretty-format expr)))
-  
-  (define (format-contract expr)
-    (let ([name (car expr)]
-          [contract (cadr expr)])
-      (string-append (format "~a ::\n" name) (pretty-format contract))))
-  
-  (define (provide-statement->string p)
-    (match p
-      [`(provide ,clause ...)
-        (apply string-append (map format-provide clause))]
-      [`(provide/contract ,clause ...)
-        (apply string-append (map format-contract clause))]))
-|#
-  
   
   )
