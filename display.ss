@@ -387,7 +387,7 @@
          (let loop ([acc '()]
                     [items items])
            (cond
-             [(null? (cdr items)) (reverse! (cons (car items) acc))]
+             [(null? (cdr items)) (reverse (cons (car items) acc))]
              [else (loop (append rsep (list (car items)) acc) (cdr items))])))]))
  
   (define (string-join sep items)
