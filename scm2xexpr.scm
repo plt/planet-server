@@ -46,7 +46,7 @@
                             (let loop ((output-elements '()))
                               (let ((c (snoop)))
                                 (if (eof-object? c)
-                                    (reverse! output-elements)
+                                    (reverse output-elements)
                                     (loop (cons (get-next-xexpr)
                                                 output-elements)))))))))))
              stylesheet-name)))
@@ -172,7 +172,7 @@
             (lambda ()
               `(span ([class "comment"])
                      ,(list->string
-                       (reverse!
+                       (reverse
                         (let loop ((comment-chars '()))
                           (let ((c (get-actual-char)))
                             (cond
@@ -192,7 +192,7 @@
                      ,(string-append
                        "#|"
                        (list->string
-                        (reverse!
+                        (reverse
                          (let loop ((comment-chars '()))
                            (let ((c (get-actual-char)))
                              (cond
@@ -209,7 +209,7 @@
            [scm-get-token
             (lambda ()
               (list->string
-               (reverse!
+               (reverse
                 (let loop ((s '()) (esc? #f))
                   (let ((c (snoop-actual-char)))
                     (cond
@@ -241,7 +241,7 @@
                      ,(string-append
                        "\""
                        (list->string
-                        (reverse!
+                        (reverse
                          (let loop ((s '()) (esc? #f))
                            (let ((c (get-actual-char)))
                              (case c

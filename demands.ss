@@ -20,7 +20,7 @@
   (define demand/c (-> (listof kv-pair?) (listof problem?)))
   
   (provide/contract 
-   [all-demands (-> (list-immutableof demand/c) demand/c)]
+   [all-demands (-> (listof demand/c) demand/c)]
    [field-exists (-> symbol? demand/c)]
    [field-nonblank (-> symbol? demand/c)]
    [fields-exist (-> (listof symbol?) demand/c)]
