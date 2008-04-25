@@ -175,7 +175,7 @@
            ; though firefox seems to always do so
            [cookie-strs (extract-bindings 'cookie (request-headers req))]
            [cookies (apply append (map do-parse cookie-strs))])
-      (with-output-to-file "~/debugging-cookies"
+      #;(with-output-to-file "~/debugging-cookies"
         (λ ()
           (printf "request-headers: ~s\n" (request-headers req))
           
