@@ -1,7 +1,30 @@
 (module scheme-names mzscheme
+  (require (lib "string.ss")
+           (lib "list.ss"))
+  
   (provide *scm-builtins* *scm-keywords*)
-
-  (define *scm-builtins*
+  
+  (define (my-keyword? str)
+    (with-handlers
+        ([(lambda (o) #t) (lambda (o) #t)])
+      (not (eval-string str))))
+  
+  (define *bound*
+    (map symbol->string
+         (namespace-mapped-symbols (make-namespace 'initial))))
+  
+  (define *keywords*
+    (filter my-keyword? *bound*))
+  
+  (define *builtins*
+    (filter (lambda (str) (not (my-keyword? str)))
+            *bound*))
+  
+  (define *scm-builtins* *builtins*)
+  (define *scm-keywords* *keywords*)
+  
+  #;
+  (define *scm-builtins* 
     '("abs"
       "acos"
       "angle"
@@ -14,7 +37,7 @@
       "car" "cdr"
       "caar"   "cadr"   "cdar"   "cddr"
       "caaar"  "caadr"  "cadar"  "caddr"  "cdaar"  "cdadr"  "cddar"  "cdddr"
-      "caaaar" "caaadr" "caadar" "caaddr" "cadaar" "cadadr" "caddar" "cadddr"
+      "caaaar" "caaadr" "caadar" "caaddr" "cadaar" "cadadr" "caddar" "cadddr" 
       "cdaaar" "cdaadr" "cdadar" "cdaddr" "cddaar" "cddadr" "cdddar" "cddddr"
       "call-with-current-continuation" "call/cc"
       "call-with-input-file"
@@ -147,7 +170,8 @@
       "=" "<" ">" "<=" ">="
       "+" "*" "-" "/"
       ))
-
+  
+  #;
   (define *scm-keywords*
     '("=>"
       "and"
@@ -184,4 +208,6 @@
       "unquote"
       "unquote-splicing"
       "when"
-      "with-handlers")))
+      "with-handlers"))
+  
+  )
