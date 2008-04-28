@@ -115,10 +115,12 @@
       (define/public (perform-action query action)
         (let* (#;[start-time (current-milliseconds)]
                [conn (get-conn)])
-          (begin0
-            (action conn)
-            (send conn disconnect)
-            #;(timing-log query (- (current-milliseconds) start-time))
+          (dynamic-wind
+           void
+           (λ () (action conn))
+           (λ () 
+             (send conn disconnect)
+             #;(timing-log query (- (current-milliseconds) start-time)))
             )))
       
       #;(define timing-log
@@ -155,7 +157,6 @@
          [get-conn 
           (λ () 
             (let ([db (apply connect (DATABASE-CONNECT-ARGUMENTS))])
-              (send db use-type-conversions #t)
               db))]))
   
   ;; this should be removed eventually; it used to be useful but the functionality has been incorporated into
@@ -289,7 +290,7 @@
   (define (user->packages u rep)
     (let* ([query (concat-sql "SELECT * FROM packages_without_categories "
                               " WHERE contributor_id = "[integer (user-id u)]
-                              " AND repository_id = "[integer rep]
+                              ;" AND repository_id = "[integer rep]
                               " ORDER BY name")]
            [results (send *db* map query
                           (lambda row
@@ -300,7 +301,7 @@
                                (f 'name)
                                (blurb-string->blurb (f 'pkg_blurb))
                                (f 'homepage)
-                               (list (row->pkgversion (packages_without_categories) row (list rep)))
+                               (list (row->pkgversion (packages_without_categories) row (list 2 3)))  ;; fixme
                                (f 'bugtrack_id)))))])
       results))
     
