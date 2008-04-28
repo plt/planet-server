@@ -77,6 +77,8 @@
    [associate-pkgversion-with-repository! (natural-number/c (union repository? natural-number/c) . -> . void?)]
    [get-next-version-number
     (-> package? boolean? (cons/c natural-number/c natural-number/c))]
+   [get-next-version-for-maj
+    (-> package? natural-number/c natural-number/c)]
    
    [log-download
     (string?  ; ip address
@@ -926,6 +928,16 @@
                 (add1 (vector-ref maj/min-vector 1)))
           (cons (add1 (vector-ref maj/min-vector 0))
                 0))))
+  
+  (define (get-next-version-for-maj pkg maj)
+    (let* ([query 
+            (concat-sql
+             "SELECT MAX(min) FROM package_versions WHERE package_id = "
+             [integer (package-id pkg)]
+             " AND maj = " [integer maj]
+             ";")]
+           [the-val (send *db* query-maybe-value query)])
+      (or the-val (error 'get-next-version-for-maj "specified major version does not exist"))))
   
   ;; for-each-package-version : (package-stub pkgversion -> X) -> X
   ;; calls f for effect on each package version in the system [ordered username/pkgname/maj/min], and

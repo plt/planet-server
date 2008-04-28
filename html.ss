@@ -1,6 +1,6 @@
-(module html mzscheme
+(module html scheme/base
   (require 
-   (lib "contract.ss") 
+   (lib "contract.ss")
    (lib "servlet.ss" "web-server")
    (lib "xml.ss" "xml")
    (lib "url.ss" "net"))
@@ -122,17 +122,20 @@
      ; "PLaneT Package Repository", but that doesn't appear to be possible with tall-page right now 
      #;(apply string-append "PLaneT Package Repository : " (join '(" > ") (map title->string titles)))
      "PLaneT Package Repository" 
-     #:head-stuff `((link ((rel "alternate")
+     `(div ((class "planetNav"))
+           ,@(join '(nbsp ">" nbsp) (map title->link titles)))
+       contents
+       #:head-stuff `((link ((rel "alternate")
                            (type "application/rss+xml")
                            (title "RSS")
                            (href "/300/planet.rss")))
                     (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
                     (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
                     (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; "))
-     #:precomputed-img `(image ((src "/images/logo.jpg") (width "128px") (height "123px") (alt "[PLT logo]")))
-     `(div ((class "planetNav"))
-           ,@(join '(nbsp ">" nbsp) (map title->link titles)))
-       contents))
+       #:precomputed-img `(image ((src "/images/logo.jpg") (width "128px") (height "123px") (alt "[PLT logo]")))
+       
+       
+       ))
          
   ;; title->string : title -> string
   (define (title->string title)

@@ -21,8 +21,13 @@
   
   (provide/contract 
    [all-demands (-> (listof demand/c) demand/c)]
+   [or-demand   (-> (cons/c demand/c (listof demand/c)) demand/c)]
    [field-exists (-> symbol? demand/c)]
+   [field-absent (-> symbol? demand/c)]
+   [field-in     (-> symbol? (listof symbol?) demand/c)]
    [field-nonblank (-> symbol? demand/c)]
+   [field-numeric  (-> symbol? demand/c)]
+   [field-in-range (-> symbol? natural-number/c natural-number/c demand/c)]
    [fields-exist (-> (listof symbol?) demand/c)]
    [fields-nonblank (-> (listof symbol?) demand/c)]
    [fields-ascii (->* () (listof symbol?) (demand/c))]
@@ -49,11 +54,33 @@
   (define (all-demands demands)
     (lambda (b) (apply append (map (λ (d) (d b)) demands))))
   
+  (define (or-demand demands)
+    (lambda (b)
+      (let ([problems (map (λ (d) (d b)) demands)])
+        (cond
+          [(ormap null? problems) '()]
+          [else (car (reverse problems))]))))
+  
   (define (field-exists f)
     (lambda (b)
       (if (exists-binding? f b)
           '()
           `((,f `(message "required"))))))
+  
+  (define (field-absent f)
+    (lambda (b)
+      (if (exists-binding? f b)
+          `((general (format "field ~a must be absent" f)))
+          '())))
+  
+  (define (field-in f options)
+    (lambda (b)
+      (cond
+        [(not (exists-binding? f b))
+         `((,f `(message "required")))]
+        [(not (memq (string->symbol (car (extract-bindings f b))) options))
+         `((,f `(message "not a legal choice")))]
+        [else '()])))
   
   (define (field-nonblank f)
     (lambda (b)
@@ -63,6 +90,24 @@
          '()]
         [else
          `((,f (message "required")))])))
+  
+  (define (field-numeric f)
+    (lambda (b)
+      (cond
+        [(and (exists-binding? f b)
+              (regexp-match #rx"^[0-9]+$" (car (extract-bindings f b))))
+         '()]
+        [else `((,f (message "must be numeric")))])))
+  
+  (define (field-in-range f lo hi)
+    (lambda (b)
+      (let ([others ((field-numeric f) b)])
+        (cond
+          [(null? others)
+           (if (<= lo (string->number (car (extract-bindings f b))) hi)
+               '()
+               `((,f (message ,(format "must be in range [~a,~a]" lo hi)))))]
+          [else others]))))
   
   
   (define (fields-exist fields)

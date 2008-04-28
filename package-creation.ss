@@ -35,6 +35,14 @@
    (listof repository?)     ; repositories this update belongs to
    . -> .
    void?)]
+ [update-non-head-package
+  (user?
+   package?
+   natural-number/c
+   bytes?
+   (listof repository?)
+   . -> .
+   void?)]
  [rebuild-package-pages
   (string? string? natural-number/c natural-number/c
            . -> .
@@ -107,6 +115,11 @@
          [maj (car maj+min)]
          [min (cdr maj+min)])
     (update/internal user (package-name pkg) maj min file-bytes repositories (λ (_) pkg))))
+
+(define (update-non-head-package user pkg maj file-bytes repositories)
+  (let ([min (get-next-version-for-maj pkg maj)])
+    (update/internal user (package-name pkg) maj min file-bytes repositories (λ (_) pkg))))
+  
 
 ;; get-metainfo : path[directory] -> (symbol (-> TST) -> TST)
 ;; gets an info.ss -retrieving thunk for the given package which is unpacked in the given directory
