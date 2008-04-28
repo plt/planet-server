@@ -78,9 +78,9 @@
     (lambda (b)
       (cond
         [(not (exists-binding? f b))
-         `((,f `(message "required")))]
+         `((,f (message "required")))]
         [(not (memq (string->symbol (car (extract-bindings f b))) options))
-         `((,f `(message "not a legal choice")))]
+         `((,f (message "not a legal choice")))]
         [else '()])))
   
   (define (field-nonblank f)
