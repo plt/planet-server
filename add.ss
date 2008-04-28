@@ -536,7 +536,7 @@ function update(status) {
             [(edit)
              (let ([pv (list-ref (package-versions pkg) (string->number (get req 'pv)))])
                (do-pkgversion-edit pv #:pkg pkg))]
-            [(upload)
+            [(update)
              (let* ([maj           (get req 'maj)]
                     [file-contents (get req 'file)]
                     [repository-id-strings (extract-bindings 'repository (request-bindings req))]
@@ -646,7 +646,7 @@ function update(status) {
                        "Upload a new revision to version " ,(number->string maj) 
                        (input ((type "file") (name "contents")))
                        (input ((type "hidden") (name "maj") (value ,(number->string maj))))
-                       (input ((type "hidden") (name "action") (value "upload")))
+                       (input ((type "hidden") (name "action") (value "update")))
                        (input ((type "submit") (value "upload"))))))
            (map
             (λ (pv pvidx)
