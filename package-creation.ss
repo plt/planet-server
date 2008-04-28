@@ -150,6 +150,18 @@
                 [pkgdir (create-package-directory username pkgname maj min)]
                 [permanent-file-path (build-path pkgdir pkgname)] 
                 [srcdir (build-path pkgdir "contents")]
+                
+                [_ (when (file-exists? permanent-file-path)
+                     (let ([relocated-file-location (make-temporary-file (string-append username "-" pkgname "-" maj "-" min "-~a.plt")
+                                                                         permanent-file-path)])
+                       (delete-file permanent-file-path)
+                       (printf 
+                        (string-append "~a: When trying to unpack a package, discovered that "
+                                       "another file of the same name already exists. Moving "
+                                       "that file out of the way (to ~a) under the assumption "
+                                       "that it is the result of an earlier crashed run.\n")
+                        (current-seconds)
+                        (path->string relocated-file-location))))]
                 [_ (copy-file tmpfilepath permanent-file-path)]
                 [_ (rename-file-or-directory tmpsrcdir srcdir)]
                 
