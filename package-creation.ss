@@ -186,7 +186,7 @@
                                        "that directory out of the way (to ~a) under the assumption "
                                        "that it is the result of an earlier crashed run.\n")
                         (current-seconds)
-                        (relocated-path-location))))]
+                        (path->string relocated-path-location))))]
                 [_ (copy-file tmpfilepath permanent-file-path)]
                 [_ (rename-file-or-directory tmpsrcdir srcdir)]
                 
