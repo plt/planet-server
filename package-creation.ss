@@ -152,7 +152,10 @@
                 [srcdir (build-path pkgdir "contents")]
                 
                 [_ (when (file-exists? permanent-file-path)
-                     (let ([relocated-file-location (make-temporary-file (string-append username "-" pkgname "-" maj "-" min "-~a.plt")
+                     (let ([relocated-file-location (make-temporary-file (string-append username "-" 
+                                                                                        pkgname "-" 
+                                                                                        (number->string maj) "-" 
+                                                                                        (number->string min) "-~a.plt")
                                                                          permanent-file-path)])
                        (delete-file permanent-file-path)
                        (printf 
