@@ -139,8 +139,8 @@
         
       (define/public (query-value q . args)
         (perform-action q (λ (c) (send/apply c query-value q args))))
-      (define/public (query-tuple q . args)
-        (perform-action q (λ (c) (send/apply c query-tuple q args))))
+      (define/public (query-row q . args)
+        (perform-action q (λ (c) (send/apply c query-row q args))))
       (define/public (exec q . args)
         (perform-action q (λ (c) (send/apply c exec q args))))
       (define/public (map q . args)
@@ -922,7 +922,7 @@
              "SELECT maj, min FROM package_versions WHERE package_id = "
              [integer (package-id pkg)]
              "ORDER BY maj DESC, min DESC LIMIT 1")]
-           [maj/min-vector (send *db* query-tuple query)]) 
+           [maj/min-vector (send *db* query-row query)]) 
       (if minor-update?
           (cons (vector-ref maj/min-vector 0)
                 (add1 (vector-ref maj/min-vector 1)))
