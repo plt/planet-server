@@ -535,7 +535,7 @@ function update(status) {
           (case (string->symbol (get req 'action))
             [(edit)
              (let ([pv (list-ref (package-versions pkg) (string->number (get req 'pv)))])
-               (do-pkgversion-edit pv))]
+               (do-pkgversion-edit pv #:pkg pkg))]
             [(upload)
              (let* ([maj           (get req 'maj)]
                     [file-contents (get req 'file)]
@@ -551,14 +551,14 @@ function update(status) {
                                               repositories))
                                            repository-ids))))])))))
   
-  (define (do-pkgversion-edit pkgversion)
+  (define (do-pkgversion-edit pkgversion #:pkg [pkg #f])
     ;; package developers can edit:
     ;;  - package description
     ;;  - release notes
     ;;  - primary file
     ;;  - categories
     ;;  - required core version
-    (let ([pkg (get-package-by-id (pkgversion-package-id pkgversion) (user-id user))]) 
+    (let ([pkg (or pkg (get-package-by-id (pkgversion-package-id pkgversion) (user-id user)))]) 
       (let* ([current-categories (get-package-categories pkg)]
              [req (send/suspend/demand 
                    (pkgversion-edit-page pkg
@@ -782,7 +782,7 @@ function update(status) {
                                      ,@
                                      (map
                                       (λ (r) `(tr 
-                                               (td (input ((type "checkbox") (name "repository") (value ,(repository-id r)))))
+                                               (td (input ((type "checkbox") (name "repository") (value ,(number->string (repository-id r))))))
                                                (td ,(repository-name r))))
                                       reps))))
                             
