@@ -143,7 +143,7 @@
     (dynamic-wind
      void
      (λ ()
-       (let* ([_ (with-output-to-file tmpfilepath (lambda () (write-bytes file-bytes)) 'truncate/replace)]
+       (let* ([_ (with-output-to-file tmpfilepath (lambda () (write-bytes file-bytes)) #:exists 'truncate/replace)]
               [_ 
                (with-handlers ([exn:fail?
                                 (λ (e) 
@@ -308,7 +308,7 @@
     (with-output-to-file file
       (lambda ()
         (write-xml/content (xexpr->xml body)))
-      'replace)))
+      #:exists 'replace)))
 
 ;; Reads all characters from the port until eof and returns the
 ;; accumulated string [this function was originally from Schematics'
