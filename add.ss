@@ -538,7 +538,7 @@ function update(status) {
                (do-pkgversion-edit pv #:pkg pkg))]
             [(update)
              (let* ([maj           (get req 'maj)]
-                    [file-contents (get req 'file)]
+                    [file-contents (get req 'contents)]
                     [repository-id-strings (extract-bindings 'repository (request-bindings req))]
                     [repository-ids (map string->number repository-id-strings)])
                (with-handlers ([exn:fail:bad-package? (λ (e) (loop `((general (span ,@(exn:fail:bad-package-xexprs e))))))])
