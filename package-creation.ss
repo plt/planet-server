@@ -119,6 +119,18 @@
           (or metainfo
               default-metainfo)))))
   
+  ;; move-directory-to-tmp : path format-string (one slot) -> path
+  ;; moves the given directory to an out-of-the-way spot and returns where it went
+  (define (move-directory-to-tmp dir-to-move template)
+    (let loop ([i 0])
+      (let ([dir (build-path (find-system-path 'temp-dir) (format template i))])
+        (cond
+          [(directory-exists? dir)
+           (loop (add1 i))]
+          [else
+           (rename-file-or-directory dir-to-move dir)
+           dir]))))
+  
   ;; update/internal : user? string nat nat bytes (listof repository?) ((listof xexpr) -> pkg) -> void
   (define (update/internal user pkgname maj min file-bytes repositories getpkg)
     (let* ([username (user-username user)]
@@ -165,6 +177,16 @@
                                        "that it is the result of an earlier crashed run.\n")
                         (current-seconds)
                         (path->string relocated-file-location))))]
+                [_ (when (directory-exists? srcdir)
+                     (let ([relocated-path-location 
+                            (move-directory-to-tmp srcdir (format "~a-~a-~a-~a-~~a-contents" username pkgname maj min))])
+                       (printf 
+                        (string-append "~a: When trying to unpack a package, discovered that "
+                                       "the package's contents directory already exists. Moving "
+                                       "that directory out of the way (to ~a) under the assumption "
+                                       "that it is the result of an earlier crashed run.\n")
+                        (current-seconds)
+                        (relocated-path-location))))]
                 [_ (copy-file tmpfilepath permanent-file-path)]
                 [_ (rename-file-or-directory tmpsrcdir srcdir)]
                 
