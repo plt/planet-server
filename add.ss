@@ -646,7 +646,8 @@ function update(status) {
                        "Upload a new revision to version " ,(number->string maj) 
                        (input ((type "file") (name "contents")))
                        (input ((type "hidden") (name "maj") (value ,(number->string maj))))
-                       (input ((type "hidden") (name "action") (value "upload"))))))
+                       (input ((type "hidden") (name "action") (value "upload")))
+                       (input ((type "submit") (value "upload"))))))
            (map
             (λ (pv pvidx)
               `(tr (td ,(number->string (pkgversion-maj pv)) "."
