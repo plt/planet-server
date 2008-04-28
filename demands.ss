@@ -9,7 +9,8 @@
   (define (kv-pair? p)
     (and (pair? p)
          (symbol? (car p))
-         (string? (cdr p))))
+         (or (string? (cdr p))
+             (bytes? (cdr p)))))
   
   (define (problem? v) 
     (match v
