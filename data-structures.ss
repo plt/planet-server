@@ -52,7 +52,7 @@
                              blurb ;; release notes
                              date-added
                              name
-                             repositories
+                             repositories   ;; listof nat [repository ids]
                              required-core
                              downloads)
     (make-inspector))

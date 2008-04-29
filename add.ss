@@ -719,7 +719,10 @@ function update(status) {
                         (list "edit metadata" 
                               (package-name pkg)
                               (format "~a.~a" (pkgversion-maj pkgversion) (pkgversion-min pkgversion)))
-                        `((form 
+                        `(,@(on-head 
+                             '()
+                             `((div ((class "notice")) "Notice: you are editing the metadata for a version of your package that is not the most current. Some fields can only be edited on the most recent version of a package. You cannot edit those fields here.")))
+                          (form 
                            ((action ,k) (method "post"))
                            (table 
                             (tr (td ((valign "top")) "Package")
@@ -805,9 +808,16 @@ function update(status) {
                                    `(table
                                      ,@
                                      (map
-                                      (λ (r) `(tr 
-                                               (td (input ((type "checkbox") (name "repository") (value ,(number->string (repository-id r))))))
-                                               (td ,(repository-name r))))
+                                      (λ (r) 
+                                        (let ([rid (repository-id r)])
+                                        `(tr 
+                                          (td (input ((type "checkbox") 
+                                                      (name "repository") 
+                                                      (value ,(number->string rid))
+                                                      ,@(if (memq rid (pkgversion-repositories pkgversion))
+                                                            `((checked "checked"))
+                                                            '()))))
+                                          (td ,(repository-name r)))))
                                       reps))))
                             
                             (tr (td ((colspan "2")) (input ((type "submit") (value "Update"))))))))))))
