@@ -76,7 +76,7 @@
         void?)]
    [update-pkgversion-fields!
     (-> pkgversion?
-        (union string? false/c)
+        (union (listof xexpr?) false/c)
         (union string? false/c)
         (union string? false/c)
         void)]
