@@ -148,12 +148,59 @@
       (define/public (for-each q . args)
         (perform-action q (λ (c) (send/apply c for-each q args))))
       
+      (define/public (get-transaction)
+        (new transaction% [conn (get-conn)]))
+      
       ;; not needed if there's no connection pool
       (define/public (disconnect)
         (void))
       
       (super-new)))
   
+  (define-struct (exn:fail:transaction-closed exn:fail) ())
+  (define (transaction-closed!)
+    (raise (make-exn:fail:transaction-closed "The transaction is closed, new commands cannot be sent to it"
+                                             (current-continuation-marks))))
+  
+  (define transaction%
+    (class* object% ()
+      
+      (init-field conn)
+      
+      (define live? #t)
+      
+      (send conn exec "BEGIN TRANSACTION;")
+      
+      (define (check-open!)
+        (unless live? (transaction-closed!)))
+      
+      (define/public (query-value q . args)
+        (check-open!)
+        (send/apply conn query-value q args))
+      
+      (define/public (query-row q . args)
+        (check-open!)
+        (send/apply conn query-row q args))
+      
+      (define/public (exec q . args)
+        (check-open!)
+        (send/apply conn exec q args))
+      
+      (define/public (map q . args)
+        (check-open!)
+        (send/apply conn map q args))
+      
+      (define/public (for-each q . args)
+        (check-open!)
+        (send/apply conn for-each q args))
+      
+      (define/public (commit)
+        (send conn exec "COMMIT TRANSACTION;")
+        (send conn disconnect)
+        (set! live? #f))
+      
+      (super-new)))
+      
   (define *db*
     (new retrying-connection%
          [get-conn 
@@ -566,22 +613,17 @@
            (row->pkgversion (all_packages) (car resls) reps))])))
     
   (define (reassociate-package-with-categories pkg categories)
-    (let ([query
-           (concat-sql
-            "BEGIN TRANSACTION; "
-            "DELETE FROM package_categories WHERE package_id = "[integer (package-id pkg)]"; "
-            [#:sql
-             (apply string-append
-                    (map (λ (c)
-                           (concat-sql
-                            "INSERT INTO package_categories (package_id, category_id) "
-                            "VALUES ("
-                            [integer (package-id pkg)]", " 
-                            [integer (if (number? c) c (category-id c))]"); "))
-                         categories))]
-            "COMMIT TRANSACTION;")])
-      (send *db* exec query)
-      (void)))
+    (let ([t (send *db* get-transaction)])
+      (send t exec (concat-sql "DELETE FROM package_categories WHERE package_id = "[integer (package-id pkg)]"; ")) 
+      (for-each (λ (c)
+                  (send t exec
+                        (concat-sql
+                         "INSERT INTO package_categories (package_id, category_id) "
+                         "VALUES ("
+                         [integer (package-id pkg)]", " 
+                         [integer (if (number? c) c (category-id c))]"); ")))
+                categories)
+      (send t commit)))
   
   (define (associate-package-with-category pkg category)
     (let ([query (concat-sql
@@ -857,13 +899,11 @@
                       [#:sql (if sexpr (concat-sql [varchar (format "~s" sexpr)]) "NULL")]
                       "); ")))
                  bases+files)]
-           [query
-            (concat-sql
-             "BEGIN TRANSACTION; "
-             "DELETE FROM primary_files WHERE package_version_id = "[integer id]"; "
-             [#:sql (apply string-append inserts)]
-             "COMMIT TRANSACTION; ")])
-      (send *db* exec query)))
+           [t (send *db* get-transaction)])
+      
+      (send t exec (concat-sql "DELETE FROM primary_files WHERE package_version_id = "[integer id]"; "))
+      (for-each (λ (i) (send t exec i)) inserts)
+      (send t commit-transaction)))
 
   ;; recompute-all-primary-files : -> void
   ;; rebuilds all package-version primary file information from the information
