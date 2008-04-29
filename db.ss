@@ -74,6 +74,12 @@
         (union string? false/c) 
         (union string? false/c)
         void?)]
+   [update-pkgversion-fields!
+    (-> pkgversion?
+        (union string? false/c)
+        (union string? false/c)
+        (union string? false/c)
+        void)]
    [associate-pkgversion-with-repository! (natural-number/c (union repository? natural-number/c) . -> . void?)]
    [get-next-version-number
     (-> package? boolean? (cons/c natural-number/c natural-number/c))]
@@ -927,6 +933,24 @@
         "NULL"))
   
   (define (update-package-fields! pkg pkgversion blurb homepage notes default-file required-core)
+    (let ([t (send *db* get-transaction)])
+      (update-pkg-fields/helper t pkg blurb homepage)
+      (update-pv-fields/helper t pkgversion notes default-file required-core)
+      (send t commit)
+      (void)))
+  
+  (define (update-pkgversion-fields! pkgversion notes default-file required-core)
+    (update-pv-fields/helper *db* pkgversion notes default-file required-core))
+  
+  (define (update-pkg-fields/helper conn pkg blurb homepage)
+    (let ([package-update-statement
+           (concat-sql
+            "UPDATE packages SET blurb = "[#:sql (sqlize-blurb blurb)]", "
+            " homepage = "[#:sql (if homepage (concat-sql [varchar homepage]) "NULL")]
+            " WHERE id = "[integer (package-id pkg)]"; ")])
+      (send conn exec package-update-statement)))
+  
+  (define (update-pv-fields/helper conn pkgversion notes default-file required-core)
     (let* ([rc-str
             (cond
               [(not required-core) "NULL"]
@@ -934,21 +958,18 @@
               [else "NULL"])]
            [pkgversion-update-statement
             (concat-sql
-             "UPDATE package_versions SET "
-             "release_blurb = "[#:sql (sqlize-blurb notes)]", "
-             "default_file = "[#:sql (if default-file
-                                         (concat-sql [varchar default-file])
-                                         "NULL")]", "
-             "required_core_version = "[#:sql rc-str]
-             " WHERE id = "[integer (pkgversion-id pkgversion)] ";")]
-          [package-update-statement
-           (concat-sql
-            "UPDATE packages SET blurb = "[#:sql (sqlize-blurb blurb)]", "
-            " homepage = "[#:sql (if homepage (concat-sql [varchar homepage]) "NULL")]
-            " WHERE id = "[integer (package-id pkg)]"; ")])
-      (send *db* exec pkgversion-update-statement)
-      (send *db* exec package-update-statement)
-      (void)))
+            "UPDATE package_versions SET "
+            "release_blurb = "[#:sql (sqlize-blurb notes)]", "
+            "default_file = "[#:sql (if default-file
+                                        (concat-sql [varchar default-file])
+                                        "NULL")]", "
+            "required_core_version = "[#:sql rc-str]
+            " WHERE id = "[integer (pkgversion-id pkgversion)] ";")])
+      (send conn exec pkgversion-update-statement)))
+  
+  
+    
+  
   
   (define (associate-pkgversion-with-repository! pkgversion-id repository/repository-id)
     (let* ([rep-id (if (number? repository/repository-id)

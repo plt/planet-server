@@ -606,15 +606,20 @@ function update(status) {
                              #f)]
            [categories (map string->number (get-all req 'categories))]
            [versions   (map string->number (get-all req 'repository))])
-      (update-package-fields!
-       pkg
-       pkgversion
-       blurb
-       homepage-string
-       notes
-       primary-file
-       core-version)
-      (reassociate-package-with-categories pkg categories)))
+      (if head-revision?
+          (begin
+            (update-package-fields! pkg
+                                    pkgversion
+                                    blurb
+                                    homepage-string
+                                    notes
+                                    primary-file
+                                    core-version)
+            (reassociate-package-with-categories pkg categories))
+          (update-pkgversion-fields! pkgversion
+                                     notes
+                                     primary-file
+                                     core-version))))
   
   
   (define (->string v)
@@ -1072,4 +1077,3 @@ function update(status) {
 
 (define (legal-core-version? s)
   (core-version-string->code s))
-
