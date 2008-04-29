@@ -558,51 +558,55 @@ function update(status) {
     ;;  - primary file
     ;;  - categories
     ;;  - required core version
-    (let ([pkg (or pkg (get-package-by-id (pkgversion-package-id pkgversion) (user-id user)))]) 
-      (let* ([current-categories (get-package-categories pkg)]
-             [req (send/suspend/demand 
-                   (pkgversion-edit-page pkg
-                                         pkgversion
-                                         (package-blurb pkg)
-                                         (pkgversion-blurb pkgversion)
-                                         (package-homepage pkg)
-                                         (pkgversion-default-file pkgversion)
-                                         (pkgversion-required-core pkgversion)
-                                         (get-category-names)
-                                         current-categories))]
-             [blurb-string (string->string-option (get req 'description))]
-             [notes-string (string->string-option (get req 'notes))]
-             [homepage-string (string->string-option (get req 'homepage))]
-             [primary-file-string (string->string-option (get req 'defaultfile))]
-             [core-version-string (string->string-option (get req 'core))]
+    (let* ([pkg (or pkg (get-package-by-id (pkgversion-package-id pkgversion) (user-id user)))]
+           [head-revision? (pv=? pkgversion (package->current-version pkg))]
              
-             ;; FIXME: the ui for editing is horrible
-             [blurb (and blurb-string (string->xexprs blurb-string))]
-             [notes (and notes-string (string->xexprs notes-string))]
-             [primary-file 
-              (if primary-file-string
-                  ; i don't know how to get around this;
-                  ; there are probably problems with
-                  ; unicode file names but we only allow ascii anyway due to
-                  ; db limitations so it's probably not a pressing concern
-                  (path->string
-                   (find-relative-path 
-                    (pkgversion-src-path pkgversion) 
-                    (normalize-path primary-file-string (pkgversion-src-path pkgversion))))
-                  #f)]
-             [core-version (if core-version-string
-                               (srfi13:string-trim-both core-version-string)
-                               #f)]
-             [categories (map string->number (get-all req 'categories))])
-        (update-package-fields!
-         pkg
-         pkgversion
-         blurb
-         homepage-string
-         notes
-         primary-file
-         core-version)
-        (reassociate-package-with-categories pkg categories))))
+           [current-categories (get-package-categories pkg)]
+           [req (send/suspend/demand 
+                 (pkgversion-edit-page pkg
+                                       pkgversion
+                                       (package-blurb pkg)
+                                       (pkgversion-blurb pkgversion)
+                                       (package-homepage pkg)
+                                       (pkgversion-default-file pkgversion)
+                                       (pkgversion-required-core pkgversion)
+                                       (get-category-names)
+                                       current-categories
+                                       head-revision?))]
+           [blurb-string (string->string-option (get req 'description))]
+           [notes-string (string->string-option (get req 'notes))]
+           [homepage-string (string->string-option (get req 'homepage))]
+           [primary-file-string (string->string-option (get req 'defaultfile))]
+           [core-version-string (string->string-option (get req 'core))]
+           
+           ;; FIXME: the ui for editing is horrible
+           [blurb (and blurb-string (string->xexprs blurb-string))]
+           [notes (and notes-string (string->xexprs notes-string))]
+           [primary-file 
+            (if primary-file-string
+                ; i don't know how to get around this;
+                ; there are probably problems with
+                ; unicode file names but we only allow ascii anyway due to
+                ; db limitations so it's probably not a pressing concern
+                (path->string
+                 (find-relative-path 
+                  (pkgversion-src-path pkgversion) 
+                  (normalize-path primary-file-string (pkgversion-src-path pkgversion))))
+                #f)]
+           [core-version (if core-version-string
+                             (srfi13:string-trim-both core-version-string)
+                             #f)]
+           [categories (map string->number (get-all req 'categories))]
+           [versions   (map string->number (get-all req 'repository))])
+      (update-package-fields!
+       pkg
+       pkgversion
+       blurb
+       homepage-string
+       notes
+       primary-file
+       core-version)
+      (reassociate-package-with-categories pkg categories)))
   
   
   (define (->string v)
@@ -700,9 +704,15 @@ function update(status) {
                                 default-file
                                 required-core
                                 categories
-                                default-categories)
+                                default-categories
+                                head-revision?)
     (define default-category-ids (map category-id default-categories))
     (define ((page-producer problems) k)
+      (define on-head
+        (if head-revision?
+            (λ (a b) a)
+            (λ (a b) b)))
+      
       (with-problems problems
                      (λ (general-error-messages value-for errors-for)
                        (page
@@ -717,16 +727,20 @@ function update(status) {
                             (tr (td ((valign "top")) "Version")       
                                 (td (b ,(format "~a.~a" (pkgversion-maj pkgversion) (pkgversion-min pkgversion)))))
                             (tr (td ((valign "top"))  "Description")   
-                                (td (textarea ((name "description") (rows "6") (cols "40"))
-                                              ,(let ([submitted-description (value-for 'description (λ (x) x))])
-                                                 (if (null? submitted-description)
-                                                     (->string description)
-                                                     (->string submitted-description))))
-                                    ,@(errors-for 'description)))
+                                (td ,@(on-head
+                                       `((textarea ((name "description") (rows "6") (cols "40"))
+                                                   ,(let ([submitted-description (value-for 'description (λ (x) x))])
+                                                      (if (null? submitted-description)
+                                                          (->string description)
+                                                          (->string submitted-description))))
+                                         ,@(errors-for 'description))
+                                       `(,(->string description)))))
                             (tr (td ((valign "top")) "Home page")
-                                (td (input ((type "text") (name "homepage")
+                                (td ,@(on-head 
+                                       `((input ((type "text") (name "homepage")
                                                           (value ,(or homepage ""))))
-                                    ,@(errors-for 'homepage)))
+                                         ,@(errors-for 'homepage))
+                                       `(,(->string* homepage)))))
                             (tr (td ((valign "top")) "Release notes") 
                                 (td (textarea ((name "notes") (rows "6") (cols "40"))
                                               ,(let ([submitted-notes (value-for 'notes (λ (x) x))])
@@ -750,36 +764,42 @@ function update(status) {
                                     ,@(errors-for 'core)))
                             (tr (td ((valign "top")) "Categories")
                                 (td ((valign "top"))
-                                    (table 
-                                     ,@(let* ([len (length categories)]
-                                              [half (ceiling (/ len 2))]
-                                              
-                                              [inputbox
-                                               (λ (cat)
-                                                 `((input ((type "checkbox")
-                                                           (name "categories")
-                                                           (value ,(number->string (category-id cat)))
-                                                           ,@(if (memv (category-id cat) default-category-ids)
-                                                                 `((checked "checked"))
-                                                                 `())))
-                                                   ,(category-name cat)))])
-                                         (let loop ([left (srfi1:take categories half)]
-                                                    [right (srfi1:drop categories half)])
-                                           (cond
-                                             [(and (null? left) (null? right)) '()]
-                                             [(null? right)
-                                              ;; in this case i'm taking advantage of the fact that i know
-                                              ;; that (len left) is either (len right) or (len right) + 1
-                                              (list
-                                               `(tr 
-                                                 (td ,@(inputbox (car left)))
-                                                 (td ,@(if (null? right) '(nbsp) (inputbox (car right))))))]
-                                             [else
-                                              (cons
-                                               `(tr
-                                                 (td ,@(inputbox (car left)))
-                                                 (td ,@(inputbox (car right))))
-                                               (loop (cdr left) (cdr right)))]))))))
+                                    ,@(on-head
+                                       `((table 
+                                          ,@(let* ([len (length categories)]
+                                                   [half (ceiling (/ len 2))]
+                                                   
+                                                   [inputbox
+                                                    (λ (cat)
+                                                      `((input ((type "checkbox")
+                                                                (name "categories")
+                                                                (value ,(number->string (category-id cat)))
+                                                                ,@(if (memv (category-id cat) default-category-ids)
+                                                                      `((checked "checked"))
+                                                                      `())))
+                                                        ,(category-name cat)))])
+                                              (let loop ([left (srfi1:take categories half)]
+                                                         [right (srfi1:drop categories half)])
+                                                (cond
+                                                  [(and (null? left) (null? right)) '()]
+                                                  [(null? right)
+                                                   ;; in this case i'm taking advantage of the fact that i know
+                                                   ;; that (len left) is either (len right) or (len right) + 1
+                                                   (list
+                                                    `(tr 
+                                                      (td ,@(inputbox (car left)))
+                                                      (td ,@(if (null? right) '(nbsp) (inputbox (car right))))))]
+                                                  [else
+                                                   (cons
+                                                    `(tr
+                                                      (td ,@(inputbox (car left)))
+                                                      (td ,@(inputbox (car right))))
+                                                    (loop (cdr left) (cdr right)))])))))
+                                       `((ul
+                                          ,@(srfi1:filter-map (λ (cat) (if (memv (category-id cat) default-category-ids)
+                                                                           `(li ,(category-name cat))
+                                                                           #f))
+                                                              categories))))))
                             (tr (td ((valign "top")) "Repositories")
                                 ,(let ([reps (get-all-repositories)])
                                    `(table

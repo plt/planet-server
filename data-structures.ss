@@ -73,7 +73,9 @@
    [package->old-versions
     (package? . -> . (listof pkgversion?))]
    [filter-package-for-repository
-    (package? natural-number/c . -> . (union package? false/c))])
+    (package? natural-number/c . -> . (union package? false/c))]
+   
+   [pv=? (pkgversion? pkgversion? . -> . boolean?)])
 
   (define (package-stub? pkg)
     (and (package? pkg) (not (package-versions pkg))))
@@ -98,5 +100,10 @@
   ;; pkgversion-in-repository? : nat -> pkgversion -> boolean
   ;; determines if pv is in repository n
   (define ((pkgversion-in-repository? n) pv) (memv n (pkgversion-repositories pv)))
+  
+  ;; pv=? : pv pv -> bool
+  ;; determine if these two package versions represent the same thing
+  (define (pv=? a b)
+    (= (pkgversion-id a) (pkgversion-id b)))
 
   )
