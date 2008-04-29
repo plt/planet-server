@@ -950,7 +950,7 @@
            [the-val (send *db* query-value query)])
       (when (sql-null? the-val)
         (error 'get-next-version-for-maj "specified major version does not exist"))
-      the-val))
+      (add1 the-val)))
   
   ;; for-each-package-version : (package-stub pkgversion -> X) -> X
   ;; calls f for effect on each package version in the system [ordered username/pkgname/maj/min], and
