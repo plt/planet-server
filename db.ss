@@ -936,8 +936,10 @@
              [integer (package-id pkg)]
              " AND maj = " [integer maj]
              ";")]
-           [the-val (send *db* query-maybe-value query)])
-      (or the-val (error 'get-next-version-for-maj "specified major version does not exist"))))
+           [the-val (send *db* query-value query)])
+      (when (sql-null? the-val) 
+        (error 'get-next-version-for-maj "specified major version does not exist"))
+      the-val))
   
   ;; for-each-package-version : (package-stub pkgversion -> X) -> X
   ;; calls f for effect on each package version in the system [ordered username/pkgname/maj/min], and
