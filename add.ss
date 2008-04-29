@@ -635,9 +635,10 @@ function update(status) {
   (define (pkg-edit-page pkg context-problems)
     (define ((page-producer problems) k)
       
-      (define (pv-group->rows g start-len)
+      (define (pv-group->rows g)
         (let ([maj (car g)]
-              [pvs (cdr g)])
+              [pvs (cdr g)]
+              )
           (cons
            `(tr (td "Package version " ,(number->string maj))
                 (td 
@@ -649,27 +650,24 @@ function update(status) {
                        (input ((type "hidden") (name "action") (value "update")))
                        (input ((type "submit") (value "upload"))))))
            (map
-            (λ (pv pvidx)
-              `(tr (td ,(number->string (pkgversion-maj pv)) "."
-                       ,(number->string (pkgversion-min pv)))
-                   (td (a ((href ,(string-append k (format "?action=edit&pv=~a" pvidx))))
-                          "[edit metadata]"))))
-            pvs
-            (build-list (length pvs) (λ (x) (+ x start-len)))))))
+            (λ (pv+pvidx)
+              (let ([pv (car pv+pvidx)]
+                    [pvidx (cdr pv+pvidx)])
+                `(tr (td ,(number->string (pkgversion-maj pv)) "."
+                         ,(number->string (pkgversion-min pv)))
+                     (td (a ((href ,(string-append k (format "?action=edit&pv=~a" pvidx))))
+                            "[edit metadata]")))))
+            pvs))))
       
       (define (versions->table-rows pvs)
         (cond
           [(not pvs)
            (error 'pkg-edit-page "cannot make an edit page for package stubs")]
           [else
-           (let* ([pv-groups (groupby pkgversion-maj pvs)]
-                  [sorted-groups (sort (hash-map pv-groups cons) (λ (a b) (> (car a) (car b))))]
-                  [len*          (map (λ (g) (length (cdr g))) sorted-groups)]
-                  [lens          (let loop ([t 0] [items len*])
-                                   (cond
-                                     [(null? items) '()]
-                                     [else (cons (+ t (car items)) (loop (+ t (car items)) (cdr items)))]))])
-             (append-map pv-group->rows sorted-groups lens))]))
+           (let* ([indexed-pvs (map cons pvs (build-list (length pvs) values))]
+                  [pv-groups (groupby (λ (x) (pkgversion-maj (car x))) pvs)]
+                  [sorted-groups (sort (hash-map pv-groups cons) (λ (a b) (> (car a) (car b))))])
+             (append-map pv-group->rows sorted-groups))]))
       
       (with-problems (append context-problems problems)
                      (λ (general-error-messages value-for errors-for)
