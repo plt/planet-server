@@ -537,7 +537,7 @@ function update(status) {
              (let ([pv (list-ref (package-versions pkg) (string->number (get req 'pv)))])
                (do-pkgversion-edit pv #:pkg pkg))]
             [(update)
-             (let* ([maj           (get req 'maj)]
+             (let* ([maj           (string->number (get req 'maj))]
                     [file-contents (get req 'contents)]
                     [repository-id-strings (extract-bindings 'repository (request-bindings req))]
                     [repository-ids (map string->number repository-id-strings)])
