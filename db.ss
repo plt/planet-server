@@ -346,7 +346,9 @@
     (opt-lambda (u [repositories #f])
       (let* ([query (concat-sql "SELECT * FROM all_packages ap WHERE contributor_id = "[integer (user-id u)]";")]
              [pkgversion-rows (send *db* map query list)])
-        (version-rows->packages (all_packages) pkgversion-rows))))
+        (sort 
+         (version-rows->packages (all_packages) pkgversion-rows)
+         (lambda (a b) (string<? (package-name a) (package-name b)))))))
             
   ;; get-category-names : -> (listof category?)
   ;; produces the current list of all available categories and their corresponding ids,
