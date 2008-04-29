@@ -549,7 +549,7 @@
   (define (version-rows->packages columns pkgversion-rows)
     (map
      (λ (rows) (version-rows->package columns rows))
-     (groupby (λ (pvr) (fld columns pvr) 'package_id) pkgversion-rows)))
+     (groupby (λ (pvr) (fld columns pvr 'package_id)) pkgversion-rows)))
   
   ;; this function relies on the idea the rows passed in will be from a derivative of the all_packages
   ;; query and at least have its rows as a prefix
