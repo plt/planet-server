@@ -344,27 +344,10 @@
   
   (define user->packages
     (opt-lambda (u [repositories #f])
-      (let* ([query (concat-sql "SELECT * FROM all_packages ap WHERE contributor_id = "[integer (user-id u)]
-                                " AND repository_id = "
-                                "(SELECT MAX(ap2.repository_id) FROM all_packages ap2 "
-                                "    WHERE ap2.package_version_id = ap.package_version_id " 
-                                [#:sql (if repositories 
-                                           (string-append "    AND ap2.repository_id IN ("(srfi13:string-join repositories ", ")") ")
-                                           "")]
-                                ") ORDER BY name, maj desc, min desc;")]
-             [results (send *db* map query
-                            (lambda row
-                              (let ([f (λ (n) (fld (all_packages) row n))])
-                                (make-package
-                                 (f 'package_id)
-                                 (f 'username)
-                                 (f 'name)
-                                 (blurb-string->blurb (f 'pkg_blurb))
-                                 (f 'homepage)
-                                 (list (row->pkgversion (all_packages) row (list (f 'repository_id))))
-                                 (f 'bugtrack_id)))))])
-        results)))
-    
+      (let* ([query (concat-sql "SELECT * FROM all_packages ap WHERE contributor_id = "[integer (user-id u)]";")]
+             [pkgversion-rows (send *db* map query list)])
+        (version-rows->packages (all_packages) pkgversion-rows))))
+            
   ;; get-category-names : -> (listof category?)
   ;; produces the current list of all available categories and their corresponding ids,
   ;; sorted in presentation order
@@ -560,22 +543,27 @@
              "SELECT * FROM all_packages WHERE contributor_id = "[integer user-id]
              " AND package_id = "[integer pkg-id]
              " ORDER BY maj DESC, min DESC;")]
-           [pkgversions (send *db* map query list)])
-      (version-rows->package (all_packages) pkgversions)))
+           [pkgversion-rows (send *db* map query list)])
+      (version-rows->package (all_packages) pkgversion-rows)))
          
+  (define (version-rows->packages columns pkgversion-rows)
+    (map
+     (λ (rows) (version-rows->package columns rows))
+     (groupby (λ (pvr) (fld columns pvr) 'package_id) pkgversion-rows)))
+  
   ;; this function relies on the idea the rows passed in will be from a derivative of the all_packages
   ;; query and at least have its rows as a prefix
-  (define (version-rows->package columns pkgversions)
+  (define (version-rows->package columns pkgversion-rows)
     (cond
-      [(null? pkgversions) #f]
+      [(null? pkgversion-rows) #f]
       [else
        (make-package
-        (fld columns (car pkgversions) 'package_id)
-        (fld columns (car pkgversions) 'username)
-        (fld columns (car pkgversions) 'name)
-        (blurb-string->blurb (fld columns (car pkgversions) 'pkg_blurb))
-        (fld columns (car pkgversions) 'homepage)
-        (let outer-loop ([rows pkgversions])
+        (fld columns (car pkgversion-rows) 'package_id)
+        (fld columns (car pkgversion-rows) 'username)
+        (fld columns (car pkgversion-rows) 'name)
+        (blurb-string->blurb (fld columns (car pkgversion-rows) 'pkg_blurb))
+        (fld columns (car pkgversion-rows) 'homepage)
+        (let outer-loop ([rows pkgversion-rows])
           (if (null? rows)
               '()
               (let loop ([rest (cdr rows)]
@@ -597,8 +585,8 @@
                     (cdr rest)
                     (car rest)
                     maj min
-                    (cons (fld columns (car pkgversions) 'repository_id) reps))]))))
-        (fld columns (car pkgversions) 'bugtrack_id))]))
+                    (cons (fld columns (car pkgversion-rows) 'repository_id) reps))]))))
+        (fld columns (car pkgversion-rows) 'bugtrack_id))]))
   
   
   ;; get-package-version-by-id : natural-number[id] natural-number[id] -> pkgversion | #f
@@ -1129,6 +1117,18 @@
                          newcat
                          (list (r (car l)))
                          (cons (list cat (reverse rs-in-cat)) other-cats))))]))))
+  
+  (define (groupby f l)
+    (let ([ht (make-hash-table)])
+      (foldl
+       (λ (item _)
+         (let ([key (f item)])
+           (hash-table-put! ht key (cons item (hash-table-get ht key (λ () '()))))))
+       (void)
+       l)
+      (hash-table-map ht (λ (k v) v))))
+                   
+  
   
   (define (blurb->xexprs b)
     (cond
