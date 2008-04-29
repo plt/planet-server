@@ -26,7 +26,7 @@
    [valid-password? (user? string? . -> . boolean?)]
    [update-user-email (user? string? . -> . void?)]
    [update-user-password (user? string? . -> . void?)]
-   [user->packages (-> user? natural-number/c (listof package?))]
+   [user->packages (opt-> (user?) ((union (listof natural-number/c) false/c))  (listof package?))]
    [get-category-names (-> (listof category?))]
    [add-package-to-db!
     (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
@@ -289,23 +289,31 @@
   (define (blurb->blurb-string b)
     (format "~s" b))
   
-  (define (user->packages u rep)
-    (let* ([query (concat-sql "SELECT * FROM packages_without_categories "
-                              " WHERE contributor_id = "[integer (user-id u)]
-                              ;" AND repository_id = "[integer rep]
-                              " ORDER BY name")]
-           [results (send *db* map query
-                          (lambda row
-                            (let ([f (λ (n) (fld (packages_without_categories) row n))])
-                              (make-package
-                               (f 'package_id)
-                               (f 'username)
-                               (f 'name)
-                               (blurb-string->blurb (f 'pkg_blurb))
-                               (f 'homepage)
-                               (list (row->pkgversion (packages_without_categories) row (list 2 3)))  ;; fixme
-                               (f 'bugtrack_id)))))])
-      results))
+  (define user->packages
+    (opt-lambda (u [repositories #f])
+      (let* ([query (concat-sql "SELECT * FROM packages_without_categories "
+                                " WHERE contributor_id = "[integer (user-id u)]
+                                [#:sql (if repositories
+                                           (string-append
+                                            " AND repository_id IN "
+                                            (srfi13:string-join repositories ", ")
+                                            " ")
+                                           " ")]
+                                           
+                                           
+                                " ORDER BY name")]
+             [results (send *db* map query
+                            (lambda row
+                              (let ([f (λ (n) (fld (packages_without_categories) row n))])
+                                (make-package
+                                 (f 'package_id)
+                                 (f 'username)
+                                 (f 'name)
+                                 (blurb-string->blurb (f 'pkg_blurb))
+                                 (f 'homepage)
+                                 (list (row->pkgversion (packages_without_categories) row (list 2 3)))  ;; fixme
+                                 (f 'bugtrack_id)))))])
+        results)))
     
   ;; get-category-names : -> (listof category?)
   ;; produces the current list of all available categories and their corresponding ids,
@@ -524,7 +532,10 @@
                          [first (car rows)]
                          [maj (fld columns (car rows) 'maj)]
                          [min (fld columns (car rows) 'min)]
-                         [reps (list (fld columns (car rows) 'repository_id))])
+                         [reps (let ([first-rep (fld columns (car rows) 'repository_id)])
+                                 (if first-rep
+                                     (list first-rep)
+                                     '()))])
                 (cond
                   [(or (null? rest)
                        (not
@@ -551,7 +562,7 @@
       (cond
         [(null? resls) #f]
         [else
-         (let ([reps (map (λ (row) (fld (all_packages) row 'repository_id)) resls)])
+         (let ([reps (srfi1:filter-map (λ (row) (fld (all_packages) row 'repository_id)) resls)])
            (row->pkgversion (all_packages) (car resls) reps))])))
     
   (define (reassociate-package-with-categories pkg categories)
@@ -937,7 +948,7 @@
              " AND maj = " [integer maj]
              ";")]
            [the-val (send *db* query-value query)])
-      (when (sql-null? the-val) 
+      (when (sql-null? the-val)
         (error 'get-next-version-for-maj "specified major version does not exist"))
       the-val))
   

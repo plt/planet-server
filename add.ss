@@ -323,7 +323,7 @@
     (with-problems problems
                    (λ (general-errors value-for message-for)
                      (lambda (k)
-                       (define packages (user->packages user (DEFAULT-REPOSITORY))) 
+                       (define packages (user->packages user)) 
                        (define (package->rows pkg)
                          (let ([v (car (package-versions pkg))])
                            `((tr ((class "pkgStats")) 
