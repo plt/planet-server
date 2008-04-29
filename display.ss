@@ -300,7 +300,7 @@
     ;; USER PAGE
     
     (define (gen-user-page user)
-      (let ([pkgs (user->packages user rep)])
+      (let ([pkgs (user->packages user (list rep))])
         (page
          (list (list (user-username user) (user->link user)))
          `((div 
