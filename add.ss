@@ -635,7 +635,7 @@ function update(status) {
   (define (pkg-edit-page pkg context-problems)
     (define ((page-producer problems) k)
       
-      (define (pv-group->rows g)
+      (define (pv-group->rows g start-len)
         (let ([maj (car g)]
               [pvs (cdr g)])
           (cons
@@ -655,7 +655,7 @@ function update(status) {
                    (td (a ((href ,(string-append k (format "?action=edit&pv=~a" pvidx))))
                           "[edit metadata]"))))
             pvs
-            (build-list (length pvs) values)))))
+            (build-list (length pvs) (λ (x) (+ x start-len)))))))
       
       (define (versions->table-rows pvs)
         (cond
@@ -663,8 +663,13 @@ function update(status) {
            (error 'pkg-edit-page "cannot make an edit page for package stubs")]
           [else
            (let* ([pv-groups (groupby pkgversion-maj pvs)]
-                  [sorted-groups (sort (hash-map pv-groups cons) (λ (a b) (> (car a) (car b))))])
-             (append-map pv-group->rows sorted-groups))]))
+                  [sorted-groups (sort (hash-map pv-groups cons) (λ (a b) (> (car a) (car b))))]
+                  [len*          (map (λ (g) (length (cdr g))) sorted-groups)]
+                  [lens          (let loop ([t 0] [items len*])
+                                   (cond
+                                     [(null? items) '()]
+                                     [else (cons (+ t (car items)) (loop (+ t (car items)) (cdr items)))]))])
+             (append-map pv-group->rows sorted-groups lens))]))
       
       (with-problems (append context-problems problems)
                      (λ (general-error-messages value-for errors-for)
