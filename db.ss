@@ -344,27 +344,24 @@
   
   (define user->packages
     (opt-lambda (u [repositories #f])
-      (let* ([query (concat-sql "SELECT * FROM packages_without_categories "
-                                " WHERE contributor_id = "[integer (user-id u)]
-                                [#:sql (if repositories
-                                           (string-append
-                                            " AND repository_id IN "
-                                            (srfi13:string-join repositories ", ")
-                                            " ")
-                                           " ")]
-                                           
-                                           
-                                " ORDER BY name")]
+      (let* ([query (concat-sql "SELECT * FROM all_packages ap WHERE contributor_id = "[integer (user-id u)]
+                                " AND repository_id = "
+                                "(SELECT MAX(ap2.repository_id) FROM all_packages ap2 "
+                                "    WHERE ap2.package_version_id = ap.package_version_id " 
+                                [#:sql (if repositories 
+                                           (string-append "    AND ap2.repository_id IN ("(srfi13:string-join repositories ", ")") ")
+                                           "")]
+                                ") ORDER BY name, maj desc, min desc;")]
              [results (send *db* map query
                             (lambda row
-                              (let ([f (λ (n) (fld (packages_without_categories) row n))])
+                              (let ([f (λ (n) (fld (all_packages) row n))])
                                 (make-package
                                  (f 'package_id)
                                  (f 'username)
                                  (f 'name)
                                  (blurb-string->blurb (f 'pkg_blurb))
                                  (f 'homepage)
-                                 (list (row->pkgversion (packages_without_categories) row (list 2 3)))  ;; fixme
+                                 (list (row->pkgversion (all_packages) row (list (f 'repository_id))))
                                  (f 'bugtrack_id)))))])
         results)))
     
