@@ -665,7 +665,7 @@ function update(status) {
            (error 'pkg-edit-page "cannot make an edit page for package stubs")]
           [else
            (let* ([indexed-pvs (map cons pvs (build-list (length pvs) values))]
-                  [pv-groups (groupby (λ (x) (pkgversion-maj (car x))) pvs)]
+                  [pv-groups (groupby (λ (x) (pkgversion-maj (car x))) indexed-pvs)]
                   [sorted-groups (sort (hash-map pv-groups cons) (λ (a b) (> (car a) (car b))))])
              (append-map pv-group->rows sorted-groups))]))
       
