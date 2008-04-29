@@ -33,6 +33,14 @@
   (extract-binding/single symbol (request-bindings request)))
 (define (get-all request symbol)
   (extract-bindings symbol (request-bindings request)))
+(define (get* request symbol process)
+  (let ([binding 
+         (with-handlers ([exn:fail? (λ (_) #f)])
+           (get request symbol))])
+    (if binding
+        (process binding)
+        #f)))
+
 (define (get-filename request symbol)
   (let* ([raw (request-bindings/raw request)]
          [binding (get-first (lambda (b)
@@ -573,11 +581,11 @@ function update(status) {
                                        (get-category-names)
                                        current-categories
                                        head-revision?))]
-           [blurb-string (string->string-option (get req 'description))]
-           [notes-string (string->string-option (get req 'notes))]
-           [homepage-string (string->string-option (get req 'homepage))]
-           [primary-file-string (string->string-option (get req 'defaultfile))]
-           [core-version-string (string->string-option (get req 'core))]
+           [blurb-string        (get* req 'description  string->string-option)]
+           [notes-string        (get* req 'notes        string->string-option)]
+           [homepage-string     (get* req 'homepage     string->string-option)]
+           [primary-file-string (get* req 'defaultfile  string->string-option)]
+           [core-version-string (get* req 'core         string->string-option)]
            
            ;; FIXME: the ui for editing is horrible
            [blurb (and blurb-string (string->xexprs blurb-string))]
