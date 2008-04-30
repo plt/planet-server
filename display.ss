@@ -302,7 +302,7 @@
                (list (package-name pkg) (package->link pkg)))
          `(,@(if (null? available)
                  `((div ((class "warning")) 
-                        ,(format "This package is not available in the ~a repository." (repository-name rep-id))
+                        ,(format "This package is not available in the ~a repository." (repository-name rep))
                         " Showing package versions available for all repositories instead."))
                  '())
            (div ((id "packageHeader"))
@@ -352,7 +352,8 @@
            ,@(if (null? unavailable)
                  `()
                  `((section "Packages in other repositories")
-                   (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." (repository-name rep-id)))
+                   (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." 
+                               (repository-name rep)))
                    ,@(pvs->table pkg unavailable load-specific)))))))
     
     ;; ============================================================
