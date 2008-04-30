@@ -29,7 +29,6 @@
   
   ;; request->repository : req -> (values number[id of a repository] boolean)
   (define (request->repository req)
-    (printf "request->repository!")
     (bindings->repository (request-bindings req) (request-cookies req)))
   
   ;; given a set of bindings, determines the repository to which it refers

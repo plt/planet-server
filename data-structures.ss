@@ -19,7 +19,19 @@
                                required-core
                                downloads))
            (struct primary-file (name xexpr))
-           (struct repository (id name client-lower-bound client-upper-bound urlname)))
+           (struct repository (id name client-lower-bound client-upper-bound urlname))
+           (struct exn:user ())
+           raise-user-error)
+  
+  (provide/contract
+   [package->current-version
+    (package? . -> . pkgversion?)]
+   [package->old-versions
+    (package? . -> . (listof pkgversion?))]
+   [filter-package-for-repository
+    (package? natural-number/c . -> . (union package? false/c))]
+   
+   [pv=? (pkgversion? pkgversion? . -> . boolean?)])
 
   (define-struct user (id       ; nat
                        username ; string
@@ -67,15 +79,7 @@
   ;; ============================================================
   ;; UTILITY
 
-  (provide/contract
-   [package->current-version
-    (package? . -> . pkgversion?)]
-   [package->old-versions
-    (package? . -> . (listof pkgversion?))]
-   [filter-package-for-repository
-    (package? natural-number/c . -> . (union package? false/c))]
-   
-   [pv=? (pkgversion? pkgversion? . -> . boolean?)])
+  
 
   (define (package-stub? pkg)
     (and (package? pkg) (not (package-versions pkg))))
@@ -105,5 +109,13 @@
   ;; determine if these two package versions represent the same thing
   (define (pv=? a b)
     (= (pkgversion-id a) (pkgversion-id b)))
+  
+  
+  ;; ============================================================
+  ;; user error reporting
+  
+  (define-struct (exn:user exn) () (make-inspector))
+  (define (raise-user-error msg)
+    (raise (make-exn:user msg (current-continuation-marks))))
 
   )

@@ -655,9 +655,18 @@
                   "AND package_version_id = "[integer (pkgversion-id pv)]"; ")])
       (send *db* query-value query)))
   
-  (define (get-all-repositories)
-    (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order;"])
-      (send *db* map query make-repository)))
+  
+  ;; get-all-repositories : -> (listof repository?)
+  ;; gets every repository in the database. Since this is assumed to change infrequently, we
+  ;; cache the result. The downside is that adding a repository requires a server restart,
+  ;; but that doesn't seem too terrible
+  (define get-all-repositories
+    (let ([all-reps #f])
+      (λ ()
+        (unless all-reps
+          (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order;"])
+            (set! all-reps (send *db* map query make-repository))))
+        all-reps)))
   
   (define (repository-ids->repositories r-ids)
     (if (null? r-ids)

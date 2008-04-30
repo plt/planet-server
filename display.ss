@@ -17,14 +17,53 @@
   (define interface-version 'v1)
   (define timeout +inf.0)
   
+  
+  
   (startup) ; initialize the database
+  
+  (define (start req)
+    
+    (define (default-exception-handler e)
+      (let ([exception-message 
+             (let ([op (open-output-string)])
+               (parameterize ([current-error-port op])
+                 ((error-display-handler) (exn-message e) e))
+               (get-output-string op))])
+        (begin
+          (log-error 
+           (request-client-ip req)
+           (format "unhandled exception: ~a" exception-message))
+          (mkdisplay
+           '("Error")
+           `((p 
+              "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
+              "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
+             ,@(if (DISPLAY-ERRORS-OVER-WEB?)
+                   `((p "The error message was: ")
+                     (pre ,exception-message))
+                   '()))
+           req))))
+    
+    (with-handlers
+        ([exn:user? (λ (e) (mkhtmlpage '("Error") `((div ((class "error")) ,(exn-message e)))))]
+         [exn:fail? default-exception-handler])
+      (real-start req)))
+    
   
   ;; we want everything to have req in scope, so we put everything here.
   ;; alternatively we could bang a global variable, which might be kinder to memory
-  (define (start req)
+  (define (real-start req)
     
-    (define-values (rep rep-explicit?)
-      (apply values (request->repository req)))
+    (define-values (rep-id rep-explicit? rep)
+      (let* ([all-reps (get-all-repositories)]
+             [repid+rep-explicit? (request->repository req)]
+             [rep-id (car repid+rep-explicit?)]
+             [rep-explicit? (cadr repid+rep-explicit?)]
+             [therep (assf (λ (x) (= (repository-id x) rep-id)) all-reps)])
+        (cond
+          [(not therep)
+           (raise-user-error "You have specified a nonexistant repository.")]
+          [else (values rep-id rep-explicit? (cadr therep))])))
         
     ;; ============================================================
     ;; COMMON CODE / PAGE GENERATION
@@ -40,7 +79,7 @@
     ;; carry that specification. Otherwise don't include it.
     (define-values
       (package->link package->owner-link user->link home-link)
-      (let ([suffix (string-append "&rep=" (number->string rep))]
+      (let ([suffix (string-append "&rep=" (number->string rep-id))]
             [basic-operations
              (list package->link/base 
                    package->owner-link/base
@@ -77,7 +116,7 @@
                  (a ((href "/300/planet.rss")) "RSS feed") " or to the "
                  (a ((href "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")) "PLaneT-Announce mailing list")"."))
          (section "Available packages")
-         (table ,@(srfi1:append-map summary-table-rows (get-package-listing rep))))))
+         (table ,@(srfi1:append-map summary-table-rows (get-package-listing rep-id))))))
      
     ;; ============================================================
     ;; package tabling functions [utility for what follows]
@@ -160,7 +199,7 @@
                 ,(or (pkgversion-required-core pv) "[none]"))
             (td ((width "*") (valign "top") (class "toload"))
                 (tt ,(to-load-fn pkg pv))))
-            
+        (tr (td ((colspan "4") (class "pv")) "Available in repositories: "))
         (tr (td ((colspan "4") (class "blurb"))
                 ,@(or (pkgversion-blurb pv)
                       `("[no release notes]"))))))
@@ -246,61 +285,79 @@
     ;; gen-package-page : package -> xexpr[xhtml]
     ;; generates the web page for a particular package
     (define (gen-package-page pkg)
-      (page
-       (list (list (package-owner pkg) (package->owner-link pkg)) 
-             (list (package-name pkg) (package->link pkg)))
-       `((div ((id "packageHeader"))
-               (div ((class "packageTitle")) 
-                    "Package " (b ((class "packageName")) ,(package-name pkg))
-                    " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))
-                    nbsp
-                    ,@(doc-link pkg (package->current-version pkg) '())
-                    ,@(if (package-homepage pkg)
-                          `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
-                          '())
-                    (table ((width "95%"))
-                     (tr
-                      (td ((width "18%")) "To load: ")
-                      (td (tt ,(load-current pkg (package->current-version pkg)))))
-                     ,@(if (pkgversion-required-core (package->current-version pkg))
-                           `((tr
-                              (td "Required PLT Scheme version: ")
-                              (td (tt ,(pkgversion-required-core (package->current-version pkg))))))
+      (let*-values ([(all-reps) (get-all-repositories)]
+                    [(all-packages) (package-versions pkg)]
+                    
+                    ;; invariant: (cons? (append available unavailable))
+                    [(available unavailable) 
+                     (srfi1:partition (λ (pv) (memq rep-id (pkgversion-repositories pv)))
+                                all-packages)]
+                    [(current) (if (null? available)
+                                   (car unavailable)
+                                   (car available))])
+        (page
+         (list (list (package-owner pkg) (package->owner-link pkg)) 
+               (list (package-name pkg) (package->link pkg)))
+         `(,@(if (null? available)
+                 `((div ((class "warning")) 
+                        ,(format "This package is not available in the ~a repository." (repository-name rep-id))
+                        " Showing package versions available for all repositories instead."))
+                 '())
+           (div ((id "packageHeader"))
+                (div ((class "packageTitle")) 
+                     "Package " (b ((class "packageName")) ,(package-name pkg))
+                     " contributed by " (b ((class "packageOwner")) ,(package-owner pkg))
+                     nbsp
+                     ,@(doc-link pkg current '())
+                     ,@(if (package-homepage pkg)
+                           `(nbsp "[" (a ((href ,(package-homepage pkg))) "package home page") "]")
                            '())
-                     (tr 
-                      (td ((valign "top")) "Package description: ")
-                      (td ((class "packageBlurb"))
-                          ,@(or (package-blurb pkg) '("[no description available]"))))
-                     (tr
-                      (td "Downloads this week: ")
-                      (td ,(number->string (downloads-this-week (package->current-version pkg)))))
-                     (tr
-                      (td "Total downloads: ")
-                      (td ,(number->string 
-                            (apply + 
-                                   (cons 
-                                    (pkgversion-downloads (package->current-version pkg))
-                                    (map pkgversion-downloads (package->old-versions pkg)))))))
-                     (tr
-                      (td ((valign "top")) "Primary files: ")
-                      (td ,@(map 
-                             (display-primary-file pkg (package->current-version pkg))
-                             (sort
-                              (pkgversion->primary-files (package->current-version pkg))
-                              (λ (a b) (string<? (primary-file-name a) (primary-file-name b))))))))))
-         (section "Current version")
-         ,(pvs->table pkg (list (package->current-version pkg)) load-current)
-         ,@(let ([old-versions (package->old-versions pkg)])
-             (if (null? old-versions)
+                     (table ((width "95%"))
+                            (tr
+                             (td ((width "18%")) "To load: ")
+                             (td (tt ,(load-current pkg current))))
+                            ,@(if (pkgversion-required-core current)
+                                  `((tr
+                                     (td "Required PLT Scheme version: ")
+                                     (td (tt ,(pkgversion-required-core current)))))
+                                  '())
+                            (tr 
+                             (td ((valign "top")) "Package description: ")
+                             (td ((class "packageBlurb"))
+                                 ,@(or (package-blurb pkg) '("[no description available]"))))
+                            (tr
+                             (td "Downloads this week: ")
+                             (td ,(number->string (downloads-this-week current))))
+                            (tr
+                             (td "Total downloads: ")
+                             (td ,(number->string (foldl + 0 (package-versions pkg)))))
+                            (tr
+                             (td ((valign "top")) "Primary files: ")
+                             (td ,@(map 
+                                    (display-primary-file pkg current)
+                                    (sort
+                                     (pkgversion->primary-files current)
+                                     (λ (a b) (string<? (primary-file-name a) (primary-file-name b))))))))))
+           ,@(if (null? available)
                  '()
-                 `((section "Old versions")
-                   ,(pvs->table pkg old-versions load-specific)))))))
+                 `((section "Current version")
+                   ,(pvs->table pkg (list (car available)) load-current)
+                   ,@(let ([old-versions (cdr available)])
+                       (if (null? old-versions)
+                           '()
+                           `((section "Old versions")
+                             ,(pvs->table pkg old-versions load-specific))))))
+           ,@(if (null? unavailable)
+                 `()
+                 `((section "Packages in other repositories")
+                   (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." (repository-name rep-id)))
+                   ,@(pvs->table pkg unavailable load-specific)))))))
     
     ;; ============================================================
     ;; USER PAGE
     
     (define (gen-user-page user)
-      (let ([pkgs (user->packages user (list rep))])
+      (let ([pkgs (user->packages user (list rep-id))])
         (page
          (list (list (user-username user) (user->link user)))
          `((div 
@@ -312,56 +369,35 @@
     ;; ============================================================
     ;; DISPATCHING APPARATUS
     
-    (define (page-for-request initial-request)
-      (with-handlers ([exn:fail? (λ (e) (default-exception-handler initial-request e))])
-        (let* ([bindings (request-bindings req)]
-               [pkgname  (extract-bindings 'package bindings)]
-               [owner    (extract-bindings 'owner bindings)])
-          (cond
-            [(null? owner)
-             ;; ideally there would be a separate page saying you can't do that, but for now I just 
-             ;; want to stop the internal error
-             (gen-main-page)]
-            [(and (null? pkgname) (not (null? owner)))
-             (let ([user (get-user-record/no-password (car owner))])
-               (if (not user)
-                   (page
-                    (list (car owner))
-                    `((p "The requested user does not exist.")))
-                   (gen-user-page user)))]
-            [else
-             (let ([pkg (get-package (car owner) (car pkgname))])
-               (if (not pkg)
-                   (page
-                    (list (car owner) (car pkgname))
-                    `((p "The requested package does not exist.")))
-                   (let ([rpkg (filter-package-for-repository pkg rep)])
-                     (if (not rpkg)
-                         (page
-                          (list (car owner) (car pkgname))
-                          `((p "The requested package does not exist in this repository. Try another repository.")))
-                         (gen-package-page pkg)))))]))))
-    
-    (define (default-exception-handler r e)
-      (let ([exception-message 
-             (let ([op (open-output-string)])
-               (parameterize ([current-error-port op])
-                 ((error-display-handler) (exn-message e) e))
-               (get-output-string op))])
-        (begin
-          (log-error 
-           (request-client-ip r)
-           (format "unhandled exception: ~a" exception-message))
-          (mkdisplay
-           '("Error")
-           `((p 
-              "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
-              "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
-             ,@(if (DISPLAY-ERRORS-OVER-WEB?)
-                   `((p "The error message was: ")
-                     (pre ,exception-message))
-                   '()))
-           r))))
+    ;; the page to show
+    (define page-for-request
+      (let* ([bindings (request-bindings req)]
+             [pkgname  (extract-bindings 'package bindings)]
+             [owner    (extract-bindings 'owner bindings)])
+        (cond
+          [(null? owner)
+           ;; ideally there would be a separate page saying you can't do that, but for now I just 
+           ;; want to stop the internal error
+           (gen-main-page)]
+          [(and (null? pkgname) (not (null? owner)))
+           (let ([user (get-user-record/no-password (car owner))])
+             (if (not user)
+                 (page
+                  (list (car owner))
+                  `((p "The requested user does not exist.")))
+                 (gen-user-page user)))]
+          [else
+           (let ([pkg (get-package (car owner) (car pkgname))])
+             (if (not pkg)
+                 (page
+                  (list (car owner) (car pkgname))
+                  `((p "The requested package does not exist.")))
+                 (let ([rpkg (filter-package-for-repository pkg rep-id)])
+                   (if (not rpkg)
+                       (page
+                        (list (car owner) (car pkgname))
+                        `((p "The requested package does not exist in this repository. Try another repository.")))
+                       (gen-package-page pkg)))))])))
     
     ;; build-response : page -> response
     ;; constructs an appropriate response, given the web page to respond with
@@ -373,7 +409,7 @@
             v)))
     
     ;; the actual executor
-    (build-response (page-for-request req)))
+    (build-response page-for-request))
   
   
   
