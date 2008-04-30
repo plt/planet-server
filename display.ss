@@ -65,7 +65,7 @@
         (cond
           [(not therep)
            (raise-user-error "You have specified a nonexistant repository.")]
-          [else (values rep-id rep-explicit? (cadr therep))])))
+          [else (values rep-id rep-explicit? therep)])))
         
     ;; ============================================================
     ;; COMMON CODE / PAGE GENERATION
