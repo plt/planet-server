@@ -23,15 +23,6 @@
            (struct exn:user ())
            raise-user-error)
   
-  (provide/contract
-   [package->current-version
-    (package? . -> . pkgversion?)]
-   [package->old-versions
-    (package? . -> . (listof pkgversion?))]
-   [filter-package-for-repository
-    (package? natural-number/c . -> . (union package? false/c))]
-   
-   [pv=? (pkgversion? pkgversion? . -> . boolean?)])
 
   (define-struct user (id       ; nat
                        username ; string
@@ -79,7 +70,14 @@
   ;; ============================================================
   ;; UTILITY
 
-  
+  (provide/contract
+   [package->current-version
+    (package? . -> . pkgversion?)]
+   [package->old-versions
+    (package? . -> . (listof pkgversion?))]
+   [filter-package-for-repository
+    (package? natural-number/c . -> . (union package? false/c))]
+   [pv=? (pkgversion? pkgversion? . -> . boolean?)])
 
   (define (package-stub? pkg)
     (and (package? pkg) (not (package-versions pkg))))
