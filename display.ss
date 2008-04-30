@@ -354,7 +354,7 @@
                  `((section "Packages in other repositories")
                    (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." 
                                (repository-name rep)))
-                   ,@(pvs->table pkg unavailable load-specific)))))))
+                   ,(pvs->table pkg unavailable load-specific)))))))
     
     ;; ============================================================
     ;; USER PAGE
