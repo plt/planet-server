@@ -59,7 +59,7 @@
              [repid+rep-explicit? (request->repository req)]
              [rep-id (car repid+rep-explicit?)]
              [rep-explicit? (cadr repid+rep-explicit?)]
-             [therep (assf (λ (x) (= (repository-id x) rep-id)) all-reps)])
+             [therep (ormap (λ (x) (= (repository-id x) rep-id)) all-reps)])
         (cond
           [(not therep)
            (raise-user-error "You have specified a nonexistant repository.")]
