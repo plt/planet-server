@@ -49,6 +49,8 @@
          [exn:fail? default-exception-handler])
       (real-start req)))
     
+  (define (retract f p?)
+    (λ (x) (if (p? x) (f x) #f)))
   
   ;; we want everything to have req in scope, so we put everything here.
   ;; alternatively we could bang a global variable, which might be kinder to memory
@@ -59,7 +61,7 @@
              [repid+rep-explicit? (request->repository req)]
              [rep-id (car repid+rep-explicit?)]
              [rep-explicit? (cadr repid+rep-explicit?)]
-             [therep (ormap (λ (x) (= (repository-id x) rep-id)) all-reps)])
+             [therep (ormap (retract values (λ (x) (= (repository-id x) rep-id))) all-reps)])
         (cond
           [(not therep)
            (raise-user-error "You have specified a nonexistant repository.")]
