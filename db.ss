@@ -579,7 +579,7 @@
                          [first (car rows)]
                          [maj (fld columns (car rows) 'maj)]
                          [min (fld columns (car rows) 'min)]
-                         [reps (let ([first-rep (fld columns first 'repository_id)])
+                         [reps (let ([first-rep (fld columns (car rows) 'repository_id)])
                                  (if first-rep
                                      (list first-rep)
                                      '()))])
