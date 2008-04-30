@@ -575,26 +575,24 @@
         (let outer-loop ([rows pkgversion-rows])
           (if (null? rows)
               '()
-              (let loop ([rest (cdr rows)]
-                         [first (car rows)]
+              (let loop ([items rows]
                          [maj (fld columns (car rows) 'maj)]
                          [min (fld columns (car rows) 'min)]
-                         [reps (let ([first-rep (fld columns (car rows) 'repository_id)])
-                                 (if first-rep
-                                     (list first-rep)
-                                     '()))])
+                         [reps '()])
                 (cond
-                  [(or (null? rest)
+                  [(or (null? (cdr items))
                        (not
                         (and (= maj (fld columns (car rest) 'maj))
                              (= min (fld columns (car rest) 'min)))))
-                   (cons (row->pkgversion columns first reps) (outer-loop rest))]
+                   (cons (row->pkgversion columns
+                                          (car items)
+                                          (cons (fld columns (car items) 'repository_id) reps))
+                         (outer-loop (cdr items)))]
                   [else
                    (loop
-                    (cdr rest)
-                    (car rest)
+                    (cdr items)
                     maj min
-                    (cons (fld columns first 'repository_id) reps))]))))
+                    (cons (fld columns (car items) 'repository_id) reps))]))))
         (fld columns (car pkgversion-rows) 'bugtrack_id))]))
   
   
