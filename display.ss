@@ -21,6 +21,16 @@
   
   (startup) ; initialize the database
   
+  (define (retract f p?)
+    (λ (x) (if (p? x) (f x) #f)))
+  
+  (define (rep-id->name id)
+    (let* ([reps (get-all-repositories)]
+           [therep (ormap (retract values (λ (x) (= (repository-id x) id))) reps)])
+      (cond
+        [(not therep)
+         (error 'rep-id->name (format "no such repository: ~a" id))])))
+  
   (define (start req)
     
     (define (default-exception-handler e)
@@ -48,9 +58,6 @@
         ([exn:user? (λ (e) (mkhtmlpage '("Error") `((div ((class "error")) ,(exn-message e)))))]
          [exn:fail? default-exception-handler])
       (real-start req)))
-    
-  (define (retract f p?)
-    (λ (x) (if (p? x) (f x) #f)))
   
   ;; we want everything to have req in scope, so we put everything here.
   ;; alternatively we could bang a global variable, which might be kinder to memory
@@ -201,7 +208,8 @@
                 ,(or (pkgversion-required-core pv) "[none]"))
             (td ((width "*") (valign "top") (class "toload"))
                 (tt ,(to-load-fn pkg pv))))
-        (tr (td ((colspan "4") (class "pv")) "Available in repositories: "))
+        (tr (td ((colspan "4")) "Available in repositories: "
+                ,(string-join   ", " (map rep-id->name (pkgversion-repositories pv)))))
         (tr (td ((colspan "4") (class "blurb"))
                 ,@(or (pkgversion-blurb pv)
                       `("[no release notes]"))))))
