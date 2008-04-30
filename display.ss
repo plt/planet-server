@@ -332,7 +332,7 @@
                              (td ,(number->string (downloads-this-week current))))
                             (tr
                              (td "Total downloads: ")
-                             (td ,(number->string (foldl + 0 (package-versions pkg)))))
+                             (td ,(number->string (foldl (λ (t r) (+ (pkgversion-downloads t) r)) 0 (package-versions pkg)))))
                             (tr
                              (td ((valign "top")) "Primary files: ")
                              (td ,@(map 
@@ -394,12 +394,7 @@
                  (page
                   (list (car owner) (car pkgname))
                   `((p "The requested package does not exist.")))
-                 (let ([rpkg (filter-package-for-repository pkg rep-id)])
-                   (if (not rpkg)
-                       (page
-                        (list (car owner) (car pkgname))
-                        `((p "The requested package does not exist in this repository. Try another repository.")))
-                       (gen-package-page pkg)))))])))
+                 (gen-package-page pkg)))])))
     
     ;; build-response : page -> response
     ;; constructs an appropriate response, given the web page to respond with
