@@ -13,6 +13,13 @@
   
   (require "data-structures.ss" "configuration.ss")
 
+  ;; A note about getting packages by repository:
+  ;; 
+  ;; For efficiency reasons, the one-to-many mapping between package versions and repositories is not
+  ;; always retrieved completely. When you get packages for a specific repository (using functions
+  ;; such as get-n-most-recent-packages), the packages' package-version information will not contain
+  ;; the other repositories those package versions may belong to.
+  
   (provide/contract
    
    [username-taken? (-> string? boolean?)]
@@ -32,15 +39,13 @@
     (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
    [get-package-listing (natural-number/c . -> . (listof category?))]
    [get-matching-packages
-    (string? string? string? (union natural-number/c false/c) natural-number/c (union natural-number/c false/c)
-     . -> .
-     (values (listof pkgversion?) boolean?))]
+    (opt->*
+     (string? string? string? (union natural-number/c false/c) natural-number/c (union natural-number/c false/c))
+     (repository?)
+     ((listof pkgversion?) boolean?))]
    [get-package
     (opt-> (string? string?) (boolean?)
            (union package? false/c))]
-   [get-package-version
-    (opt-> (string? string? natural-number/c natural-number/c) (boolean?)
-           (union pkgversion? false/c))]
    [get-package-by-id
     (-> natural-number/c natural-number/c
         (union package? false/c))]
@@ -391,43 +396,46 @@
   ;; gets all the matching package versions, sorted from best to worst
   ;; [note that ordering by hidden means that all the entries where hidden = true are after all the ones where
   ;;  it is false; this means that hidden packages are only selected if no non-hidden packages fit the request]
-  (define (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)
-    (let* ([rc-version (core-version-string->code requester-core-version)]
-           [query (concat-sql
-                   "SELECT * FROM all_packages "
-                   " WHERE (required_core_version <= " [integer rc-version]
-                   " OR required_core_version IS NULL) "
-                   " AND name = "[varchar pkgname]
-                   " AND username = "[varchar pkgowner]
-                   [#:sql (if maj 
-                              (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
-                                          [#:sql
-                                           (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
-                              "")]
-                   " AND repository_id = "[integer (DEFAULT-REPOSITORY)]
-                   " ORDER BY hidden, maj DESC, min DESC;")]
-           [ans (send *db* map query 
-                      (lambda row 
-                        (let ([rep (fld (all_packages) row 'repository_id)])
-                          (row->pkgversion (all_packages) row (list rep)))))])
-      (cond
-        [(not (null? ans))
-         (values ans #f)]
-        [else
-         ;; this query and the previous should be in a transaction
-         (let* ([query (concat-sql
-                        "SELECT count(*) FROM all_packages "
-                        " WHERE required_core_version > "[integer rc-version]
-                        " AND name = "[varchar pkgname]
-                        " AND username = "[varchar pkgowner]
-                        [#:sql 
-                         (if maj 
-                             (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
-                                         [#:sql (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
-                             "")]
-                        " AND repository_id = "[integer (DEFAULT-REPOSITORY)]"; ")]
-                [resl (send *db* query-value query)])
-           (values '() (> resl 0)))])))
+  (define get-matching-packages
+    (opt-lambda (requester-core-version pkgowner pkgname maj minlo minhi 
+                                        [repository (repository-for-version (core-version-string->code requester-core-version))])
+      (let* ([rc-version (core-version-string->code requester-core-version)]
+             [query1 (concat-sql
+                      "SELECT * FROM all_packages "
+                      " WHERE (required_core_version <= " [integer rc-version]
+                      " OR required_core_version IS NULL) "
+                      " AND name = "[varchar pkgname]
+                      " AND username = "[varchar pkgowner]
+                      [#:sql (if maj 
+                                 (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
+                                             [#:sql
+                                              (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
+                                 "")]
+                      " AND repository_id = "[integer (repository-for-version rc-version)]
+                      " ORDER BY hidden, maj DESC, min DESC;")]
+             [query2 (concat-sql
+                      "SELECT count(*) FROM all_packages "
+                      " WHERE required_core_version > "[integer rc-version]
+                      " AND name = "[varchar pkgname]
+                      " AND username = "[varchar pkgowner]
+                      [#:sql (if maj 
+                                 (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
+                                             [#:sql (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
+                                 "")]
+                      " AND repository_id = "[integer (repository-id repository)]"; ")]
+             
+             [t (send *db* get-transaction*)])
+        (let ([ans (send t map query1
+                         (lambda row 
+                           (let ([rep (fld (all_packages) row 'repository_id)])
+                             (row->pkgversion (all_packages) row (list rep)))))])
+          (begin0
+            (cond
+              [(not (null? ans)) (values ans #f)]
+              [else
+               (let ([resl (send t query-value query2)])
+                 (values '() (> resl 0)))])
+            (send t commit))))))
   
   ;; ----------------------------------------
   ;; table defs
@@ -524,32 +532,6 @@
              [pkgversions (send *db* map query list)])
         (version-rows->package (all_packages) pkgversions))))
   
-  (define get-package-version
-    (opt-lambda (owner name maj min (include-hidden? #f))
-      (let* ([query
-              (concat-sql
-               "SELECT * FROM all_packages "
-               " WHERE username = "[varchar owner]
-               " AND name = "[varchar name]
-               " AND maj = "[integer maj]
-               " AND min = "[integer min]
-               [#:sql
-                (if include-hidden?
-                    ""
-                    " AND hidden = false")]
-               ";")])
-        (let ([pkgver-list 
-               (send *db* map query 
-                     (λ row (row->pkgversion
-                             (all_packages)
-                             row
-                             (list 2) ;; of course this should not be just 2, but for now it works
-                             )))])
-          (cond
-            [(null? pkgver-list) #f]
-            [(null? (cdr pkgver-list)) (car pkgver-list)]
-            [else (error 'get-package-version "too many packages!")])))))
-  
   ;; get-package-by-id : nat nat -> (union package #f)
   ;; gets the given package id, but only if its owner is the given owner
   (define (get-package-by-id pkg-id user-id)
@@ -587,10 +569,9 @@
                 (let loop ([items (cdr rows)]
                            [reps (list (fld columns leader-row 'repository_id))])
                   (cond
-                    [(null? items)
-                     (cons (row->pkgversion columns leader-row reps) (outer-loop items))]
-                    [(not (and (= maj (fld columns (car items) 'maj))
-                               (= min (fld columns (car items) 'min))))
+                    [(or (null? items)
+                         (not (and (= maj (fld columns (car items) 'maj))
+                                   (= min (fld columns (car items) 'min)))))
                      (cons (row->pkgversion columns
                                             leader-row
                                             reps)
@@ -739,6 +720,19 @@
               (* y 10000)
               (* x 1000000))))]
       [else #f]))
+  
+  
+  ;; repository-accepts-version? : integer[core-version code] -> repository -> boolean
+  ;; determines if the given version is a core version served by the given repository
+  (define ((repository-accepts-version? code) rep)
+    (<= (repository-client-lower-bound rep)
+        code
+        (repository-client-upper-bound rep)))
+  
+  ;; repository-for-version : integer[core-version code] -> repository | #f
+  (define (repository-for-version code)
+    (let ([reps (get-all-repositories)])
+      (srfi1:find (repository-accepts-version? code) reps)))
            
   (define (code->core-version-string code)
     (let ([maj (quotient code 10000)]
@@ -1111,6 +1105,9 @@
             [varchar ip-addr]", "
             [varchar message]")")])
       (send *db* exec query)
+      (display message)
+      (newline)
+      (flush-output)
       (void)))
   
   ;; ============================================================

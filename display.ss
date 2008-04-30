@@ -218,8 +218,8 @@
                 ,(or (pkgversion-required-core pv) "[none]"))
             (td ((width "*") (valign "top") (class "toload"))
                 (tt ,(to-load-fn pkg pv))))
-        (tr (td ((colspan "4")) "Available in repositories: "
-                ,(string-join  ", " (map rep-id->name (pkgversion-repositories pv)))))
+        (tr (td ((colspan "4")) (small "Available in repositories: "
+                ,(string-join  ", " (map rep-id->name (pkgversion-repositories pv))))))
         (tr (td ((colspan "4") (class "blurb"))
                 ,@(or (pkgversion-blurb pv)
                       `("[no release notes]"))))))
@@ -311,7 +311,7 @@
                     ;; invariant: (cons? (append available unavailable))
                     [(available unavailable) 
                      (srfi1:partition (λ (pv) (memq rep-id (pkgversion-repositories pv)))
-                                all-packages)]
+                                      all-packages)]
                     [(current) (if (null? available)
                                    (car unavailable)
                                    (car available))])
