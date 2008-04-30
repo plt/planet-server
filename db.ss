@@ -579,7 +579,7 @@
                          [first (car rows)]
                          [maj (fld columns (car rows) 'maj)]
                          [min (fld columns (car rows) 'min)]
-                         [reps (let ([first-rep (fld columns (car rows) 'repository_id)])
+                         [reps (let ([first-rep (fld columns first 'repository_id)])
                                  (if first-rep
                                      (list first-rep)
                                      '()))])
@@ -594,7 +594,7 @@
                     (cdr rest)
                     (car rest)
                     maj min
-                    (cons (fld columns (car pkgversion-rows) 'repository_id) reps))]))))
+                    (cons (fld columns first 'repository_id) reps))]))))
         (fld columns (car pkgversion-rows) 'bugtrack_id))]))
   
   
