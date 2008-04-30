@@ -24,12 +24,22 @@
   (define (retract f p?)
     (λ (x) (if (p? x) (f x) #f)))
   
-  (define (rep-id->name id)
+  (define (t-compose f g)
+    (λ (x) 
+      (let ([y (g x)])
+        (and y (f y)))))
+  
+  (define (rep-id->rep id)
     (let* ([reps (get-all-repositories)]
            [therep (ormap (retract values (λ (x) (= (repository-id x) id))) reps)])
       (cond
         [(not therep)
-         (error 'rep-id->name (format "no such repository: ~a" id))])))
+         (error 'rep-id->name (format "no such repository: ~a" id))]
+        [else 
+         therep])))
+  
+  (define rep-id->name (t-compose repository-name rep-id->rep))
+  
   
   (define (start req)
     
@@ -209,7 +219,7 @@
             (td ((width "*") (valign "top") (class "toload"))
                 (tt ,(to-load-fn pkg pv))))
         (tr (td ((colspan "4")) "Available in repositories: "
-                ,(string-join   ", " (map rep-id->name (pkgversion-repositories pv)))))
+                ,(string-join  ", " (map rep-id->name (pkgversion-repositories pv)))))
         (tr (td ((colspan "4") (class "blurb"))
                 ,@(or (pkgversion-blurb pv)
                       `("[no release notes]"))))))
