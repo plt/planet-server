@@ -492,7 +492,13 @@
        (blurb-string->blurb (f 'release_blurb))
        (f 'version_date)
        (f 'version_name)
-       repositories
+       ;; a hack for now --- it's possible for a package to have no repositories, in which case
+       ;; the natural code to write for the caller of this function will produce
+       ;; (list #f) for repositories. Detect it here and fix it, though really it should be dealt
+       ;; with elsewhere
+       (if (equal? repositories (list #f))
+           '()
+           repositories)
        (let ([s (f 'required_core_version)])
          (if s
              (code->core-version-string s)
@@ -1045,7 +1051,7 @@
                  (blurb-string->blurb (f 'release_blurb))
                  (f 'version_date)
                  (f 'version_name)
-                 #f
+                 '()
                  (let ([s (f 'required_core_version)])
                    (if s
                        (code->core-version-string s)

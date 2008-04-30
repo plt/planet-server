@@ -289,7 +289,7 @@
           [`(rename ,_ ,id ,contract)
             (row id (contract->xexpr contract))]
           [`(,id ,contract)
-            (row id (contract->xexpr contract))]))  
+            (row id (contract->xexpr contract))]))
       
       `(div ((class "primaryFile"))
             (div ((class "name")) ,(file-link pkg pv (primary-file-name pf) (primary-file-name pf)))
