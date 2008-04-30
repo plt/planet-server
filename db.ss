@@ -575,9 +575,9 @@
         (let outer-loop ([rows pkgversion-rows])
           (if (null? rows)
               '()
-              (let ([leader-row (car rows)]
-                    [maj (fld columns leader-row 'maj)]
-                    [min (fld columns leader-row 'min)])
+              (let* ([leader-row (car rows)]
+                     [maj (fld columns leader-row 'maj)]
+                     [min (fld columns leader-row 'min)])
                 (let loop ([items (cdr rows)]
                            [reps (list (fld columns leader-row 'repository_id))])
                   (cond
