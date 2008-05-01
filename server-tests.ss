@@ -131,12 +131,15 @@
     (test-suite "log-user-out")
     
     ;;[get-user-record/no-password (-> string? (union user? false/c))]
-    (test-suite "get-user-record/no-password")
+    (test-suite "get-user-record/no-password"
+      (test-equal? "1" (user-realname (get-user-record/no-password "jacobm")) "Jacob Matthews")
+      (test-equal? "2" (user-realname (get-user-record/no-password "test"))   "Testy McTestTest")
+      (test-equal? "3" (get-user-record/no-password "not-here") #f))
     
     ;; [valid-password? (user? string? . -> . boolean?)]
     (test-suite "valid-password?"
-      (test-equal? "1" (valid-password? "jacobm" "not-my-real-password") #f)
-      (test-equal? "2" (valid-password? "test" "test") #t))
+      (test-equal? "1" (valid-password? (get-user-record/no-password "jacobm") "not-my-real-password") #f)
+      (test-equal? "2" (valid-password? (get-user-record/no-password "test") "test") #t))
     
     ;;[update-user-email (user? string? . -> . void?)]
     (test-suite "update-user-email")
