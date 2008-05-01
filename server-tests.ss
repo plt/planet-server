@@ -47,13 +47,13 @@
                 [(actual-pv-summaries) (map pv->summary pvs)])
     (for-each 
      (λ (actual-pv-summary)
-       (unless (assf (λ (expected-pv-summary) (equal? expected-pv-summary actual-pv-summary)) expected-pv-summaries)
+       (unless (member (λ (expected-pv-summary) (equal? expected-pv-summary actual-pv-summary)) expected-pv-summaries)
          (with-check-info (['unexpected-pv-summary actual-pv-summary])
            (fail-check))))
      actual-pv-summaries)
     (for-each
      (λ (expected-pv-summary)
-       (unless (assf (λ (actual-pv-summary) (equal? expected-pv-summary actual-pv-summary)) actual-pv-summaries)
+       (unless (member (λ (actual-pv-summary) (equal? expected-pv-summary actual-pv-summary)) actual-pv-summaries)
          (with-check-info (['expected-pv-summary expected-pv-summary])
            (fail-check))))
      expected-pv-summaries)))
