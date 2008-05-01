@@ -110,7 +110,7 @@
     
     ;[email-taken? (-> string? boolean?)]
     (test-suite "email-taken?"
-      (test-equal? "1" (email-taken? "jacobm@gmail.com") #t)
+      (test-equal? "1" (email-taken? "test@example.com") #t)
       (test-equal? "2" (email-taken? "not-taken@taken.not") #f))
     
     ;;[create-new-user (-> string? string? string? string? user?)]
@@ -134,7 +134,9 @@
     (test-suite "get-user-record/no-password")
     
     ;; [valid-password? (user? string? . -> . boolean?)]
-    (test-suite "valid-password?")
+    (test-suite "valid-password?"
+      (test-equal? "1" (valid-password? "jacobm" "not-my-real-password") #f)
+      (test-equal? "2" (valid-password? "test" "test") #t))
     
     ;;[update-user-email (user? string? . -> . void?)]
     (test-suite "update-user-email")
@@ -146,7 +148,20 @@
     (test-suite "user->packages")
     
     ;;[get-category-names (-> (listof category?))]
-    (test-suite "get-category-names")
+    (test-suite "get-category-names"
+      (test-equal? "1" (map category-name (get-category-names))
+        '("Development Tools"
+          "Networking and Protocols"
+          "Graphics and Audio"
+          "XML-Related"
+          "Data Structures and Algorithms"
+          "Input/Output and Filesystem"
+          "Mathematical and Scientific"
+          "Hardware/Operating System-Specific Tools"
+          "Textual and Graphical User Interface"
+          "Metaprogramming Tools"
+          "PLaneT-Related"
+          "Miscellaneous")))
     
     ;; [add-package-to-db! (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
     (test-suite "add-package-to-db!")
@@ -230,13 +245,20 @@
     
     ;;[legal-repository? (-> number? boolean?)]
     (test-suite "legal-repository?"
-      (test-equal? "2" (legal-repository? 1) #f)
-      (test-equal? "3" (legal-repository? 2) #t)
-      (test-equal? "4" (legal-repository? 3) #t)
-      (test-equal? "5" (legal-repository? 4) #f))
+      (test-equal? "1" (legal-repository? 1) #f)
+      (test-equal? "2" (legal-repository? 2) #t)
+      (test-equal? "3" (legal-repository? 3) #t)
+      (test-equal? "4" (legal-repository? 4) #f))
     
     ;;[legal-language? (-> string? boolean?)]
-    (test-suite "legal-language?")
+    (test-suite "legal-language?"
+      (test-equal? "1" (legal-language? "3.99.0.1") #t)
+      (test-equal? "2" (legal-language? "4.0") #t)
+      (test-equal? "3" (legal-language? "299.1") #t)
+      (test-equal? "4" (legal-language? "372.3") #t)
+      (test-equal? "5" (legal-language? "5.5") #f)
+      (test-equal? "6" (legal-language? "12") #f)
+      (test-equal? "7" (legal-language? "4.99.3") #f))
     
     ;;[add-pkgversion-to-db! (-> user? package? natural-number/c natural-number/c path? path? (-> symbol? (-> any) any)
     ;;                           natural-number/c)]
