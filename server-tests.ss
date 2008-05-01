@@ -55,7 +55,8 @@
      (λ (expected-pv-summary)
        (unless (assf (λ (actual-pv-summary) (equal? expected-pv-summary actual-pv-summary)) actual-pv-summaries)
          (with-check-info (['expected-pv-summary expected-pv-summary])
-           (fail-check)))))))
+           (fail-check))))
+     expected-pv-summaries)))
        
 (define-check (check-server-gives-file require-spec expected-maj expected-min)
   (let* ([owner (car require-spec)]
