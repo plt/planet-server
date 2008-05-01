@@ -65,7 +65,12 @@
                                ) 
     (make-inspector))
   
-  (define-struct repository (id name client-lower-bound client-upper-bound urlname) (make-inspector))
+  (define-struct repository (id                    ; natural-number 
+                             name                  ; string
+                             client-lower-bound    ; natural-number
+                             client-upper-bound    ; natural-number
+                             urlname               ; string
+                             ) (make-inspector))
 
   ;; ============================================================
   ;; UTILITY

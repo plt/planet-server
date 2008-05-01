@@ -650,7 +650,9 @@
       (λ ()
         (unless all-reps
           (let ([query "SELECT id, name, client_lower_bound, client_upper_bound, urlname FROM repositories ORDER BY sort_order;"])
-            (set! all-reps (send *db* map query make-repository))))
+            (set! all-reps (send *db* map query 
+                                 (λ (id name lb ub url)
+                                   (make-repository id name (number->string lb) (number->string ub) url))))))
         all-reps)))
   
   (define (repository-ids->repositories r-ids)
