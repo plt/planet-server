@@ -745,9 +745,9 @@
              (number->string maj)
              (format "~a.~a" maj min))]
         [else
-         (let ([x (modulo maj 100)]
+         (let ([x (quotient maj 100)]
                [y (remainder maj 100)]
-               [z (modulo min 100)]
+               [z (quotient min 100)]
                [w (remainder min 100)])
            (cond
              [(and (zero? z) (zero? w))
