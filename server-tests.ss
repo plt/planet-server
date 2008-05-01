@@ -102,49 +102,63 @@
 (define db.ss-tests
   (test-suite "db tests"
     
-    (test-suite "repository util"
-      (test-equal? "1"
-                   (get-all-repositories)
-                   (list
-                    (make-repository 3
-                                     "4.x"
-                                     3990000  
-                                     4990000  
-                                     "4.x")
-                    (make-repository 2
-                                     "3xx"
-                                     2990000
-                                     3990000
-                                     "300")))
-      (test-equal? "2" (legal-repository? 1) #f)
-      (test-equal? "3" (legal-repository? 2) #t)
-      (test-equal? "4" (legal-repository? 3) #t)
-      (test-equal? "5" (legal-repository? 4) #f))
+    ;[username-taken? (-> string? boolean?)]
+    (test-suite "username-taken?"
+      (test-equal? "1" (username-taken? "jacobm") #t)
+      (test-equal? "2" (username-taken? "planet") #t)
+      (test-equal? "3" (username-taken? "not-a-real-user") #f))
     
-    (test-suite "core-version-string->code"
-      (test-equal?  "1" (core-version-string->code "300")        3000000)
-      (test-equal?  "2" (core-version-string->code "369.2")      3690002)
-      (test-equal?  "3" (core-version-string->code "369.20")     3690020)
-      (test-equal?  "4" (core-version-string->code "3.99")       3990000)
-      (test-equal?  "5" (core-version-string->code "3.99.0.2")   3990002)
-      (test-equal?  "6" (core-version-string->code "3.99.0.23")  3990023)
-      (test-equal?  "7" (core-version-string->code "3.99.48.23") 3994823)
-      (test-equal?  "8" (core-version-string->code "4.9.0")      4090000)
-      (test-equal?  "9" (core-version-string->code "4.9.2")      4090200)
-      (test-equal? "10" (core-version-string->code "5.10")       5100000))
+    ;[email-taken? (-> string? boolean?)]
+    (test-suite "email-taken?"
+      (test-equal? "1" (email-taken? "jacobm@gmail.com") #t)
+      (test-equal? "2" (email-taken? "not-taken@taken.not") #f))
     
-    (test-suite "code->core-version-string"
-      (test-equal?  "1" (code->core-version-string 3000000) "300")
-      (test-equal?  "2" (code->core-version-string 3690002) "369.2")
-      (test-equal?  "3" (code->core-version-string 3690020) "369.20")
-      (test-equal?  "4" (code->core-version-string 3990000) "3.99")       
-      (test-equal?  "5" (code->core-version-string 3990002) "3.99.0.2")
-      (test-equal?  "6" (code->core-version-string 3990023) "3.99.0.23")
-      (test-equal?  "7" (code->core-version-string 3994823) "3.99.48.23")
-      (test-equal?  "8" (code->core-version-string 4090000) "4.9")
-      (test-equal?  "9" (code->core-version-string 4090200) "4.9.2")
-      (test-equal? "10" (code->core-version-string 5100000) "5.10"))
+    ;;[create-new-user (-> string? string? string? string? user?)]
+    (test-suite "create-new-user")
+
+    ;;[get-user-record (-> string? string? (union user? false/c))]
+    (test-suite "get-user-record"
+      (test-equal? "1" (get-user-record "test" "not the password") #f)
+      (test-equal? "2" (user? (get-user-record "test" "test")) #t))
     
+    ;;[get-logged-in-user-from-passcode (-> string? string? (union user? false/c))]
+    (test-suite "get-logged-in-user-from-passcode")
+    
+    ;;[log-user-in (-> user? string?)]
+    (test-suite "log-user-in")
+    
+    ;;[log-user-out (-> user? void?)]
+    (test-suite "log-user-out")
+    
+    ;;[get-user-record/no-password (-> string? (union user? false/c))]
+    (test-suite "get-user-record/no-password")
+    
+    ;; [valid-password? (user? string? . -> . boolean?)]
+    (test-suite "valid-password?")
+    
+    ;;[update-user-email (user? string? . -> . void?)]
+    (test-suite "update-user-email")
+    
+    ;; [update-user-password (user? string? . -> . void?)]
+    (test-suite "update-user-password")
+    
+    ;;[user->packages (opt-> (user?) ((union (listof natural-number/c) false/c))  (listof package?))]
+    (test-suite "user->packages")
+    
+    ;;[get-category-names (-> (listof category?))]
+    (test-suite "get-category-names")
+    
+    ;; [add-package-to-db! (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
+    (test-suite "add-package-to-db!")
+    
+    ;;[get-package-listing (natural-number/c . -> . (listof category?))]
+    (test-suite "get-package-listing")
+    
+    ;; [get-matching-packages
+    ;;  (opt->*
+    ;;   (string? string? string? (union natural-number/c false/c) natural-number/c (union natural-number/c false/c))
+    ;;   (repository?)
+    ;;   ((listof pkgversion?) boolean?))]
     (test-suite "get-matching-packages"
       (test-case "1"
         (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 0 #f
@@ -169,7 +183,143 @@
                                              '()))
       (test-case "8"
         (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 2 3
-                                             '())))))
+                                             '())))
+    
+    ;;[get-package (opt-> (string? string?) (boolean?) (union package? false/c))]
+    (test-suite "get-package")
+    
+    ;;[get-package-by-id (-> natural-number/c natural-number/c (union package? false/c))]
+    (test-suite "get-package-by-id")
+    
+    ;;[get-package-version-by-id (-> natural-number/c natural-number/c (union pkgversion? false/c))]
+    (test-suite "get-package-version-by-id")
+    
+    ;;[reassociate-package-with-categories (package? (listof (or/c category? natural-number/c)) . -> . any)]
+    (test-suite "reassociate-package-with-categories")
+    
+    ;;[associate-package-with-category (package? (or/c category? natural-number/c) . -> . void?)]
+    (test-suite "associate-package-with-category") 
+        
+    ;;[get-package-categories (package? . -> . (listof category?))]
+    (test-suite "get-package-categories")
+    
+    ;;[pkgversion->primary-files (pkgversion? . -> . (listof primary-file?))]
+    (test-suite "pkgversion->primary-files")
+    
+    ;;[downloads-this-week (pkgversion? . -> . natural-number/c)]
+    (test-suite "downloads-this-week")
+    
+    ;;[get-all-repositories (-> (listof repository?))]
+    (test-suite "get-all-repositories"
+      (test-equal? "1"
+        (get-all-repositories)
+        (list
+         (make-repository 3
+                          "4.x"
+                          3990000  
+                          4990000  
+                          "4.x")
+         (make-repository 2
+                          "3xx"
+                          2990000
+                          3990000
+                          "300"))))
+    
+    ;;[repository-ids->repositories (-> (listof natural-number/c) (listof repository?))]
+    (test-suite "repository-ids->repositories")
+    
+    ;;[legal-repository? (-> number? boolean?)]
+    (test-suite "legal-repository?"
+      (test-equal? "2" (legal-repository? 1) #f)
+      (test-equal? "3" (legal-repository? 2) #t)
+      (test-equal? "4" (legal-repository? 3) #t)
+      (test-equal? "5" (legal-repository? 4) #f))
+    
+    ;;[legal-language? (-> string? boolean?)]
+    (test-suite "legal-language?")
+    
+    ;;[add-pkgversion-to-db! (-> user? package? natural-number/c natural-number/c path? path? (-> symbol? (-> any) any)
+    ;;                           natural-number/c)]
+    (test-suite "add-pkgversion-to-db!")
+    
+    ;; [update-package-fields!
+    ;;  (-> package? 
+    ;;      pkgversion?
+    ;;      (union (listof xexpr?) false/c) ;; package blurb
+    ;;      (union string? false/c)         ;; package homepage
+    ;;      (union (listof xexpr?) false/c) ;; package notes
+    ;;    (union string? false/c) 
+    ;;    (union string? false/c)
+    ;;    void?)]
+    (test-suite "update-package-fields!")
+    
+    ;;[update-pkgversion-fields!
+    ;; (-> pkgversion?
+    ;;     (union (listof xexpr?) false/c)
+    ;;     (union string? false/c)
+    ;;     (union string? false/c)
+    ;;     void)]
+    (test-suite "update-pkgversion-fields!")
+    
+    ;;[associate-pkgversion-with-repository! (natural-number/c (union repository? natural-number/c) . -> . void?)]
+    (test-suite "associate-pkgversion-with-repository!")
+    
+    ;;[get-next-version-number (-> package? boolean? (cons/c natural-number/c natural-number/c))]
+    (test-suite "get-next-version-number")
+    
+    ;;[get-next-version-for-maj (-> package? natural-number/c natural-number/c)]
+    (test-suite "get-next-version-for-maj")
+    
+    ;;[log-download
+    ;; (string?  ; ip address
+    ;;  pkgversion? ; the downloaded package
+    ;;  string?  ; client core version
+    ;;  . -> . void?)]
+    (test-suite "log-download")
+    
+    ;;[log-error
+    ;;(string?          ; ip address
+    ;; string?          ; freeform error message
+    ;; . -> . void?)]
+    (test-suite "log-error")
+    
+    ;;[for-each-package-version ((package? pkgversion? . -> . any) . -> . any)]
+    (test-suite "for-each-package-version")
+    
+    ;;[core-version-string->code (string? . -> . (union number? false/c))]
+    (test-suite "core-version-string->code"
+      (test-equal?  "1" (core-version-string->code "300")        3000000)
+      (test-equal?  "2" (core-version-string->code "369.2")      3690002)
+      (test-equal?  "3" (core-version-string->code "369.20")     3690020)
+      (test-equal?  "4" (core-version-string->code "3.99")       3990000)
+      (test-equal?  "5" (core-version-string->code "3.99.0.2")   3990002)
+      (test-equal?  "6" (core-version-string->code "3.99.0.23")  3990023)
+      (test-equal?  "7" (core-version-string->code "3.99.48.23") 3994823)
+      (test-equal?  "8" (core-version-string->code "4.9.0")      4090000)
+      (test-equal?  "9" (core-version-string->code "4.9.2")      4090200)
+      (test-equal? "10" (core-version-string->code "5.10")       5100000))
+    
+    ;;[code->core-version-string (number? . -> . (union string? false/c))]
+    (test-suite "code->core-version-string"
+      (test-equal?  "1" (code->core-version-string 3000000) "300")
+      (test-equal?  "2" (code->core-version-string 3690002) "369.2")
+      (test-equal?  "3" (code->core-version-string 3690020) "369.20")
+      (test-equal?  "4" (code->core-version-string 3990000) "3.99")       
+      (test-equal?  "5" (code->core-version-string 3990002) "3.99.0.2")
+      (test-equal?  "6" (code->core-version-string 3990023) "3.99.0.23")
+      (test-equal?  "7" (code->core-version-string 3994823) "3.99.48.23")
+      (test-equal?  "8" (code->core-version-string 4090000) "4.9")
+      (test-equal?  "9" (code->core-version-string 4090200) "4.9.2")
+      (test-equal? "10" (code->core-version-string 5100000) "5.10"))
+    
+    ;; [recompute-all-primary-files (-> any)]
+    (test-suite "recompute-all-primary-files")
+    
+    ;;[get-n-most-recent-packages (natural-number/c (union natural-number/c repository?) . -> . (listof package?))]
+    (test-suite "get-n-most-recent-packages")
+    
+    ;;[blurb->xexprs (any/c . -> . (union (listof xexpr?) false/c))]
+    (test-suite "blurb->xexprs")))
 
 (define server-tests
   (test-suite
