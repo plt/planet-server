@@ -3,7 +3,8 @@
 (require (planet schematics/schemeunit:2:10/test)
          
          scheme/system
-         planet/util)
+         planet/util
+         planet/config)
 
 
 ;; the testing database has a specific setup that exercises weird cases,
@@ -35,10 +36,10 @@
 (define-simple-check (check-server-gives-file require-spec expected-maj expected-min)
   (let* ([owner (car require-spec)]
          [pkgname (cadr require-spec)]
-         [expected-result-file (pkg-path owner pkgname expected-maj expected-min)])
+         [expected-result-file (pkg-path owner pkgname expected-maj expected-min)]
          [spec (apply get-package-spec require-spec)]
          [results (download-package spec)])
-      (and (pair? results) ; not an error ...
+    (and (pair? results) ; not an error ...
            (car results)   ; ... not a missing package ...
            (let-values ([(filename maj min) (apply values (cdr results))])
              (dynamic-wind
@@ -46,7 +47,7 @@
               (λ () (and (= expected-maj maj)
                          (= expected-min min)
                          (files=? expected-result-file filename)))
-              (λ () (delete-file filename))))))
+              (λ () (delete-file filename)))))))
 
 (define-simple-check (check-server-has-no-match require-spec)
   (let* ([owner (car require-spec)]
@@ -58,10 +59,17 @@
       (when (car results)
         (delete-file (cadr results))))))
 
+(define real-url (HTTP-DOWNLOAD-SERVLET-URL))
+
 (define server-tests
   (test-suite
    "Tests for the planet server"
-   '#:before initialize-testing-database!
+   '#:before (λ ()
+               (HTTP-DOWNLOAD-SERVLET-URL "http://localhost:8080/servlets/planet-servlet.ss")
+               (initialize-testing-database!))
+   '#:after (λ ()
+               (HTTP-DOWNLOAD-SERVLET-URL real-url))
+   
    (test-suite "Server provides correct package for require spec"
      (test-case "1"
        (check-server-gives-file '("planet" "test-connection.plt") 1 0))
