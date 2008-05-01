@@ -42,6 +42,11 @@
 (define (pv->summary pv)
   (list (pkgversion-maj pv) (pkgversion-min pv)))
 
+(define-simple-check (check-package actual expected-owner expected-package-name)
+  (and
+   (string=? (package-owner actual) expected-owner)
+   (string=? (package-name actual) expected-package-name)))
+
 (define-check (check-get-matching-packages-results requester-core-version pkgowner pkgname maj minlo minhi expected-pv-summaries)
   (let*-values ([(pvs _) (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)]
                 [(actual-pv-summaries) (map pv->summary pvs)])
@@ -204,10 +209,28 @@
                                              '())))
     
     ;;[get-package (opt-> (string? string?) (boolean?) (union package? false/c))]
-    (test-suite "get-package")
+    (test-suite "get-package"
+      (test-case "1" (check-package (get-package "planet" "test-connection.plt") "planet" "test-connection.plt"))
+      (test-case "2" (check-package (get-package "jacobm" "crypto.plt") "jacobm" "crypto.plt"))
+      (test-case "3" (check-package (get-package "planet" "test-connection.plt" #f) "planet" "test-connection.plt"))
+      (test-case "4" (check-package (get-package "jacobm" "crypto.plt" #f) "jacobm" "crypto.plt"))
+      (test-case "5" (check-package (get-package "planet" "test-connection.plt" #t) "planet" "test-connection.plt"))
+      (test-case "6" (check-package (get-package "jacobm" "crypto.plt" #t) "jacobm" "crypto.plt"))
+      
+      (test-equal? "7" (get-package "planet" "crypto.plt" #t) #f)
+      (test-equal? "8" (get-package "jacobm" "test-connection.plt" #t) #f)
+      (test-equal? "9" (get-package "asdfasdfasdfas" "dfasdfasdfij") #f)
+      
+      (test-equal? "10" (get-package "jacobm" "foof-loop.plt") #f)
+      (test-equal? "11" (get-package "jacobm" "foof-loop.plt" #f) #f)
+      (test-case "12" (check-package (get-package "jacobm" "foof-loop.plt" #t) "jacobm" "foof-loop.plt")))
     
     ;;[get-package-by-id (-> natural-number/c natural-number/c (union package? false/c))]
-    (test-suite "get-package-by-id")
+    (test-suite "get-package-by-id"
+      (test-case "1" (check-package (get-package-by-id 26 80) "planet" "test-connection.plt"))
+      (test-case "2" (check-package (get-package-by-id 187 34) "jacobm" "crypto.plt"))
+      (test-equal? "3" (get-package-by-id 187 80) #f)
+      (test-equal? "4" (get-package-by-id 26 34) #f))
     
     ;;[get-package-version-by-id (-> natural-number/c natural-number/c (union pkgversion? false/c))]
     (test-suite "get-package-version-by-id")
