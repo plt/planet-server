@@ -431,7 +431,7 @@
                                    "")]
                         "; ")]
                
-               [t (send *db* get-transaction*)])
+               [t (send *db* get-transaction)])
           (let ([ans (send t map query1
                            (lambda row 
                              (let ([rep (fld (all_packages) row 'repository_id)])
