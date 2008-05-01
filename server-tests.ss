@@ -6,11 +6,13 @@
          planet/util
          planet/config)
 
+(provide (all-defined-out))
 
 ;; the testing database has a specific setup that exercises weird cases,
 ;; so we set it up the same way each time
 (define (initialize-testing-database!)
-  (system "/local/pgsql/bin/psql -f testing-db.sql"))
+  #;(system "/local/pgsql/bin/psql -f testing-db.sql")
+  (void))
 
 (define (files=? f1 f2)
   (and 
@@ -33,31 +35,44 @@
 (define (pkg-path owner pkg maj min)
   (build-path "/local/planet/archives" owner pkg (number->string maj) (number->string min) pkg))
 
-(define-simple-check (check-server-gives-file require-spec expected-maj expected-min)
+(define-check (check-server-gives-file require-spec expected-maj expected-min)
   (let* ([owner (car require-spec)]
          [pkgname (cadr require-spec)]
          [expected-result-file (pkg-path owner pkgname expected-maj expected-min)]
          [spec (apply get-package-spec require-spec)]
          [results (download-package spec)])
-    (and (pair? results) ; not an error ...
-           (car results)   ; ... not a missing package ...
-           (let-values ([(filename maj min) (apply values (cdr results))])
-             (dynamic-wind
-              void
-              (λ () (and (= expected-maj maj)
-                         (= expected-min min)
-                         (files=? expected-result-file filename)))
-              (λ () (delete-file filename)))))))
+    (with-check-info (['actual-server-result results])
+        (unless (pair? results)
+           ; server internal error
+          (fail-check))
+        (unless (car results)
+          ; missing package
+          (fail-check))
+        
+        (let-values ([(filename maj min) (apply values (cdr results))])
+          (dynamic-wind
+           void
+           (λ () 
+             (unless (and (= expected-maj maj)
+                          (= expected-min min)
+                          (files=? expected-result-file filename))
+               (fail-check)))
+           (λ () (delete-file filename)))))))
 
-(define-simple-check (check-server-has-no-match require-spec)
+(define-check (check-server-has-no-match require-spec)
   (let* ([owner (car require-spec)]
          [pkg (cadr require-spec)]
          [spec (apply get-package-spec require-spec)]
          [results (download-package spec)])
-    (begin0
-      (and (pair? results) (not (car results)))
-      (when (car results)
-        (delete-file (cadr results))))))
+    (with-check-info (['actual-server-result results])
+     (dynamic-wind
+      void
+      (λ ()
+        (unless (and (pair? results) (not (car results)))
+          (fail-check)))
+      (λ () 
+        (when (car results)
+          (delete-file (cadr results))))))))
 
 (define real-url (HTTP-DOWNLOAD-SERVLET-URL))
 
