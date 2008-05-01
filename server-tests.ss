@@ -44,6 +44,7 @@
 
 (define-simple-check (check-package actual expected-owner expected-package-name)
   (and
+   (package? actual)
    (string=? (package-owner actual) expected-owner)
    (string=? (package-name actual) expected-package-name)))
 
