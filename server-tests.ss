@@ -1,10 +1,14 @@
 #lang scheme/base
 
 (require (planet schematics/schemeunit:2:10/test)
+         (planet schematics/schemeunit:2:10/text-ui)
          
          scheme/system
          planet/util
-         planet/config)
+         planet/config
+         
+         "db.ss"
+         "data-structures.ss")
 
 (provide (all-defined-out))
 
@@ -76,16 +80,51 @@
 
 (define real-url (HTTP-DOWNLOAD-SERVLET-URL))
 
+(define db.ss-tests
+  (test-suite "repository util"
+    (test-equal? "1"
+                 (get-all-repositories)
+                 (list
+                  (make-repository 3
+                                   "4.x"
+                                   3990000  
+                                   4990000  
+                                   "4.x")
+                  (make-repository 2
+                                   "3xx"
+                                   2990000
+                                   3990000)))
+    (test-equal? "2" (legal-repository? 1) #f)
+    (test-equal? "3" (legal-repository? 2) #t)
+    (test-equal? "4" (legal-repository? 3) #t)
+    (test-equal? "5" (legal-repository? 4) #f)
+    
+    (test-equal?  "6" (core-version-string->code "300")        3000000)
+    (test-equal?  "7" (core-version-string->code "369.2")      3690002)
+    (test-equal?  "8" (core-version-string->code "369.20")     3690020)
+    (test-equal?  "9" (core-version-string->code "3.99")       3990000)
+    (test-equal? "10" (core-version-string->code "3.99.0.2")   3990002)
+    (test-equal? "11" (core-version-string->code "3.99.0.23")  3990023)
+    (test-equal? "12" (core-version-string->code "3.99.48.23") 3994823)
+    (test-equal? "13" (core-version-string->code "4.9.0")      4090000)
+    (test-equal? "14" (core-version-string->code "4.9.2")      4090200)
+    (test-equal? "15" (core-version-string->code "5.10")       5100000)
+    
+    (test-equal? "16" (code->core-version-string 3000000) "300")
+    (test-equal? "17" (code->core-version-string 3690002) "369.2")
+    (test-equal? "18" (code->core-version-string 3690020) "369.20")
+    (test-equal? "19" (code->core-version-string 3990000) "3.99")       
+    (test-equal? "20" (code->core-version-string 3990002) "3.99.0.2")
+    (test-equal? "21" (code->core-version-string 3990023) "3.99.0.23")
+    (test-equal? "22" (code->core-version-string 3994823) "3.99.48.23")
+    (test-equal? "23" (code->core-version-string 4090000) "4.9")
+    (test-equal? "24" (code->core-version-string 4090200) "4.9.2")
+    (test-equal? "25" (code->core-version-string 5100000) "5.10")))
+
 (define server-tests
   (test-suite
-   "Tests for the planet server"
-   '#:before (λ ()
-               (HTTP-DOWNLOAD-SERVLET-URL "http://localhost:8080/servlets/planet-servlet.ss")
-               (initialize-testing-database!))
-   '#:after (λ ()
-               (HTTP-DOWNLOAD-SERVLET-URL real-url))
-   
-   (test-suite "Server provides correct package for require spec"
+   "server integration"
+   (test-suite "server provides correct package for require spec"
      (test-case "1"
        (check-server-gives-file '("planet" "test-connection.plt") 1 0))
      (test-case "2"
@@ -110,4 +149,17 @@
        (check-server-has-no-match '("planet" "test-connection.plt" 1 (= 1))))
      (test-case "12"
        (check-server-has-no-match '("planet" "test-connection.plt" 2))))))
+
+(define all-tests
+  (test-suite "all"
+   '#:before (λ () 
+               (HTTP-DOWNLOAD-SERVLET-URL "http://localhost:8080/servlets/planet-servlet.ss")
+               (initialize-testing-database!))
+   '#:after (λ ()
+              (HTTP-DOWNLOAD-SERVLET-URL real-url))
+   db.ss-tests
+   server-tests))
+
+(test/text-ui all-tests)
+             
    
