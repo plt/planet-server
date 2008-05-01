@@ -40,7 +40,7 @@
   (build-path "/local/planet/archives" owner pkg (number->string maj) (number->string min) pkg))
 
 (define (pv->summary pv)
-  (list (pkgversion-name pv) (pkgversion-maj pv) (pkgversion-min pv)))
+  (list (pkgversion-maj pv) (pkgversion-min pv)))
 
 (define-check (check-get-matching-packages-results requester-core-version pkgowner pkgname maj minlo minhi expected-pv-summaries)
   (let*-values ([(pvs _) (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)]
@@ -148,16 +148,16 @@
     (test-suite "get-matching-packages"
       (test-case "1"
         (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 0 #f
-                                             '(("test-connection.plt" 1 0))))
+                                             '((1 0))))
       (test-case "2"
         (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 0 0
-                                             '(("test-connection.plt" 1 0))))
+                                             '((1 0))))
       (test-case "3"
         (check-get-matching-packages-results "370" "planet" "test-connection.plt" 1 0 #f
-                                             '(("test-connection.plt" 1 0))))
+                                             '((1 0))))
       (test-case "4"
         (check-get-matching-packages-results "4.0" "planet" "test-connection.plt" 1 0 #f
-                                             '(("test-connection.plt" 1 0))))
+                                             '((1 0))))
       (test-case "5"
         (check-get-matching-packages-results "5.8" "planet" "test-connection.plt" 1 0 #f
                                              '()))
