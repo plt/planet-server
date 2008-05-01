@@ -399,43 +399,50 @@
   (define get-matching-packages
     (opt-lambda (requester-core-version pkgowner pkgname maj minlo minhi 
                                         [repository (repository-for-version (core-version-string->code requester-core-version))])
-      (let* ([rc-version (core-version-string->code requester-core-version)]
-             [query1 (concat-sql
-                      "SELECT * FROM all_packages "
-                      " WHERE (required_core_version <= " [integer rc-version]
-                      " OR required_core_version IS NULL) "
-                      " AND name = "[varchar pkgname]
-                      " AND username = "[varchar pkgowner]
-                      [#:sql (if maj 
-                                 (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
-                                             [#:sql
-                                              (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
-                                 "")]
-                      " AND repository_id = "[integer (repository-for-version rc-version)]
-                      " ORDER BY hidden, maj DESC, min DESC;")]
-             [query2 (concat-sql
-                      "SELECT count(*) FROM all_packages "
-                      " WHERE required_core_version > "[integer rc-version]
-                      " AND name = "[varchar pkgname]
-                      " AND username = "[varchar pkgowner]
-                      [#:sql (if maj 
-                                 (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
-                                             [#:sql (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
-                                 "")]
-                      " AND repository_id = "[integer (repository-id repository)]"; ")]
-             
-             [t (send *db* get-transaction*)])
-        (let ([ans (send t map query1
-                         (lambda row 
-                           (let ([rep (fld (all_packages) row 'repository_id)])
-                             (row->pkgversion (all_packages) row (list rep)))))])
-          (begin0
-            (cond
-              [(not (null? ans)) (values ans #f)]
-              [else
-               (let ([resl (send t query-value query2)])
-                 (values '() (> resl 0)))])
-            (send t commit))))))
+      (let/ec return
+        
+        (unless repository
+          (return '() #f))
+      
+        (let* ([rc-version (core-version-string->code requester-core-version)]
+               [query1 (concat-sql
+                        "SELECT * FROM all_packages "
+                        " WHERE (required_core_version <= " [integer rc-version]
+                        " OR required_core_version IS NULL) "
+                        " AND name = "[varchar pkgname]
+                        " AND username = "[varchar pkgowner]
+                        [#:sql (if maj 
+                                   (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
+                                               [#:sql
+                                                (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
+                                   "")]
+                        " AND repository_id = "[integer (repository-id repository)]
+                        " ORDER BY hidden, maj DESC, min DESC;")]
+               [query2 (concat-sql
+                        "SELECT count(*) FROM all_packages "
+                        " WHERE "
+                        "  (required_core_version > "[integer rc-version]
+                        "   OR repository_id <> "[integer (repository-id repository)]") "
+                        " AND name = "[varchar pkgname]
+                        " AND username = "[varchar pkgowner]
+                        [#:sql (if maj 
+                                   (concat-sql " AND maj = "[integer maj]" AND min >= "[integer minlo]
+                                               [#:sql (if minhi (concat-sql " AND min <= "[integer minhi]) "")])
+                                   "")]
+                        "; ")]
+               
+               [t (send *db* get-transaction*)])
+          (let ([ans (send t map query1
+                           (lambda row 
+                             (let ([rep (fld (all_packages) row 'repository_id)])
+                               (row->pkgversion (all_packages) row (list rep)))))])
+            (begin0
+              (cond
+                [(not (null? ans)) (values ans #f)]
+                [else
+                 (let ([resl (send t query-value query2)])
+                   (values '() (> resl 0)))])
+              (send t commit)))))))
   
   ;; ----------------------------------------
   ;; table defs

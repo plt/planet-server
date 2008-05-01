@@ -39,6 +39,24 @@
 (define (pkg-path owner pkg maj min)
   (build-path "/local/planet/archives" owner pkg (number->string maj) (number->string min) pkg))
 
+(define (pv->summary pv)
+  (list (pkgversion-name pv) (pkgversion-maj pv) (pkgversion-min pv)))
+
+(define-check (check-get-matching-packages-results requester-core-version pkgowner pkgname maj minlo minhi expected-pv-summaries)
+  (let*-values ([(pvs _) (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)]
+                [(actual-pv-summaries) (map pv->summary pvs)])
+    (for-each 
+     (λ (actual-pv-summary)
+       (unless (assf (λ (expected-pv-summary) (equal? expected-pv-summary actual-pv-summary)) expected-pv-summaries)
+         (with-check-info (['unexpected-pv-summary actual-pv-summary])
+           (fail-check))))
+     actual-pv-summaries)
+    (for-each
+     (λ (expected-pv-summary)
+       (unless (assf (λ (actual-pv-summary) (equal? expected-pv-summary actual-pv-summary)) actual-pv-summaries)
+         (with-check-info (['expected-pv-summary expected-pv-summary])
+           (fail-check)))))))
+       
 (define-check (check-server-gives-file require-spec expected-maj expected-min)
   (let* ([owner (car require-spec)]
          [pkgname (cadr require-spec)]
@@ -95,7 +113,8 @@
                     (make-repository 2
                                      "3xx"
                                      2990000
-                                     3990000)))
+                                     3990000
+                                     "300")))
       (test-equal? "2" (legal-repository? 1) #f)
       (test-equal? "3" (legal-repository? 2) #t)
       (test-equal? "4" (legal-repository? 3) #t)
@@ -123,7 +142,33 @@
       (test-equal?  "7" (code->core-version-string 3994823) "3.99.48.23")
       (test-equal?  "8" (code->core-version-string 4090000) "4.9")
       (test-equal?  "9" (code->core-version-string 4090200) "4.9.2")
-      (test-equal? "10" (code->core-version-string 5100000) "5.10"))))
+      (test-equal? "10" (code->core-version-string 5100000) "5.10"))
+    
+    (test-suite "get-matching-packages"
+      (test-case "1"
+        (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 0 #f
+                                             '(("test-connection.plt" 1 0))))
+      (test-case "2"
+        (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 0 0
+                                             '(("test-connection.plt" 1 0))))
+      (test-case "3"
+        (check-get-matching-packages-results "370" "planet" "test-connection.plt" 1 0 #f
+                                             '(("test-connection.plt" 1 0))))
+      (test-case "4"
+        (check-get-matching-packages-results "4.0" "planet" "test-connection.plt" 1 0 #f
+                                             '(("test-connection.plt" 1 0))))
+      (test-case "5"
+        (check-get-matching-packages-results "5.8" "planet" "test-connection.plt" 1 0 #f
+                                             '()))
+      (test-case "6"
+        (check-get-matching-packages-results "5.8" "nobody" "no-file.plt" 1 0 #f
+                                             '()))
+      (test-case "7"
+        (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 1 #f
+                                             '()))
+      (test-case "8"
+        (check-get-matching-packages-results "3.99.0.0" "planet" "test-connection.plt" 1 2 3
+                                             '())))))
 
 (define server-tests
   (test-suite
