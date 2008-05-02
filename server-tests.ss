@@ -339,20 +339,20 @@
     ;;[get-next-version-for-maj (-> package? natural-number/c natural-number/c)]
     (test-suite "get-next-version-for-maj"
       (test-equal? "1"
-        (get-next-version-for-maj (get-package "jacobm" "resume.plt") 1)
-        1)
+        (get-next-version-for-maj (get-package "robby" "redex.plt") 1)
+        4)
       (test-equal? "2"
-        (get-next-version-for-maj (get-package "jacobm" "resume.plt") 2)
-        2)
+        (get-next-version-for-maj (get-package "robby" "redex.plt") 2)
+        7)
       (test-equal? "3"
-        (get-next-version-for-maj (get-package "jacobm" "resume.plt") 3)
-        1)
+        (get-next-version-for-maj (get-package "robby" "redex.plt") 3)
+        7)
       (test-exn "4"
                 (λ (e) 
                   (and (exn:fail? e)
                        (string=? (exn-message e)
                                  "get-next-version-for-maj: specified major version does not exist")))
-                (λ () (get-next-version-for-maj (get-package "jacobm" "resume.plt") 4))))
+                (λ () (get-next-version-for-maj (get-package "robby" "redex.plt") 4))))
     
     ;;[log-download
     ;; (string?  ; ip address
