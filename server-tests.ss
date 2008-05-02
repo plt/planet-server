@@ -288,7 +288,13 @@
     (test-suite "associate-package-with-category") 
         
     ;;[get-package-categories (package? . -> . (listof category?))]
-    (test-suite "get-package-categories")
+    (test-suite "get-package-categories"
+      (test-equal? "1"
+        (map category-name (get-package-categories (get-package "planet" "test-connection.plt")))
+        (list "PLaneT-Related"))
+      (test-equal? "2"
+        (map category-id (get-package-categories (get-package-by-id 184 54)))
+        (list 2 6 12)))
     
     ;;[pkgversion->primary-files (pkgversion? . -> . (listof primary-file?))]
     (test-suite "pkgversion->primary-files"
