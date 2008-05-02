@@ -166,7 +166,7 @@
       (test-true "1"
         (let* ([u (get-user-record/no-password "test")]
                [old-email (user-email u)]
-               [new-email (append "new-" old-email)])
+               [new-email (string-append "new-" old-email)])
           (update-user-email u new-email)
           (and (string=? (user-email u) new-email)
                (string=? (user-email (get-user-record/no-password "test")) new-email)
