@@ -269,8 +269,8 @@
     
     ;;[repository-ids->repositories (-> (listof natural-number/c) (listof repository?))]
     (test-suite "repository-ids->repositories"
-      (test-equal? "1" (map repository-name (repository-ids->repositories '(2 3))) '("3xx" "4.x"))
-      (test-equal? "2" (map repository-name (repository-ids->repositories '(0 1 2 3 4 5))) '("3xx" "4.x")))
+      (test-equal? "1" (map repository-name (repository-ids->repositories '(2 3))) '("4.x" "3xx"))
+      (test-equal? "2" (map repository-name (repository-ids->repositories '(0 1 2 3 4 5))) '("4.x" "3xx")))
     
     ;;[legal-repository? (-> number? boolean?)]
     (test-suite "legal-repository?"
@@ -340,18 +340,18 @@
     (test-suite "get-next-version-for-maj"
       (test-equal? "1"
         (get-next-version-for-maj (get-package "jacobm" "resume.plt") 1)
-        (cons 1 1))
+        1)
       (test-equal? "2"
         (get-next-version-for-maj (get-package "jacobm" "resume.plt") 2)
-        (cons 2 2))
+        2)
       (test-equal? "3"
         (get-next-version-for-maj (get-package "jacobm" "resume.plt") 3)
-        (cons 3 1))
+        1)
       (test-exn "4"
                 (λ (e) 
                   (and (exn:fail? e)
                        (string=? (exn-message e)
-                                 "specified major version does not exist")))
+                                 "get-next-version-for-maj: specified major version does not exist")))
                 (λ () (get-next-version-for-maj (get-package "jacobm" "resume.plt") 4))))
     
     ;;[log-download
