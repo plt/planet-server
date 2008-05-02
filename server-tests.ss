@@ -228,7 +228,7 @@
     
     ;;[get-package-by-id (-> natural-number/c natural-number/c (union package? false/c))]
     (test-suite "get-package-by-id"
-      (test-case "1" (check-package (get-package-by-id 26 80) "planet" "test-connection.plt"))
+      (test-case "1" (check-package (get-package-by-id 26 18) "planet" "test-connection.plt"))
       (test-case "2" (check-package (get-package-by-id 187 34) "jacobm" "crypto.plt"))
       (test-equal? "3" (get-package-by-id 187 80) #f)
       (test-equal? "4" (get-package-by-id 26 34) #f))
@@ -268,7 +268,9 @@
                           "300"))))
     
     ;;[repository-ids->repositories (-> (listof natural-number/c) (listof repository?))]
-    (test-suite "repository-ids->repositories")
+    (test-suite "repository-ids->repositories"
+      (test-equal? "1" (map repository-name (repository-ids->repositories '(2 3))) '("3xx" "4.x"))
+      (test-equal? "2" (map repository-name (repository-ids->repositories '(0 1 2 3 4 5))) '("3xx" "4.x")))
     
     ;;[legal-repository? (-> number? boolean?)]
     (test-suite "legal-repository?"
@@ -314,10 +316,43 @@
     (test-suite "associate-pkgversion-with-repository!")
     
     ;;[get-next-version-number (-> package? boolean? (cons/c natural-number/c natural-number/c))]
-    (test-suite "get-next-version-number")
+    (test-suite "get-next-version-number"
+      (test-equal? "1" 
+        (get-next-version-number (get-package "planet" "test-connection.plt") #f)
+        (cons 2 0))
+      (test-equal? "2" 
+        (get-next-version-number (get-package "planet" "test-connection.plt") #t)
+        (cons 1 1))
+      (test-equal? "3"
+        (get-next-version-number (get-package "jacobm" "crypto.plt") #f)
+        (cons 2 0))
+      (test-equal? "4"
+        (get-next-version-number (get-package "jacobm" "crypto.plt") #t)
+        (cons 1 15))
+      (test-equal? "5"
+        (get-next-version-number (get-package "jacobm" "resume.plt") #f)
+        (cons 4 0))
+      (test-equal? "6"
+        (get-next-version-number (get-package "jacobm" "resume.plt") #t)
+        (cons 3 1)))
     
     ;;[get-next-version-for-maj (-> package? natural-number/c natural-number/c)]
-    (test-suite "get-next-version-for-maj")
+    (test-suite "get-next-version-for-maj"
+      (test-equal? "1"
+        (get-next-version-for-maj (get-package "jacobm" "resume.plt") 1)
+        (cons 1 1))
+      (test-equal? "2"
+        (get-next-version-for-maj (get-package "jacobm" "resume.plt") 2)
+        (cons 2 2))
+      (test-equal? "3"
+        (get-next-version-for-maj (get-package "jacobm" "resume.plt") 3)
+        (cons 3 1))
+      (test-exn "4"
+                (λ (e) 
+                  (and (exn:fail? e)
+                       (string=? (exn-message e)
+                                 "specified major version does not exist")))
+                (λ () (get-next-version-for-maj (get-package "jacobm" "resume.plt") 4))))
     
     ;;[log-download
     ;; (string?  ; ip address
