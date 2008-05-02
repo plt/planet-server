@@ -291,7 +291,13 @@
     (test-suite "get-package-categories")
     
     ;;[pkgversion->primary-files (pkgversion? . -> . (listof primary-file?))]
-    (test-suite "pkgversion->primary-files")
+    (test-suite "pkgversion->primary-files"
+      (test-equal? "1" 
+        (map primary-file-name (pkgversion->primary-files (get-package-version-by-id 80 18)))
+        (list "test-connection.ss"))
+      
+      ;; need a multiple primary-file example
+      )
     
     ;;[downloads-this-week (pkgversion? . -> . natural-number/c)]
     (test-suite "downloads-this-week")
