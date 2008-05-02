@@ -174,7 +174,7 @@
                  (update-user-email u old-email)
                  (and 
                   (string=? (user-email u) old-email)
-                  (string=? (get-user-record/no-password "test") old-email)))))))
+                  (string=? (user-email (get-user-record/no-password "test")) old-email)))))))
     
     ;; [update-user-password (user? string? . -> . void?)]
     (test-suite "update-user-password"
