@@ -141,14 +141,20 @@
       (test-equal? "1" (get-user-record "test" "not the password") #f)
       (test-equal? "2" (user? (get-user-record "test" "test")) #t))
     
-    ;;[get-logged-in-user-from-passcode (-> string? string? (union user? false/c))]
-    (test-suite "get-logged-in-user-from-passcode")
-    
     ;;[log-user-in (-> user? string?)]
-    (test-suite "log-user-in")
-    
+    ;;[get-logged-in-user-from-passcode (-> string? string? (union user? false/c))]
     ;;[log-user-out (-> user? void?)]
-    (test-suite "log-user-out")
+    (test-suite "get-logged-in-user-from-passcode / log-user-in / log-user-out"
+      (test-true "1"
+        (let* ([u        (get-user-record/no-password "test")]
+               [passcode (log-user-in u)]
+               [u2       (get-logged-in-user-from-passcode "test" passcode)]
+               [bad      (get-logged-in-user-from-passcode "test" (string-append passcode "000"))]
+               [_        (log-user-out u)]
+               [bad2     (get-logged-in-user-from-passcode "test" passcode)])
+          (and (equal? u u2)
+               (not bad)
+               (not bad2)))))
     
     ;;[get-user-record/no-password (-> string? (union user? false/c))]
     (test-suite "get-user-record/no-password"
