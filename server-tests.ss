@@ -4,6 +4,8 @@
          (planet schematics/schemeunit:2:10/text-ui)
          
          scheme/system
+         xml/xml
+         
          planet/util
          planet/config
          
@@ -47,6 +49,18 @@
    (package? actual)
    (string=? (package-owner actual) expected-owner)
    (string=? (package-name actual) expected-package-name)))
+
+(define-check (check-package-version actual expected)
+  (let-values ([(id pkg-id maj min reps) (apply values expected)])
+    (define (checkprop name accessor expected)
+      (let ([received (accessor actual)])
+        (unless (equal? received expected)
+          (with-check-info (['name received]) (fail-check)))))
+    (checkprop 'id pkgversion-id id)
+    (checkprop 'package-id pkgversion-package-id pkg-id)
+    (checkprop 'maj pkgversion-maj maj)
+    (checkprop 'min pkgversion-min min)
+    (checkprop 'repositories pkgversion-repositories reps)))
 
 (define-check (check-get-matching-packages-results requester-core-version pkgowner pkgname maj minlo minhi expected-pv-summaries)
   (let*-values ([(pvs _) (get-matching-packages requester-core-version pkgowner pkgname maj minlo minhi)]
@@ -148,10 +162,30 @@
       (test-equal? "2" (valid-password? (get-user-record/no-password "test") "test") #t))
     
     ;;[update-user-email (user? string? . -> . void?)]
-    (test-suite "update-user-email")
+    (test-suite "update-user-email"
+      (test-true "1"
+        (let* ([u (get-user-record/no-password "test")]
+               [old-email (user-email u)]
+               [new-email (append "new-" old-email)])
+          (update-user-email u new-email)
+          (and (string=? (user-email u) new-email)
+               (string=? (user-email (get-user-record/no-password "test")) new-email)
+               (begin 
+                 (update-user-email u old-email)
+                 (and 
+                  (string=? (user-email u) old-email)
+                  (string=? (get-user-record/no-password "test") old-email)))))))
     
     ;; [update-user-password (user? string? . -> . void?)]
-    (test-suite "update-user-password")
+    (test-suite "update-user-password"
+      (test-true "1"
+        (let ([u (get-user-record/no-password "test")])
+          (update-user-password u "newpassword")
+          (and
+           (valid-password? u "newpassword")
+           (begin
+             (update-user-password u "test")
+             (valid-password? u "test"))))))
     
     ;;[user->packages (opt-> (user?) ((union (listof natural-number/c) false/c))  (listof package?))]
     (test-suite "user->packages")
@@ -234,8 +268,13 @@
       (test-equal? "4" (get-package-by-id 26 34) #f))
     
     ;;[get-package-version-by-id (-> natural-number/c natural-number/c (union pkgversion? false/c))]
-    (test-suite "get-package-version-by-id")
-    
+    (test-suite "get-package-version-by-id"
+      (test-case "1"
+        (check-package-version 
+         (get-package-version-by-id 80 18)
+         (list 80 26 1 0 (list 2 3))))
+      (test-false "2" (get-package-version-by-id 80 20)))
+  
     ;;[reassociate-package-with-categories (package? (listof (or/c category? natural-number/c)) . -> . any)]
     (test-suite "reassociate-package-with-categories")
     
@@ -403,7 +442,13 @@
     (test-suite "get-n-most-recent-packages")
     
     ;;[blurb->xexprs (any/c . -> . (union (listof xexpr?) false/c))]
-    (test-suite "blurb->xexprs")))
+    (test-suite "blurb->xexprs"
+      (test-equal? "1" (andmap xexpr? (blurb->xexprs "hello")) #t) 
+      (test-equal? "2" (andmap xexpr? (blurb->xexprs '((p "hello") (div "this is a " (p "test"))))) #t)
+      (test-equal? "3" (blurb->xexprs 1242342) #f))
+      
+      
+      ))
 
 (define server-tests
   (test-suite
