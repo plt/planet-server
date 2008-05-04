@@ -471,6 +471,17 @@
       (test-equal? "1" (andmap xexpr? (blurb->xexprs "hello")) #t) 
       (test-equal? "2" (andmap xexpr? (blurb->xexprs '((p "hello") (div "this is a " (p "test"))))) #t)
       (test-equal? "3" (blurb->xexprs 1242342) #f))
+    
+    (test-suite "groupby"
+      (test-equal? "1" 
+        (sort (groupby even? (build-list 10 values)) (λ (a b) (< (car a) (car b))))
+        '((0 2 4 6 8)
+          (1 3 5 7 9)))
+      (test-equal? "2" 
+        (sort (groupby (λ (x) (modulo x 3)) (build-list 10 values)) (λ (a b) (< (car a) (car b))))
+        '((0 3 6 9)
+          (1 4 7)
+          (2 5 8))))
       
       
       ))

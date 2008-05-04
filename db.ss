@@ -115,7 +115,8 @@
     
    )
   
-  (provide sql-null?)
+  (provide sql-null?
+           groupby)
   
   ;; ============================================================
   ;; database setup
@@ -1168,7 +1169,7 @@
            (hash-table-put! ht key (cons item (hash-table-get ht key (λ () '()))))))
        (void)
        l)
-      (hash-table-map ht (λ (k v) v))))
+      (hash-table-map ht (λ (k v) (reverse v)))))
                    
   
   
