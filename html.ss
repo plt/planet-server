@@ -231,7 +231,7 @@
            [(and 
              (directory-exists? full-path)
              (file-exists? (build-path full-path "index.html")))
-            (file-url pkg pv (build-path full-path "index.html"))]
+            (file-url pkg pv (path->string (build-path full-path "index.html")))]
            [else (failure)]))])))
 
 ;; file-url : package pkgversion string -> string[url]
