@@ -12,6 +12,8 @@
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   (require "data-structures.ss" "configuration.ss")
+  
+  (require scheme/path)
 
   ;; A note about getting packages by repository:
   ;; 
@@ -873,7 +875,19 @@
               (if (null? main-files)
                   "NULL"
                   (concat-sql [varchar (car main-files)]))]", "
-             [#:sql (safe-info 'doc.txt (lambda () "NULL") (λ (x) (format "~a" x)))] ", "
+             [#:sql 
+              (cond
+                [(safe-info 'scribblings (λ () #f))
+                 =>
+                 (λ (scribble)
+                   (match scribble
+                     [`((,(? string? file-str) (,flags ...)) ,_ ...)
+                      (let* ([filename (file-name-from-path file-str)]
+                             [pathname (regexp-match #rx"(.*)\\.scrbl$" (path->bytes filename))])
+                        (path->string (build-path "planet-scribble-html" (bytes->path (cadr pathname)))))]
+                     [_ "NULL"]))]
+                [(safe-info 'doc.txt (lambda () #f) (λ (x) (format "~a" x))) => (λ (x) x)]
+                [else "NULL"])] ", "
              ;; note to jacob: don't check this in until you can add the column html_docs
              ;; to package_versions and rebuild all the views. PAIN!
              #|(if (null? html-docs-paths)
