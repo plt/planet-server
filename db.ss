@@ -933,7 +933,7 @@
       
       (send t exec (concat-sql "DELETE FROM primary_files WHERE package_version_id = "[integer id]"; "))
       (for-each (λ (i) (send t exec i)) inserts)
-      (send t commit-transaction)))
+      (send t commit)))
 
   ;; recompute-all-primary-files : -> void
   ;; rebuilds all package-version primary file information from the information
