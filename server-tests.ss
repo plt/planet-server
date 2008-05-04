@@ -194,7 +194,14 @@
              (valid-password? u "test"))))))
     
     ;;[user->packages (opt-> (user?) ((union (listof natural-number/c) false/c))  (listof package?))]
-    (test-suite "user->packages")
+    (test-suite "user->packages"
+      (test-true "1"
+       (let* ([u (get-user-record/no-password "test")]
+              [pkgs (user->packages u)])
+         ;; basic sanity check
+         (andmap
+          (λ (pkg) (apply pv>? (package-versions pkg)))
+          pkgs))))
     
     ;;[get-category-names (-> (listof category?))]
     (test-suite "get-category-names"

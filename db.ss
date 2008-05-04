@@ -358,7 +358,7 @@
                                       " AND repository_id IN "
                                       "(" (srfi13:string-join (map number->string repositories) ", ") ")")
                                      "")]
-                                ";")]
+                                " ORDER BY package_id, maj DESC, min DESC;")]
              [pkgversion-rows (send *db* map query list)])
         (sort 
          (version-rows->packages (all_packages) pkgversion-rows)

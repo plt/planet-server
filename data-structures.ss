@@ -82,7 +82,9 @@
     (package? . -> . (listof pkgversion?))]
    [filter-package-for-repository
     (package? natural-number/c . -> . (union package? false/c))]
-   [pv=? (pkgversion? pkgversion? . -> . boolean?)])
+   [pv=? (->* (pkgversion?) (listof pkgversion?) (boolean?))]
+   [pv<? (->* (pkgversion?) (listof pkgversion?) (boolean?))]
+   [pv>? (->* (pkgversion?) (listof pkgversion?) (boolean?))])
 
   (define (package-stub? pkg)
     (and (package? pkg) (not (package-versions pkg))))
@@ -108,10 +110,38 @@
   ;; determines if pv is in repository n
   (define ((pkgversion-in-repository? n) pv) (memv n (pkgversion-repositories pv)))
   
+  
+  (define (collect-boolean fn elts)
+    (cond
+      [(null? elts) #t]
+      [(null? (cdr elts)) #t]
+      [else
+       (and (fn (car elts) (cadr elts)) (collect-boolean fn (cdr elts)))]))
+  
+  (define (lift-binary-predicate f)
+    (λ (a . bs) (collect-boolean f (cons a bs))))
+  
   ;; pv=? : pv pv -> bool
   ;; determine if these two package versions represent the same thing
-  (define (pv=? a b)
-    (= (pkgversion-id a) (pkgversion-id b)))
+  (define pv=? 
+    (lift-binary-predicate (λ (a b) (= (pkgversion-id a) (pkgversion-id b)))))
+  
+  ;; pv<? : pv pv -> bool
+  ;; determine if the first pkg version represents a lower-numbered revision of the same
+  ;; package as the second pkg version
+  (define pv<?
+    (lift-binary-predicate
+     (λ (a b)
+       (and (= (pkgversion-package-id a) (pkgversion-package-id b))
+            (or (< (pkgversion-maj a) (pkgversion-maj b))
+                (and 
+                 (= (pkgversion-maj a) (pkgversion-maj b))
+                 (< (pkgversion-min a) (pkgversion-min b))))))))
+  
+  (define (pv>? a . bs)
+    (apply pv<? (reverse (cons a bs))))
+  
+   
   
   
   ;; ============================================================
