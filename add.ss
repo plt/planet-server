@@ -906,7 +906,8 @@ function update(status) {
           (λ (e) 
             (parameterize ([current-error-port (current-output-port)])
               ((error-display-handler) (format "~a:\n ~a" (current-date-string) (exn-message e)) e)
-              (flush-output))
+              (flush-output (current-error-port)))
+            (flush-output)
             (loop `((general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))))])
       (let* ([request (send/suspend/nocache (main-loop-page problems))]
              [bindings (request-bindings request)]
