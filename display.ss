@@ -182,14 +182,10 @@
     ;; doc-link : pkg pkgversion (listof xexpr) -> (listof xexpr)
     ;; produces a link to the documentation of the given package, given a default "no docs exist" xexpr
     (define (doc-link pkg pv failure)
-      (if (and
-           (pkgversion-doctxt pv)
-           (file-exists? (build-path (pkgversion-src-path pv) (pkgversion-doctxt pv))))
-          `("[" 
-            (a ((href ,(pkgversion->docs-link pkg pv (λ () (error 'doc-link "impossible situation")))))
-               "docs")
-            "]")
-          failure))
+      (let ([docs-link (pkgversion->docs-link pkg pv (λ () #f))])
+        (if docs-link
+            `("[" (a ((href ,docs-link)) "docs") "]")
+            failure)))
     
     ;; file-link: package pkgversion string xexpr -> xexpr
     ;; give a link to the source code for the given file in the given package and version,
