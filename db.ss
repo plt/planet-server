@@ -877,7 +877,7 @@
                   (concat-sql [varchar (car main-files)]))]", "
              [#:sql 
               (cond
-                [(safe-info 'scribblings (λ () #f))
+                [(info.ss 'scribblings (λ () #f))
                  =>
                  (λ (scribble)
                    (match scribble
