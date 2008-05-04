@@ -884,7 +884,7 @@
                      [`((,(? string? file-str) (,flags ...)) ,_ ...)
                       (let* ([filename (file-name-from-path file-str)]
                              [pathname (regexp-match #rx"(.*)\\.scrbl$" (path->bytes filename))])
-                        (path->string (build-path "planet-scribble-html" (bytes->path (cadr pathname)))))]
+                        (concat-sql [varchar (path->string (build-path "planet-scribble-html" (bytes->path (cadr pathname))))]))]
                      [_ "NULL"]))]
                 [(safe-info 'doc.txt (lambda () #f) (λ (x) (format "~a" x))) => (λ (x) x)]
                 [else "NULL"])] ", "
