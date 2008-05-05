@@ -492,7 +492,7 @@
   (with-handlers ((exn:fail? (λ (e)
                                (let* ([strp (open-output-string)])
                                  (parameterize ([current-error-port strp])
-                                   ((error-display-handler) "" e))
+                                   ((error-display-handler) (exn-message e) e))
                                  (with-check-info (['stack (get-output-string strp)])
                                    (fail-check))))))
     (thunk)))
