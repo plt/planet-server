@@ -107,15 +107,14 @@
   ;; carry that specification. Otherwise don't include it.
   (define-values
     (package->link package->owner-link user->link home-link)
-    (let ([suffix (string-append "&rep=" (number->string (rep-id)))]
-          [basic-operations
+    (let ([basic-operations
            (list package->link/base 
                  package->owner-link/base
                  user->link/base
                  home-link/base)])
       (apply values
              (if (rep-explicit?)
-                 (map (lift-operation (lambda (x) (string-append x suffix)))
+                 (map (lift-operation (lambda (x) (string-append x (string-append "&rep=" (number->string (rep-id))))))
                       basic-operations)
                  basic-operations))))    
   
