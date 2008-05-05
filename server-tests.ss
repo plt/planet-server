@@ -488,23 +488,33 @@
       
       ))
 
+(define-check (check-not-exn/stack thunk)
+  (with-handlers ((exn:fail? (λ (e)
+                               (let* ([strp (open-output-string)])
+                                 (parameterize ([current-error-port strp])
+                                   ((error-display-handler) "" e))
+                                 (with-check-info (['stack (get-output-string strp)])
+                                   (fail-check))))))
+    (thunk)))
+
 (define display-tests
   (test-suite "display.ss tests"
     (test-suite "gen-package-page"
-      (test-not-exn "all packages generate pages"
-        (λ ()
-          (let ([all-packages (append-map user->packages (get-all-users))])
-            (parameterize ([req #f]      
-                           [rep-id 3]
-                           [rep-explicit? #f]
-                           [rep (car (get-all-repositories))])
-              (for-each
-               (λ (u) (for-each
-                       (λ (pkg)
-                         (with-check-info (['pkg pkg])
-                           (gen-package-page pkg)))
-                       (user->packages u)))
-               (get-all-users)))))))))
+      (test-case "all packages generate pages"
+        (check-not-exn/stack
+         (λ ()
+           (let ([all-packages (append-map user->packages (get-all-users))])
+             (parameterize ([req #f]      
+                            [rep-id 3]
+                            [rep-explicit? #f]
+                            [rep (car (get-all-repositories))])
+               (for-each
+                (λ (u) (for-each
+                        (λ (pkg)
+                          (with-check-info (['pkg pkg])
+                            (gen-package-page pkg)))
+                        (user->packages u)))
+                (get-all-users))))))))))
           
 
 (define server-tests
