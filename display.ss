@@ -79,7 +79,7 @@
   (define (real-start req-obj)
     
     (let* ([all-reps (get-all-repositories)]
-           [repid+rep-explicit? (request->repository req)]
+           [repid+rep-explicit? (request->repository req-obj)]
            [rid (car repid+rep-explicit?)]
            [rexp? (cadr repid+rep-explicit?)]
            [therep (ormap (retract values (λ (x) (= (repository-id x) rid))) all-reps)])
