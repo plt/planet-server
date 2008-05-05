@@ -342,7 +342,7 @@
             (car result)))))
   
   (define (get-all-users)
-    (let ([query "SELECT ud, username, realname, email FROM contributors;"])
+    (let ([query "SELECT id, username, realname, email FROM contributors;"])
       (send *db* map query make-user)))
   
   ;; ------------------------------------------------------------

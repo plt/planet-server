@@ -499,7 +499,11 @@
                            [rep-explicit? #f]
                            [rep (car (get-all-repositories))])
               (for-each
-               (λ (u) (for-each gen-package-page (user->packages u)))
+               (λ (u) (for-each
+                       (λ (pkg)
+                         (with-check-info (['pkg pkg])
+                           (gen-package-page pkg)))
+                       (user->packages u)))
                (get-all-users)))))))))
           
 
