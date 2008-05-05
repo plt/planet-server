@@ -10,6 +10,9 @@
          planet/util
          planet/config
          
+         web-server/private/request-structs  ;; for generating a dummy req for use in testing web stuff
+         net/url
+         
          "db.ss"
          "data-structures.ss"
          "display.ss")
@@ -494,8 +497,19 @@
                                  (parameterize ([current-error-port strp])
                                    ((error-display-handler) (exn-message e) e))
                                  (with-check-info (['stack (get-output-string strp)])
-                                   (fail-check))))))
+                                   (raise e))))))
     (thunk)))
+
+
+(define dummy-req
+  (make-request 'GET 
+                (string->url "http://planet.plt-scheme.org")
+                '()
+                '()
+                #f
+                "127.0.0.1"
+                80
+                "127.0.0.1"))
 
 (define display-tests
   (test-suite "display.ss tests"
@@ -504,7 +518,7 @@
         (check-not-exn/stack
          (λ ()
            (let ([all-packages (append-map user->packages (get-all-users))])
-             (parameterize ([req #f]      
+             (parameterize ([req dummy-req]      
                             [rep-id 3]
                             [rep-explicit? #f]
                             [rep (car (get-all-repositories))])
