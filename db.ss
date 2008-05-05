@@ -32,6 +32,7 @@
    [log-user-in (-> user? string?)]
    [log-user-out (-> user? void?)]
    [get-user-record/no-password (-> string? (union user? false/c))]
+   [get-all-users (-> (listof user?))]
    [valid-password? (user? string? . -> . boolean?)]
    [update-user-email (user? string? . -> . void?)]
    [update-user-password (user? string? . -> . void?)]
@@ -339,6 +340,10 @@
         (if (null? result)
             #f
             (car result)))))
+  
+  (define (get-all-users)
+    (let ([query "SELECT ud, username, realname, email FROM contributors;"])
+      (send *db* map query make-user)))
   
   ;; ------------------------------------------------------------
   ;; package insertion/management

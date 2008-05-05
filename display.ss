@@ -15,6 +15,11 @@
   
   (provide interface-version timeout start)
   
+  (provide gen-package-page
+           req           
+           rep-id
+           rep-explicit?
+           rep)
   
   (define interface-version 'v1)
   (define timeout +inf.0)

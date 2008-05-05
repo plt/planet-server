@@ -4,13 +4,15 @@
          (planet schematics/schemeunit:2:10/text-ui)
          
          scheme/system
+         scheme/list
          xml/xml
          
          planet/util
          planet/config
          
          "db.ss"
-         "data-structures.ss")
+         "data-structures.ss"
+         "display.ss")
 
 (provide (all-defined-out))
 
@@ -486,6 +488,21 @@
       
       ))
 
+(define display-tests
+  (test-suite "display.ss tests"
+    (test-suite "gen-package-page"
+      (test-not-exn "all packages generate pages"
+        (λ ()
+          (let ([all-packages (append-map user->packages (get-all-users))])
+            (parameterize ([req #f]      
+                           [rep-id 3]
+                           [rep-explicit? #f]
+                           [rep (car (get-all-repositories))])
+              (for-each
+               (λ (u) (for-each gen-package-page (user->packages u)))
+               (get-all-users)))))))))
+          
+
 (define server-tests
   (test-suite
       "server integration"
@@ -517,13 +534,14 @@
 
 (define all-tests
   (test-suite "all"
-   '#:before (λ () 
-               (HTTP-DOWNLOAD-SERVLET-URL "http://localhost:8080/servlets/planet-servlet.ss")
-               (initialize-testing-database!))
-   '#:after (λ ()
-              (HTTP-DOWNLOAD-SERVLET-URL real-url))
-   db.ss-tests
-   server-tests))
+    '#:before (λ () 
+                (HTTP-DOWNLOAD-SERVLET-URL "http://localhost:8080/servlets/planet-servlet.ss")
+                (initialize-testing-database!))
+    '#:after (λ ()
+               (HTTP-DOWNLOAD-SERVLET-URL real-url))
+    db.ss-tests
+    display-tests
+    server-tests))
 
 (test/text-ui all-tests)
              
