@@ -528,7 +528,8 @@
                           (λ (pkg)
                             (with-check-info (['pkg pkg])
                               (gen-package-page pkg)))
-                          (user->packages u))))
+                          (with-check-info (['user u])
+                            (user->packages u)))))
                 (get-all-users))))))))))
           
 
