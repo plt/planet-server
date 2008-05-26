@@ -31,7 +31,6 @@
    package?                 ; package being updated
    boolean?                 ; backwards-compatible update?
    bytes?                   ; package contents
-   (listof repository?)     ; repositories this update belongs to
    . -> .
    natural-number/c)]
  [update-non-head-package
@@ -39,7 +38,6 @@
    package?
    natural-number/c
    bytes?
-   (listof repository?)
    . -> .
    natural-number/c)]
  [rebuild-package-pages
