@@ -1024,7 +1024,10 @@
                              pkgversion/pkgversion-id
                              (pkgversion-id pkgversion/pkgversion-id))]
           [t (send *db* get-transaction)])
-      (send t exec (string-append "DELETE FROM version_repositories WHERE package_version_id = "pkgversion-id";"))
+      (send t exec (concat-sql
+                    "DELETE FROM version_repositories WHERE package_version_id = "
+                    [integer pkgversion-id]
+                    ";"))
       (for-each 
        (λ (r/n) (send t exec (concat-sql "INSERT INTO version_repositories (package_version_id, repository_id) "
                                          "VALUES ("
