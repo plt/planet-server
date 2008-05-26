@@ -395,6 +395,10 @@
                [get-pv-reps (λ () (sort (pkgversion-repositories (get-pv)) <))]
                [pkgversion (get-pv)])
           (append
+           (list
+            (begin
+              (reassociate-pkgversion-with-repositories pkgversion '())
+              (get-pv-reps)))
            (map (λ (rep) 
                   (reassociate-pkgversion-with-repositories pkgversion (list rep))
                   (get-pv-reps))
@@ -403,7 +407,68 @@
             (begin 
               (reassociate-pkgversion-with-repositories pkgversion all-reps)
               (get-pv-reps)))))
-        '((2) (3) (2 3))))
+        '(() (2) (3) (2 3)))
+      
+      (test-equal? "2"
+        (let* ([all-reps (get-all-repositories)]
+               [get-pv (λ () (package->current-version (get-package "planet" "test-connection.plt")))]
+               [get-pv-reps (λ () (sort (pkgversion-repositories (get-pv)) <))]
+               [pkgversion (get-pv)])
+          (append
+           (list
+            (begin
+              (reassociate-pkgversion-with-repositories (pkgversion-id pkgversion) '())
+              (get-pv-reps)))
+           (map (λ (rep) 
+                  (reassociate-pkgversion-with-repositories (pkgversion-id pkgversion) (list rep))
+                  (get-pv-reps))
+                (sort (get-all-repositories) (λ (a b) (< (repository-id a) (repository-id b)))))
+           (list
+            (begin 
+              (reassociate-pkgversion-with-repositories (pkgversion-id pkgversion) all-reps)
+              (get-pv-reps)))))
+        '(() (2) (3) (2 3)))
+      
+      (test-equal? "3"
+        (let* ([all-reps (get-all-repositories)]
+               [get-pv (λ () (package->current-version (get-package "planet" "test-connection.plt")))]
+               [get-pv-reps (λ () (sort (pkgversion-repositories (get-pv)) <))]
+               [pkgversion (get-pv)])
+          (append
+           (list
+            (begin
+              (reassociate-pkgversion-with-repositories pkgversion '())
+              (get-pv-reps)))
+           (map (λ (rep) 
+                  (reassociate-pkgversion-with-repositories pkgversion (list (repository-id rep)))
+                  (get-pv-reps))
+                (sort (get-all-repositories) (λ (a b) (< (repository-id a) (repository-id b)))))
+           (list
+            (begin 
+              (reassociate-pkgversion-with-repositories pkgversion (map repository-id all-reps))
+              (get-pv-reps)))))
+        '(() (2) (3) (2 3)))
+      
+      (test-equal? "4"
+        (let* ([all-reps (get-all-repositories)]
+               [get-pv (λ () (package->current-version (get-package "planet" "test-connection.plt")))]
+               [get-pv-reps (λ () (sort (pkgversion-repositories (get-pv)) <))]
+               [pkgversion (get-pv)])
+          (append
+           (list
+            (begin
+              (reassociate-pkgversion-with-repositories (pkgversion-id pkgversion) '())
+              (get-pv-reps)))
+           (map (λ (rep) 
+                  (reassociate-pkgversion-with-repositories (pkgversion-id pkgversion) (list (repository-id rep)))
+                  (get-pv-reps))
+                (sort (get-all-repositories) (λ (a b) (< (repository-id a) (repository-id b)))))
+           (list
+            (begin 
+              (reassociate-pkgversion-with-repositories (pkgversion-id pkgversion) (map repository-id all-reps))
+              (get-pv-reps)))))
+        '(() (2) (3) (2 3)))
+      )
     
     ;;[get-next-version-number (-> package? boolean? (cons/c natural-number/c natural-number/c))]
     (test-suite "get-next-version-number"
@@ -507,10 +572,7 @@
         (sort (groupby (λ (x) (modulo x 3)) (build-list 10 values)) (λ (a b) (< (car a) (car b))))
         '((0 3 6 9)
           (1 4 7)
-          (2 5 8))))
-      
-      
-      ))
+          (2 5 8))))))
 
 (define-check (check-not-exn/stack thunk)
   (with-handlers ((exn:fail? (λ (e)
