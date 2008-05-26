@@ -411,8 +411,8 @@
                                                      ,@(message-for 'adrpassword)))
                                              (tr (td ((colspan "2")) (input ((type "submit") (value "Change address"))))))))))))))))
   
-  ;; package-update-page : package #;(listof repository) (listof problem?) -> string -> response
-  (define (pkgversion-update-page pkg repositories problems)
+  ;; package-update-page : package (listof problem?) -> string -> response
+  (define (pkgversion-update-page pkg problems)
     (let* ([general-error-messages (strings->error-xhtml (extract 'general problems))]
            [pv (package->current-version pkg)]
            [major-revision (format "~a.0" (add1 (pkgversion-maj pv)))]
@@ -450,7 +450,6 @@ function update(status) {
               major-revision
               minor-revision))
            
-           
            (form 
             ((action ,k) (method "post") (enctype "multipart/form-data"))
             (table 
@@ -464,20 +463,8 @@ function update(status) {
                           (option ((value "f")) "No"))))
              (tr (td (span ((id "verLabel")) nbsp))
                  (td (b (span ((id "verVal")) nbsp))))
-             (tr (td "Which repositories is this update compatible with?") (td ""))
-             ,@(map
-                (lambda (rep)
-                  `(tr (td "") (td (input ((type "checkbox") (name "repository") (value ,(number->string (repository-id rep)))
-                                                             ,@(if (= (repository-id rep) (DEFAULT-REPOSITORY))
-                                                                   `((selected "selected"))
-                                                                   '())))
-                                   ,(repository-name rep))))
-                repositories)
-             
              (tr (td ((colspan "2")) (input ((type "submit") (value "Update package")))))))
-           (script "update(null);")
-           
-           )))))
+           (script "update(null);"))))))
   
   (define (do-add-package request)
     (let* ([valid-categories (get-category-names)]
@@ -490,32 +477,23 @@ function update(status) {
   ;; do-package-update : package -> void
   ;; manages a user-submitted update to the given package.
   (define (do-package-update pkg)
-    (let* ([repositories (get-all-repositories)]
-           [valid-ids (map repository-id repositories)])
-      (let loop ([problems '()])
-        (let* ([request (send/suspend (pkgversion-update-page pkg repositories problems))] 
-               [file-contents (get request 'file)]
-               [minor-update?/list (get-all request 'minor)]
-               
-               [repository-id-strings (extract-bindings 'repository (request-bindings request))]
-               [repository-ids (map string->number repository-id-strings)])
-          (cond
-            [(null? repository-ids)
-             (loop `((general "Please select at least one repository for your package")))]
-            [(not (andmap (lambda (x) (memv x valid-ids)) repository-ids))
-             (loop `((general "Illegal repository selected")))]
-            [(not (and (pair? minor-update?/list) 
-                       (null? (cdr minor-update?/list))
-                       (member (car minor-update?/list) '("t" "f"))))
-             (loop `((general 
-                      ,(string-append "Please select whether you are submitting a minor "
-                                      "or a major update (see the PLT Scheme Help Desk "
-                                      "for more discussion of the difference between minor "
-                                      "and major updates)"))))]                    
-            [else
-             (let ([minor-update? (string=? (car minor-update?/list) "t")])
-               (with-handlers ([exn:fail:bad-package? (λ (e) (loop `((general (span ,@(exn:fail:bad-package-xexprs e))))))])
-                 (update-package user pkg minor-update? file-contents)))])))))
+    (let loop ([problems '()])
+      (let* ([request (send/suspend (pkgversion-update-page pkg problems))] 
+             [file-contents (get request 'file)]
+             [minor-update?/list (get-all request 'minor)])
+        (cond
+          [(not (and (pair? minor-update?/list) 
+                     (null? (cdr minor-update?/list))
+                     (member (car minor-update?/list) '("t" "f"))))
+           (loop `((general 
+                    ,(string-append "Please select whether you are submitting a minor "
+                                    "or a major update (see the PLT Scheme Help Desk "
+                                    "for more discussion of the difference between minor "
+                                    "and major updates)"))))]                    
+          [else
+           (let ([minor-update? (string=? (car minor-update?/list) "t")])
+             (with-handlers ([exn:fail:bad-package? (λ (e) (loop `((general (span ,@(exn:fail:bad-package-xexprs e))))))])
+               (update-package user pkg minor-update? file-contents)))]))))
   
   (define (do-pkg-edit pkg)
     (let ([repositories (get-all-repositories)])
