@@ -464,10 +464,6 @@ function update(status) {
                           (option ((value "f")) "No"))))
              (tr (td (span ((id "verLabel")) nbsp))
                  (td (b (span ((id "verVal")) nbsp))))
-             
-             
-             
-             
              (tr (td "Which repositories is this update compatible with?") (td ""))
              ,@(map
                 (lambda (rep)
@@ -489,15 +485,10 @@ function update(status) {
            [file-bytes (get request 'file)]
            [filename-bytes (get-filename request 'file)])
       (let ([package-name (bytes->string/utf-8 filename-bytes)])
-        (create-package user package-name file-bytes
-                        (list repository)))))
+        (create-package user package-name file-bytes))))
   
   ;; do-package-update : package -> void
   ;; manages a user-submitted update to the given package.
-  ;;
-  ;; the commented-out code below and in package-update-page pertain to when planet has to go
-  ;; multi-repository again. for the moment, though, i'd rather just have every package go to
-  ;; the default repository unconditionally.
   (define (do-package-update pkg)
     (let* ([repositories (get-all-repositories)]
            [valid-ids (map repository-id repositories)])
@@ -524,14 +515,7 @@ function update(status) {
             [else
              (let ([minor-update? (string=? (car minor-update?/list) "t")])
                (with-handlers ([exn:fail:bad-package? (λ (e) (loop `((general (span ,@(exn:fail:bad-package-xexprs e))))))])
-                 (update-package user pkg minor-update? file-contents 
-                                 ;; the map below converts repository ids to repository data structures
-                                 (map 
-                                  (lambda (id) 
-                                    (srfi1:find 
-                                     (lambda (r) (= id (repository-id r)))
-                                     repositories))
-                                  repository-ids))))])))))
+                 (update-package user pkg minor-update? file-contents)))])))))
   
   (define (do-pkg-edit pkg)
     (let ([repositories (get-all-repositories)])
@@ -546,18 +530,9 @@ function update(status) {
                (do-pkgversion-edit pv #:pkg pkg))]
             [(update)
              (let* ([maj           (string->number (get req 'maj))]
-                    [file-contents (get req 'contents)]
-                    [repository-id-strings (extract-bindings 'repository (request-bindings req))]
-                    [repository-ids (map string->number repository-id-strings)])
+                    [file-contents (get req 'contents)])
                (with-handlers ([exn:fail:bad-package? (λ (e) (loop `((general (span ,@(exn:fail:bad-package-xexprs e))))))])
-                 (update-non-head-package user pkg maj file-contents 
-                                          ;; the map below converts repository ids to repository data structures
-                                          (map 
-                                           (lambda (id) 
-                                             (srfi1:find 
-                                              (lambda (r) (= id (repository-id r)))
-                                              repositories))
-                                           repository-ids))))])))))
+                 (update-non-head-package user pkg maj file-contents)))])))))
   
   (define (do-pkgversion-edit pkgversion #:pkg [pkg #f])
     ;; package developers can edit:
@@ -604,8 +579,8 @@ function update(status) {
            [core-version (if core-version-string
                              (srfi13:string-trim-both core-version-string)
                              #f)]
-           [categories (map string->number (get-all req 'categories))]
-           [versions   (map string->number (get-all req 'repository))])
+           [categories   (map string->number (get-all req 'categories))]
+           [repositories (map string->number (get-all req 'repository))])
       (if head-revision?
           (begin
             (update-package-fields! pkg
@@ -619,8 +594,8 @@ function update(status) {
           (update-pkgversion-fields! pkgversion
                                      notes
                                      primary-file
-                                     core-version))))
-  
+                                     core-version))
+      (reassociate-pkgversion-with-repositories pkgversion repositories)))
   
   (define (->string v)
     (if v (format "~s" v) " "))

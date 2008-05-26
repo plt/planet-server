@@ -527,6 +527,7 @@
                          (for-each
                           (λ (pkg)
                             (with-check-info (['pkg pkg])
+                              (printf "pkg: ~s\n" pkg)
                               (gen-package-page pkg)))
                           (with-check-info (['user u])
                             (user->packages u)))))

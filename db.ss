@@ -89,6 +89,10 @@
         (union string? false/c)
         void)]
    [associate-pkgversion-with-repository! (natural-number/c (union repository? natural-number/c) . -> . void?)]
+   [reassociate-pkgversion-with-repositories ((union pkgversion? natural-number/c) 
+                                              (listof (union repository? natural-number/c))
+                                              . -> .
+                                              void?)]
    [get-next-version-number
     (-> package? boolean? (cons/c natural-number/c natural-number/c))]
    [get-next-version-for-maj
@@ -997,14 +1001,13 @@
             " WHERE id = "[integer (pkgversion-id pkgversion)] ";")])
       (send conn exec pkgversion-update-statement)))
   
-  
-    
-  
+  (define (->rep-id r/n)
+    (if (number? r/n)
+        r/n
+        (repository-id r/n)))
   
   (define (associate-pkgversion-with-repository! pkgversion-id repository/repository-id)
-    (let* ([rep-id (if (number? repository/repository-id)
-                       repository/repository-id
-                       (repository-id repository/repository-id))]
+    (let* ([rep-id (->rep-id repository/repository-id)]
            [q (concat-sql
                "INSERT INTO version_repositories (package_version_id, repository_id) "
                "VALUES ("
@@ -1012,6 +1015,24 @@
                [integer rep-id] ")")])
       (send *db* exec q)
       (void)))
+  
+  ;; reassociate-pkgversion-with-repositories 
+  ;; drops any existing association between package versions and repositories for the given package version
+  ;; and associates it with the given repositories instead
+  (define (reassociate-pkgversion-with-repositories pkgversion/pkgversion-id repositories)
+    (let ([pkgversion-id (if (number? pkgversion/pkgversion-id)
+                             pkgversion/pkgversion-id
+                             (pkgversion-id pkgversion/pkgversion-id))]
+          [t (send *db* get-transaction)])
+      (send t exec (string-append "DELETE FROM version_repositories WHERE package_version_id = "pkgversion-id";"))
+      (for-each 
+       (λ (r/n) (send t exec (concat-sql "INSERT INTO version_repositories (package_version_id, repository_id) "
+                                         "VALUES ("
+                                         [integer pkgversion-id]
+                                         [integer (->rep-id r/n)]
+                                         ");")))
+       repositories)
+      (send t commit)))
   
   ;; get-next-version-number : package boolean -> (cons nat nat)
   ;; gets the next version number that pkg will have, assuming that

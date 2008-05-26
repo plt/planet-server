@@ -24,9 +24,8 @@
   (user?                    ; package owner
    string?
    bytes?                   ; package file contents
-   (listof natural-number/c)     ; repositories this package belongs to
    . -> .
-   void?)]
+   natural-number/c)]
  [update-package
   (user?                    ; package owner
    package?                 ; package being updated
@@ -34,7 +33,7 @@
    bytes?                   ; package contents
    (listof repository?)     ; repositories this update belongs to
    . -> .
-   void?)]
+   natural-number/c)]
  [update-non-head-package
   (user?
    package?
@@ -42,7 +41,7 @@
    bytes?
    (listof repository?)
    . -> .
-   void?)]
+   natural-number/c)]
  [rebuild-package-pages
   (string? string? natural-number/c natural-number/c
            . -> .
@@ -65,7 +64,7 @@
           (current-continuation-marks)
           xexprs)))
 
-(define (create-package user package-name file-bytes repositories)
+(define (create-package user package-name file-bytes)
   
   (unless (planet-file-name? package-name)
     (raise-bad-package-error 
@@ -89,7 +88,6 @@
                      1
                      0
                      file-bytes
-                     repositories
                      (λ (i)
                        (let* ([blurb-datum (i 'blurb (λ () #f))]
                               [blurb (if (string? blurb-datum)
@@ -110,16 +108,15 @@
                            (associate-package-with-category pkg-stub (hash-ref cats-ht 'misc)))
                          pkg-stub)))))
 
-(define (update-package user pkg minor-update? file-bytes repositories)
+(define (update-package user pkg minor-update? file-bytes)
   (let* ([maj+min (get-next-version-number pkg minor-update?)]
          [maj (car maj+min)]
          [min (cdr maj+min)])
-    (update/internal user (package-name pkg) maj min file-bytes repositories (λ (_) pkg))))
+    (update/internal user (package-name pkg) maj min file-bytes (λ (_) pkg))))
 
-(define (update-non-head-package user pkg maj file-bytes repositories)
+(define (update-non-head-package user pkg maj file-bytes)
   (let ([min (get-next-version-for-maj pkg maj)])
-    (update/internal user (package-name pkg) maj min file-bytes repositories (λ (_) pkg))))
-  
+    (update/internal user (package-name pkg) maj min file-bytes (λ (_) pkg))))
 
 ;; get-metainfo : path[directory] -> (symbol (-> TST) -> TST)
 ;; gets an info.ss -retrieving thunk for the given package which is unpacked in the given directory
@@ -144,8 +141,8 @@
          (rename-file-or-directory dir-to-move dir)
          dir]))))
 
-;; update/internal : user? string nat nat bytes (listof repository?) ((listof xexpr) -> pkg) -> void
-(define (update/internal user pkgname maj min file-bytes repositories getpkg)
+;; update/internal : user? string nat nat bytes ((listof xexpr) -> pkg) -> void
+(define (update/internal user pkgname maj min file-bytes getpkg)
   (let* ([username (user-username user)]
          
          ;; unpack in a temporary spot -- this makes sure the package is valid before
@@ -206,6 +203,12 @@
               ;; get metainfo, add to database
               [info.ss (get-metainfo srcdir)]
               [pkg (getpkg info.ss)]
+              [repository-strings (info.ss 'repositories (λ () #f))]
+              [repositories
+               (let ([all-repositories (get-all-repositories)])
+                 (if repository-strings 
+                     (filter (λ (x) (memq (repository-name x) repository-strings)) all-repositories)
+                     all-repositories))]
               [id (add-pkgversion-to-db! user 
                                          pkg
                                          maj
@@ -219,7 +222,8 @@
            (let ([pkgversion (get-package-version-by-id id (user-id user))])
              (unless pkgversion
                (error 'update/internal "no pkgversion, even though we just added it!"))
-             (announce-new-pkgversion pkg pkgversion)))))
+             (announce-new-pkgversion pkg pkgversion)))
+         id))
      (λ () (delete-directory* tmpdir)) ;; regardless of how we exit, clean up the tmp dir
      )))
 
