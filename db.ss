@@ -1027,13 +1027,14 @@
       (send t exec (string-append
                     "DELETE FROM version_repositories WHERE package_version_id = "
                     (number->string pkgversion-id)
-                    ";"))
+                    ))
       (for-each 
        (λ (r/n) (send t exec (concat-sql "INSERT INTO version_repositories (package_version_id, repository_id) "
                                          "VALUES ("
                                          [integer pkgversion-id]
+                                         ", "
                                          [integer (->rep-id r/n)]
-                                         ");")))
+                                         ")")))
        repositories)
       (send t commit)))
   

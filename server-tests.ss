@@ -384,6 +384,27 @@
     ;;[associate-pkgversion-with-repository! (natural-number/c (union repository? natural-number/c) . -> . void?)]
     (test-suite "associate-pkgversion-with-repository!")
     
+    ;;[reassociate-pkgversion-with-repositories ((union pkgversion? natural-number/c) 
+    ;;                                           (listof (union repository? natural-number/c))
+    ;;                                           . -> .
+    ;;                                           void?)]
+    (test-suite "reassociate-pkgversion-with-repositories"
+      (test-equal? "1"
+        (let* ([all-reps (get-all-repositories)]
+               [get-pv (λ () (package->current-version (get-package "planet" "test-connection.plt")))]
+               [get-pv-reps (λ () (sort (map repository-id (pkgversion-repositories (get-pv))) <))]
+               [pkgversion (get-pv)])
+          (append
+           (map (λ (rep) 
+                  (reassociate-pkgversion-with-repositories pkgversion (list rep))
+                  (get-pv-reps))
+                (sort (get-all-repositories) (λ (a b) (< (repository-id a) (repository-id b)))))
+           (list
+            (begin 
+              (reassociate-pkgversion-with-repositories pkgversion all-reps)
+              (get-pv-reps)))))
+        '((2) (3) (2 3))))
+    
     ;;[get-next-version-number (-> package? boolean? (cons/c natural-number/c natural-number/c))]
     (test-suite "get-next-version-number"
       (test-equal? "1" 
