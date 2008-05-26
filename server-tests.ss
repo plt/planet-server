@@ -392,7 +392,7 @@
       (test-equal? "1"
         (let* ([all-reps (get-all-repositories)]
                [get-pv (λ () (package->current-version (get-package "planet" "test-connection.plt")))]
-               [get-pv-reps (λ () (sort (map repository-id (pkgversion-repositories (get-pv))) <))]
+               [get-pv-reps (λ () (sort (pkgversion-repositories (get-pv)) <))]
                [pkgversion (get-pv)])
           (append
            (map (λ (rep) 
