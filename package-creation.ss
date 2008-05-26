@@ -205,7 +205,7 @@
               [repositories
                (let ([all-repositories (get-all-repositories)])
                  (if repository-strings 
-                     (filter (λ (x) (memq (repository-name x) repository-strings)) all-repositories)
+                     (filter (λ (x) (member (repository-name x) repository-strings)) all-repositories)
                      all-repositories))]
               [id (add-pkgversion-to-db! user 
                                          pkg
