@@ -1,0 +1,289 @@
+\documentclass{article}
+
+\title{PLaneT Server Deployment Documentation}
+\author{Jacob Matthews}
+
+\begin{document}
+\maketitle
+
+This document explains the live enviroment in which the PLaneT server
+runs. It explains some of how the PLaneT server code works, but its
+main focus is to explain how the deployment works.
+
+\section{The setup}
+
+The machine that runs the planet server is a dedicated computer
+running in the University of Chicago server room. It is known by two
+hostnames: coach.cs.uchicago.edu and planet.plt-scheme.org. Basic
+server administration for non-planet-related tasks is handled by
+University of Chicago CS Tech Staff (so they handle the machine's
+physical housing, hardware issues, and things like managing the
+firewall and keeping the kernel up to date if necessary). They are
+aware of the machine's role and they are in contact occasionally as
+the need arises. They have root access to the machine; PLT Scheme
+staff do not.
+
+PLaneT-specific administration must be handled by us. While the
+machine has an NFS mount and you can access normal CS home directories
+from there, currently all PLaneT-specific configuration lives in
+subdirectories off of /local (see below for details of what lives where).
+
+\subsection{Core PLaneT Services}
+
+The planet server's job is to run three services:
+\begin{itemize}
+\item Apache
+\item the PLT Scheme Web Server
+\item PostgreSQL
+\end{itemize}
+
+All three of these services must be running for the system to
+function. Their roles are as follows:
+
+\subsubsection{Apache}
+
+Apache's job is to serve static content (other than PLaneT packages
+themselves), rewrite URLs using \texttt{mod\_rewrite}, and to proxy incoming
+requests for dynamic content to the PLT Scheme web server, which is
+only accessible to the local host. We use Apache as the main web
+server rather than exposing the PLT Scheme web server directly so that
+we can take advantage of \texttt{mod\_rewrite} (though more recent versions of
+the PLT Scheme web server offer more flexible mappings between URLs
+and servlets, so this may not be necessary anymore) and to allow us to
+run other services such as bug tracking software that are written
+assuming an Apache frontend in the future.
+
+We run Apache Web Server version 2.0.54 as user wwwplanet listening
+on port 8080 of all interfaces. The firewall, administered by Tech
+Staff, forwards requests on port 80 to requests on port 8080. (The
+point of this scheme is to avoid the need for Apache to run as a
+privileged user.)  Its htdocs directory (where Apache-served content,
+including static HTML files and potentially PHP or other non-Scheme
+pages lives) is
+
+  \texttt{/local/webroot/htdocs}
+
+Imporant subdirectories of htdocs are as follows:
+
+\begin{itemize}
+\item \texttt{300/}, \texttt{4.x/}:  \\
+each of these directories does nothing but hold that repository's RSS
+  feed, which is automatically maintained by the PLaneT server code
+  running on the PLT Scheme web server.
+
+\item \texttt{autoinstallers/}: \\
+a packages directory hierarchy (about which more below), each file in
+  the leaves of these directories is a .plt file that, when installed
+  using the DrScheme .plt file installer, just requires (and thus
+  installs) the corresponding planet package.
+\item \texttt{css/}: \\
+all planet css files
+\item {images/:} \\
+all planet images
+\item {package-source/}: \\
+a parallel package directory hierarchy that contains package sources
+pre-rendered as HTML at the leaves.
+\end{itemize}
+
+The apache installation itself (i.e., the files for the binaries and
+so on) lives in \texttt{/local/apache}.
+
+The most important directory there is \texttt{conf}, which contains
+Apache's configuration files. The planet-specific rules, including
+proxying and rewrite rules, live in
+   \texttt{httpd.conf}
+in that directory.
+
+\subsection{The PLT Scheme Web Server}
+
+The PLT Scheme web server's job is to serve dynamic content, including
+the two main user-interface servlets display.ss and add.ss which
+manage user interaction with planet, and planet-servlet.ss, which
+handles requests for planet packages from the PLaneT client.
+
+The PLT Web Server runs as user wwwplanet listening on port 8081, is
+blocked by firewall from the outside world and is only accessible from
+the local machine, which means that its only inbound traffic is from
+the Apache proxy. It is currently running mzscheme version v3.99.0.25
+and a variety of PLaneT packages.
+
+Imporant directories for this service:
+
+\begin{itemize}
+\item \texttt{/local/svn/plt/}: \\
+Root of the SVN checkout that houses the version of PLT Scheme running
+the planet server.
+
+\item \texttt{/local/svn/iplt/}: \\
+Root of the iplt checkout for planet, which houses two important
+  subdirectories: \texttt{web}, which is the root of the standard PLT web
+  templates (maintained by Eli Barzilay) and planet, where all the
+  planet server code lives. The \texttt{iplt/planet} directory is used directly
+  as the PLT server's servlets directory, so updates into that
+  repository should be treated as live (it generally requires
+  restarting the server or refreshing servlets to observe changes, but
+  it is unwise to rely on this behavior for staging).
+\item \texttt{/local/planet/archives/}: \\
+This is the original package director hierarchy, though at this point
+  the fact that it was the first one might only be of historical
+  interest. The .plt file containing planet package "pkg.plt" owned by
+  "owner" with package version x.y lives in the subdirectory
+  \texttt{owner/pkg.plt/x/y/pkg.plt} off of this directory. The package's
+  contents are also unpacked; they live in \texttt{owner/pkg.plt/x/y/contents/}
+  (and whatever subdirectories may be present in the package itself).
+\item \texttt{/local/planet/logs/}: \\
+the file "logfile" in this directory contains the output written by
+  the web server. This is generally where internal error messages
+  get written.
+\item \texttt{/local/planet/20x/}: \\
+This is where very old packages live. The PLaneT server for the
+  199-20x series of PLT Scheme releases had a different policy for
+  repositories worked than the current policy. As a result when the
+  planet system was rewritten in 2006 it was easier to effectively
+  proxy all requests coming from v200 series planet clients to an old
+  version of the planet server than it was to fit packages from
+  version 200 into the new system. This directory holds those old
+  packages. I doubt highly that anyone ever accesses them anymore, but
+  it doesn't hurt to keep them around.
+\item \texttt{/local/webroot/}: \\
+Serves as the PLT Server's webroot, so mime.types, access log, and all
+  the other standard PLT Server configuration stuff lives here with
+  the exception of servlets. The servlets directory is actually a
+  symlink to \texttt{/local/svn/iplt/planet}, as discussed above.
+\item \texttt{/local/webroot/wwwplanet-home/}: \\
+Home directory for user wwwplanet. This is significant because the
+  subdirectory .plt-scheme in this directory contains all the planet
+  packages used by the PLaneT server itself in serving PLaneT. It is
+  sometimes necessary to directly manipulate these files because if
+  they are not working then generally the planet server won't be
+  working either.
+\end{itemize}
+
+Note that as of this writing I've got a pretty gross thing going on in
+this directory. The database driver I use, \texttt{schematics/spgsql.plt}, has
+a bug that causes it to throw an exception when certain escape
+sequences are returned from the database in response to a query. This
+actually happens in the planet data, and the schematics people seem to
+be too busy to release a package that fixes the bug, so I fixed it
+myself and just directly replaced the relevant file in the
+package. \textbf{THIS IS A TERRIBLE THING TO HAVE DONE}, mostly because it
+means that whenever the planet client feels compelled to download a
+new version of spgsql.plt package it'll get the old, broken version
+rather than the fixed one. It would be a very good idea to set up a
+development link for a local fork of the package, copy the contents
+into that directory, and then rewrite the require line in
+iplt/planet/db.ss to point to that local copy; I just haven't done
+so.
+
+\subsection{PostgreSQL}
+
+The PLT Scheme web server stores persistent data in a locally-running
+PostgreSQL database. That database holds all metainformation about
+packages --- their version numbers, their owners, and so on --- but it
+does not hold the data of the packages themselves. It runs version 8.2
+on port 5432 (which is the default for postgresql) as user
+postgres. 
+
+Note that as of this writing, PostgreSQL version 8.3 is NOT compatible
+with the Scheme driver we use, a mismatch that manifests itself as
+errors that appear to be quite high-level failures (such as queries
+not finding rows that should be there) rather than obviously
+protocol-level errors.
+
+Important directories: 
+\begin{itemize}
+\item \texttt{/local/pgsql/}: \\
+Root of all database stuff.
+
+\item \texttt{/local/pgsql/data/}: \\
+All database data. No permissions from anyone
+except user postgres. Two files of interest in here:
+\begin{itemize}
+  \item \texttt{pg\_hba.conf}, which controls access policies for
+  the database. (You shouldn't ever need to mess with even that, but
+  you might need to remember that it doesn't contain the default
+  information if you're upgrading the database software or something
+  like that.)
+  \item \texttt{logs/logfile}, the database's log. 
+\end{itemize}
+\end{itemize}
+
+\subsection{Looking at the database}
+
+The sql client lives at \texttt{/local/pgsql/psql} --- you'll need to
+say the magic words \texttt{export PGDATA=/local/pgsql/data/}
+so that it can find the database, then run
+  \texttt{/local/pgsql/bin/psql planet}
+to make queries. 
+
+\textbf{WARNING: YOU ARE ACCESSING LIVE DATA! IT IS POSSIBLE
+TO SCREW THINGS UP BADLY WITH AN INCORRECT UPDATE, DELETE, OR INSERT
+HERE! TRY IT ELSEWHERE FIRST!}
+
+\subsection{Additional utility}
+
+\texttt{/local/planet/bin} contains helpers that make it easier to bring up
+and take down planet services as necessary.
+
+\begin{itemize}
+\item \texttt{apachectl} --- symlink to the real apachectl program. 
+\item \texttt{wwwplanet\_ctl} --- controls the PLT Scheme server instance
+\item \texttt{planetdb\_ctl} --- controls the PostgreSQL instance
+\end{itemize}
+
+To use apachectl, you need to first \texttt{su wwwplanet} to have the right
+permissions. The others can be run from your normal account; they will
+prompt for the relevant password when run. They all have the same
+interface:
+
+\textit{command} \texttt{start}  --- brings up the service.
+\textit{command} \texttt{stop} --- brings down the service.
+\textit{command} \texttt{restart} --- restarts the service.
+
+\texttt{apachectl} and \texttt{planetdb\_ctl} both just expose
+functionality provided by apache and postgresql, respectively, so they
+both support more options ("man apachectl" and "man pg\_ctl"
+respectively); \texttt{wwwplanet\_ctl} by contrast is just a little shell script
+I wrote so it is relatively feature-poor.
+
+\section{Pragmatics: Doing things with the server}
+
+It is extremely useful to have a mock server running elsewhere for
+testing that you keep as close to the live server as possible. I use
+Parallels on my mac, on which I've got a Debian installation set up
+exactly like the above description. I always run development on that
+server. When I want to update the planet servlets, I develop on my own
+machine in a locally checked-out copy of the iplt tree, svn commit
+that work, svn update on the testing server, restart at least the PLT
+server, and then test the changes. Generally speaking, I try not to
+update the Apache, mzscheme, or Postgres installations when it isn't
+necessary. This is mainly to avoid breakage and the tradeoff is that
+when I do need to update mzscheme it's generally extremely painful;
+future maintainers should do what they feel is right.
+
+To update the database, look on the web for general instructions on
+how to update the database. Basically, the idea is to run pg\_dumpall,
+which dumps database information to a file, then bring down the
+database server, update the installation, start up the new server, and
+then run pg\_restore to re-import the data.
+
+Things that go wrong:
+
+\begin{itemize}
+\item Watch for permissions errors. In particular, if some Scheme function
+  that accesses the filesystem works when you run it, it might not
+  continue to work when wwwplanet runs it. This will generally cause
+  bad things to happen on the server.
+
+\item Make sure that you have the same versions in deployment as in
+  testing. You never know when a slight change will cause something to
+  break. (I don't know about the PostgreSQL 8.2 vs 8.3 difference from
+  studying manuals!)
+
+\item Try to make changes as compartmentalized as possible. If you have to
+  update everything on the whole server at once, there's much more
+  opportunity for things to break.
+
+\item When in doubt, try restarting the PLT Scheme web server.
+\end{itemize}
+\end{document}
