@@ -9,6 +9,12 @@
   (define default-repository-struct (car (get-all-repositories)))
   ;; ============================================================
 
+  ;; import : path -> void
+  ;; does the whole importing deal. relies on accurate information in the info table at the end
+  ;; of this file
+  (define (import path)
+    (import-into-database (path->users path info)))
+  
   ;; path->users : path (string -> (list string[realname] string[email])) -> (listof  user)
   ;; read in a users record from an old-style planet repository
   (define (path->users path info-about)
@@ -61,6 +67,7 @@
   ;;             # add the update, marking major or minor as appropriate
 
   (define (import-into-database users)
+    (parameterize ([SEND-EMAILS? #f])
     (do-for-each users (u)
      (let ([user (create-new-user (user-name u) (user-realname u) (user-email u) (random-password))])
        (do-for-each (user-packages u) (p)
@@ -76,7 +83,7 @@
                              package
                              (backwards-compatible? update)
                              (get-update-bytes update)
-                             (list default-repository-struct))))))))
+                             (list default-repository-struct)))))))))
 
 
   ;; ----------------------------------------

@@ -13,7 +13,7 @@
   (define (logged-in-user r)
     ;; extract the logged-in user that corresponds to this request, if any
     (with-handlers ([exn:fail? (λ (e) 
-                                 (error 'logged-in-user "oops! I got: ~a\n" (exn-message e))
+                                 ;(error 'logged-in-user "oops! I got: ~a\n" (exn-message e))
                                  
                                  #f)])
       (let* ([cs (request-cookies r)]
