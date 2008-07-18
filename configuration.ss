@@ -16,7 +16,7 @@
   (define WEB-PACKAGES-URL-ROOT (make-parameter (string-append #;(URL-ROOT) "/package-source")))
   
   (define DATABASE-CONNECT-ARGUMENTS (make-parameter '(#:database "planet" #:user "jacobm" #:password "matrix")))
-  (define DEFAULT-REPOSITORY (make-parameter 2)) ; the repository to show by default; corresponds to 3xx
+  (define DEFAULT-REPOSITORY (make-parameter 3)) ; the repository to show by default; corresponds to 4.x
   
   (define DISPLAY-ERRORS-OVER-WEB? (make-parameter #t))
   (define SEND-EMAILS? (make-parameter #t))
