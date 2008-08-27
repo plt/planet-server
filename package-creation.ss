@@ -1,7 +1,8 @@
 #lang scheme/base
-
+;current as of 8/25/2008	
 (require "db.ss" "data-structures.ss" "configuration.ss"
          "html.ss" "scm2xexpr.scm" "announcements.ss")
+(require "tracplanet/trac-admin.ss")
 
 (require scheme/contract
          scheme/file
@@ -77,7 +78,8 @@
   
   
   (let* ([cats (get-category-names)]
-         [cats-ht (make-hasheq)])
+         [cats-ht (make-hasheq)]
+         [trac (add-component package-name (user-username user))])
     (for-each 
      (λ (c) (hash-set! cats-ht (category-shortname c) c))
      cats)
