@@ -1234,7 +1234,7 @@
                   [_ (loop (cdr exprs) provides)])]))]
           [else #f]))))
   
-;==================Functions for trac table creation
+  ;==================Functions for trac table creation
 (provide/contract (get-all-user-email (-> list?)))
 ;void->listof (listof string?)
  ;used for initial import of users to trac
@@ -1252,4 +1252,6 @@
   (send *db* map "SELECT NAME, maj, min FROM all_packages" (lambda(x y z) (list
 x y z))))
 
+  
+ >>>>>>> .r2194
   )
