@@ -6,7 +6,7 @@
          (lib "string.ss")
          (lib "list.ss")
          (lib "srfi/13.ss"))
-(define url "http://accessory.cs.uchicago.edu:8080/trac/xmlrpc") ;will change when necessary
+(define url "http://planet.plt-scheme.org/trac/xmlrpc") ;will change when necessary
 (define newfiles "/local/svn/iplt/planet/tracplanet")
 (define xmlrpc (string-append newfiles "/xmlrpc"))
 
