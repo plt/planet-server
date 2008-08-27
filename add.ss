@@ -1,5 +1,4 @@
 #lang scheme/base
-;current as of 8/25/08
 (require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss" "demands.ss"
          "user-utilities.ss" "cookie-monster.ss")
 (require "tracplanet/trac-admin.ss")
