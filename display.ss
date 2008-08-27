@@ -31,7 +31,7 @@
   
   (define interface-version 'v1)
   (define timeout +inf.0)
-  (define local-url "http://accessory.cs.uchicago.edu/")
+  (define local-url "http://planet.plt-scheme.org/")
   
   
   (startup) ; initialize the database
@@ -159,9 +159,12 @@
                      (a ((href "/300/planet.rss")) "RSS feed") " or to the "
                      (a ((href "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")) "PLaneT-Announce mailing list")"."))
                  (td ((width "30%")(halign "RIGHT")(valign "top"))
-                     (section (strong "Top Bug Closers       "))
-                     (a ((href ,(string-append local-url "trac/reports/1"))) "[Trac]") 
-                     (p (table  ,@(make-bug-closer-table))))))
+		     (table ((width "100%")); ((bgcolor "lightblue") (width "100%") (height "100%")) ;; figure out a good color
+		      (tr
+		       (td
+			(section (strong "Top Bug Closers       "))
+			(a ((href ,(string-append local-url "trac/reports/1"))) "[Trac]") 
+			(p (table ((width "100%"))  ,@(make-bug-closer-table)))))))))
              (table ,@(srfi1:append-map summary-table-rows (get-package-listing
 (rep-id))))))))
 
@@ -385,7 +388,6 @@
 		           (td "Number of bug reports:")
                            (td ,(number->string (length tq))))
                           (tr
-B
                            (td "Number of open bug reports:")
                            (td ,(number->string (length ttq))))
 	           	  (tr
@@ -547,8 +549,8 @@ B
 
   (define (fill-bug-table name bugs)
     `((tr ((bgcolor "#ddddff"))
-          (td ((colspan "40") (valign "top") (class "User")) ,name)
-          (td ((colspan "40") (valign "center") (class "Bugs")) ,(number->string bugs)))))
+          (td ((valign "top") (class "User")) ,name)
+          (td ((valign "center") (class "Bugs")) ,(number->string bugs)))))
 
   (define (make-bug-closer-table)
     `((tr (td ((class "heading")) (strong "Username"))
