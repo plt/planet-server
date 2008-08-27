@@ -1,5 +1,5 @@
 #lang scheme/base
-
+;current as of 8/25/08
 (require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss" "demands.ss"
          "user-utilities.ss" "cookie-monster.ss")
 (require "tracplanet/trac-admin.ss")
@@ -153,9 +153,9 @@
                [password (get r 'password1)])
            (verify-email-address email)
            (let ([user (create-new-user username realname email password)]
-		 [trac-user (when (not (user-exists? username))
+                     [trac-user (when (not (user-exists? username))
                               (user-add username password #f))])
-
+        
              (main-interaction-loop (car (request->repository r)) user)))])))
   
   (define (reset-password)
@@ -277,8 +277,8 @@
           (cond
             [(null? problems)
              ; update the user's password and then send to the logged-in state
+             (update-user-password user (get r 'password1))
              (user-change-password (user-username user) (get r 'password1))
-	     (update-user-password user (get r 'password1))
              (main-interaction-loop (car (request->repository r)) user)]
             [else (loop problems)])))))
   
