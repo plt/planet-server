@@ -5,15 +5,24 @@
   
   
   (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss" "configuration.ss")
+  (require  "tracplanet/trac-admin.ss")
+  (require "tracplanet/xmlrpc/xml-rpc.ss")
+  (require (lib "servlet.ss" "web-server")
   (require (lib "servlet.ss" "web-server")
            (lib "xml.ss" "xml")
            (lib "cookie.ss" "net")
            (lib "pretty.ss")
            (lib "match.ss")
            (lib "list.ss")
+	   web-server/managers/none
            (prefix srfi1: (lib "1.ss" "srfi")))
   
-  (provide interface-version timeout start)
+ (define instance-expiration-handler #f)
+ (define manager
+        (create-none-manager instance-expiration-handler))
+
+ 
+(provide interface-version timeout start)
   
   (provide gen-package-page
            req           
@@ -23,7 +32,7 @@
   
   (define interface-version 'v1)
   (define timeout +inf.0)
-  
+  (define local-url "http://plt-scheme.org") 
   
   
   (startup) ; initialize the database
@@ -129,28 +138,38 @@
   ;; ============================================================
   ;; MAIN LISTING
   
+ 
   ;; generate-web-page : repository (listof xexpr[html]) (listof web-contents) -> listof xexpr[xhtml]
   ;; makes the body of a web page telling all currently-available packages
   (define (gen-main-page)
     (page
      '()
      `((div ((class "description"))
-            (p (strong "PLaneT") " is PLT Scheme's centralized package distribution system. Here you "
-               "will find user-contributed Scheme packages along with instructions for using them.")
-            (p "The packages on this site are user-contributed and not part of PLT Scheme. Be aware "
-               "that when you download one of them for use in your programs, you are installing "
-               "software on your computer that could deliberately or accidentally harm your system. "
-               "Do not require from PLaneT any packages you do not trust.")
-            (p "For more about how to use PLaneT and for instructions on turning your own code into"
-               " packages, look up PLaneT in the DrScheme Help Desk.")
-            (p "This page shows the latest versions of all available packages, sorted by category. ")
-            (p "You can be notified when new packages are added by subscribing to the "
-               (a ((href "/300/planet.rss")) "RSS feed") " or to the "
-               (a ((href "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")) "PLaneT-Announce mailing list")"."))
-       (section "Available packages")
-       (table ,@(srfi1:append-map summary-table-rows (get-package-listing (rep-id)))))))
-  
-  ;; ============================================================
+            (table
+             (tr (td ((width "60%"))
+                  (p (strong "PLaneT") " is PLT Scheme's centralized package distribution system. Here you "
+                     "will find user-contributed Scheme packages along with instructions for using them.")
+                  (p "The packages on this site are user-contributed and not part of PLT Scheme. Be aware "
+                     "that when you download one of them for use in your programs, you are installing "
+                     "software on your computer that could deliberately or accidentally harm your system. "
+                     "Do not require from PLaneT any packages you do not trust.")
+                  (p "For more about how to use PLaneT and for instructions on turning your own code into"
+                     " packages, look up PLaneT in the DrScheme Help Desk.")
+                  (p "This page shows the latest versions of all available packages, sorted by category. ")
+                  (p "You can be notified when new packages are added by subscribing to the "
+                     (a ((href "/300/planet.rss")) "RSS feed") " or to the "
+                     (a ((href "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")) "PLaneT-Announce mailing list")"."))
+                 (td ((width "30%")(halign "RIGHT")(valign "top"))
+                     (section (strong "Top Bug Closers       "))
+                     (a ((href ,(string-append local-url "trac/reports/1"))) "
+         [Trac]")
+
+                     (p (table  ,@(make-bug-closer-table))))))
+             (table ,@(srfi1:append-map summary-table-rows (get-package-listing
+(rep-id))))))))
+
+ 
+  ;; ===========================================================a
   ;; package tabling functions [utility for what follows]
   
   (define (summary-table-rows cat)
@@ -311,6 +330,9 @@
                   [else 
                    `(i "[no interface available]")]))))
   
+ (define (tickets-open list-of-ids)
+     (filter (lambda(x)
+                (not (string=? "closed" (ticket-status (ticket-get-wrapper x))))) list-of-ids))
   ;; gen-package-page : package -> xexpr[xhtml]
   ;; generates the web page for a particular package
   (define (gen-package-page pkg)
@@ -323,7 +345,9 @@
                                     all-packages)]
                   [(current) (if (null? available)
                                  (car unavailable)
-                                 (car available))])
+                                 (car available))]
+		  [(tq)  (ticket-query (string-append "component=" (package-name pkg)))]
+		  [(ttq (tickets-open tq)])
       (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
              (list (package-name pkg) (package->link pkg)))
@@ -361,6 +385,12 @@
                            (td "Total downloads: ")
                            (td ,(number->string (foldl (λ (t r) (+ (pkgversion-downloads t) r)) 0 (package-versions pkg)))))
                           (tr
+		           (td "Number of bug reports:")
+                           (td ,(number->string (length tq))))
+                          (tr
+                           (td "Number of open bug reports:")
+                           (td ,(number->string (length ttq))))
+	           	  (tr
                            (td ((valign "top")) "Primary files: ")
                            (td ,@(map 
                                   (display-primary-file pkg current)
@@ -371,6 +401,16 @@
                '()
                `((section "Current version")
                  ,(pvs->table pkg (list (car available)) load-current)
+		,@(if (null?  tq)
+                       `((section "No Tickets Currently open for this Package"))                       `((section "Open Tickets available for this Package")
+                         "["
+                         (a ((href ,(string-append
+                                     local-url
+                                     "trac/query?component="
+                                     (package-name pkg))))
+                            "All Tickets")
+                         "]"
+                         ,(package->bug-table (package-name pkg))))
                  ,@(let ([old-versions (cdr available)])
                      (if (null? old-versions)
                          '()
@@ -382,7 +422,127 @@
                  (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." 
                              (repository-name (rep))))
                  ,(pvs->table pkg unavailable load-specific)))))))
-  
+  ;; ============================================================
+ ;Functions for creating bug table on a page
+
+  ; string -> (listof xexpr?)
+  (define (package->bug-table component)
+    (table-with-component-fields (query->table "component" component)))
+
+  ;string? string? -> (listof ticket?)
+  (define (query->table type selector)
+    (filter (lambda (x)
+              (not (equal?
+                    (ticket-status x)
+                    "closed")))
+            (map (lambda(x) (ticket-get-wrapper x))
+                 (ticket-query (string-append type "="
+                                              selector)))))
+
+
+  ;(listof ticket?)-> (listof xexpr)
+  (define (table-with-component-fields tickets)
+    (table-with-fields (list "Ticket Id" "Owner" "Reporter" "Type" "Version") tickets ticket->row))
+
+   ;(listof ticket?)-> (listof xexpr)
+  (define (table-with-owner-fields tickets)
+    (table-with-fields (list "Ticket Id" "Component" "Reporter" "Type" "Version") tickets ticket->owner-row))
+
+  ;(listof string? ) (listof ticket?) (-> ticket? (listof xexpr?))-> (listof xexpr)
+  (define (table-with-fields list-of-fields tickets row-function)
+    (append
+        (if (null? tickets)
+                `(section "This user has no tickets.")
+                `(table ((width "100%"))
+                        (tr (b
+                          ,@(map (lambda(x) `(td ,x)) list-of-fields)))
+                                ,@(srfi1:append-map row-function tickets)))
+                `((a ((href ,(string-append local-url "trac/newticket")))) "[New Ticket]")))
+
+
+  (define (ticket->gen-row t second-field)
+    `((tr ((bgcolor "#ddddff"))
+          (td ((valign "center") (halign "center") (class "Ticket"))
+              (a ((href ,(string-append
+                          local-url
+                          "trac/ticket/"
+                          (ticket-id t))))) ,(ticket-id t))
+          ,@(cond [(equal? second-field ticket-component)
+                   `((td ((valign "center") (class "owner"))
+                        (a ((href ,(string-append
+                                    local-url
+                                    "display.ss?package="
+                                    (ticket-component t)
+                                    "&owner="
+                                    (ticket-owner t)
+                                    ))))
+                        ,(ticket-component t)))]
+                  [(equal? second-field ticket-owner)
+                   `((td ((valign "center") (class "owner"))
+                        (a ((href ,(string-append
+                                    local-url
+                                    "display.ss?owner="
+                                    (ticket-owner t) )))),(ticket-owner t)))]
+                  [else `((td ((valign "center") (class "reporter")) ,(second-field t)))])
+          (td ((valign "center")) ,(ticket-reporter t))
+          (td ((valign "center")) ,(ticket-type t))
+          (td ((valign "center")) ,(ticket-version t)))
+      (tr (td ((valign "top")) ,(ticket-summary t)))))
+   ;ticket -> (listof xexpr)
+  (define (ticket->owner-row t)
+    (ticket->gen-row t ticket-component))
+
+
+
+
+  ;ticket->listof[xepr]
+  ;takes a ticket and turns it into html as the first item in a list
+  (define (ticket->row  ticketa)
+    (ticket->gen-row ticketa ticket-owner))
+
+
+  ; list? exact-nonneg-int? -> (and/c list? (=? (length list) exact-nonneg int))
+  (define (take-it lista number)
+    (if (or (zero? number) (empty? lista))
+        empty
+        (cons (first lista) (take-it (rest lista) (- number 1)))))
+
+  ;bug-closer-table: void -> listof xexpr?[tr]
+  (define (bug-closer-rows)
+    (let* ([query-results (ticket-query "status=closed")]
+           [bug-closers (map ticket-owner (map ticket-get-wrapper  query-results))]
+           [hash-table (make-hash-table 'equal)])
+      (for-each (lambda(x)
+                  (let* ([value (hash-table-get hash-table x 0)])
+                    (hash-table-put! hash-table x (+ 1 value))))
+                bug-closers)
+      (let* ([hash-list (hash-table-map hash-table
+                                        (lambda(x y)
+                                          (cons y x)))]
+             [sorted           (sort hash-list (lambda(x y)
+                                                 (> (first x) (first y))))]
+             [top-three         (take-it sorted (min (length sorted) 3))])
+        (if (null? top-three)
+            (list `(tr (td ((colspan "2"))
+                           (i "There are no current closed bug reports. Be the first to close a bug!"))))
+            (srfi1:append-map (lambda(x) (fill-bug-table
+                                          (rest x)
+                                          (first x)))
+                              top-three)))))
+
+
+  (define (fill-bug-table name bugs)
+    `((tr ((bgcolor "#ddddff"))
+          (td ((colspan "40") (valign "top") (class "User")) ,name)
+          (td ((colspan "40") (valign "center") (class "Bugs")) ,(number->string bugs)))))
+
+  (define (make-bug-closer-table)
+    `((tr (td ((class "heading")) (strong "Username"))
+          (td ((class "heading")) (strong "# Closed")))
+      ,@(bug-closer-rows)))
+
+
+ 
   ;; ============================================================
   ;; USER PAGE
   
@@ -394,7 +554,10 @@
           ((id "userInfo"))
           "User " (b ,(user-username user)))
          (section "Packages")
-         (table ,@(map package->summary-row pkgs))))))
+         (table ,@(map package->summary-row pkgs))
+	(section "Open Tickets Owned by User")
+        ,(table-with-owner-fields (query->table "owner" (user-username user)))))))
+	 
   
   ;; ============================================================
   ;; DISPATCHING APPARATUS
