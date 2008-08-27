@@ -31,7 +31,7 @@
   
   (define interface-version 'v1)
   (define timeout +inf.0)
-  (define local-url "http://accessory.cs.uchicago.edu/")
+  (define local-url "http://planet.plt-scheme.org/")
   
   
   (startup) ; initialize the database
