@@ -1234,4 +1234,22 @@
                   [_ (loop (cdr exprs) provides)])]))]
           [else #f]))))
   
+
+(provide/contract (get-all-user-email (-> list?)))
+;void->listof (listof string?)
+ ;used for initial import of users to trac
+(define (get-all-user-email)
+    (let ([query "SELECT  username, email FROM contributors;"])
+      (send *db* map query (lambda(x y) (list x y)))))
+
+(provide/contract (get-all-packages-no-version (-> (listof cons?)))
+                  (get-all-packages-with-version (-> (listof cons?))))
+
+(define (get-all-packages-no-version)
+  (send *db* map "SELECT NAME, USER FROM all_packages" (lambda(x y) (cons x y))))
+
+(define (get-all-packages-with-version)
+  (send *db* map "SELECT NAME, maj, min FROM all_packages" (lambda(x y z) (list
+x y z))))
+
   )
