@@ -400,15 +400,31 @@ B
                `((section "Current version")
                  ,(pvs->table pkg (list (car available)) load-current)
 		,@(if (null?  tq)
-                       `((section "No Tickets Currently open for this Package"))                       `((section "Open Tickets available for this Package")
-                         "["
+                       `((section "No Tickets Currently open for this Package")
+			 "["
                          (a ((href ,(string-append
                                      local-url
-                                     "trac/query?component="
+                                     "trac/newticket"
+                                    )))
+                            "New Ticket")
+                         "]"
+)
+                       `((section "Open Tickets available for this Package")
+                        "["
+                         (a ((href ,(string-append
+                                     local-url
+                                     "trac/"
                                      (package-name pkg))))
                             "All Tickets")
                          "]"
-                         ,(package->bug-table (package-name pkg))))
+		 "["
+                         (a ((href ,(string-append
+                                     local-url
+                                     "trac/newticket"
+                                    )))
+                            "New Ticket")
+                         "]"
+			,(package->bug-table (package-name pkg))))
                  ,@(let ([old-versions (cdr available)])
                      (if (null? old-versions)
                          '()

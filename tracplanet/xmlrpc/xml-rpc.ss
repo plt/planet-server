@@ -6,7 +6,7 @@
          (lib "string.ss")
          (lib "list.ss")
          (lib "srfi/13.ss"))
-(define url "http://planet.plt-scheme.org/trac/xmlrpc") ;will change when necessary
+(define url "http://accessory.cs.uchicago.edu:8080/trac/xmlrpc") ;will change when necessary
 (define newfiles "/local/svn/iplt/planet/tracplanet")
 (define xmlrpc (string-append newfiles "/xmlrpc"))
 
@@ -66,10 +66,13 @@
 ;string? -> (listof numbers?)
 ;returns a list of numbers matching query string (using the format where "reporter=mr.jones" would be (list (cons "reporter" "mr.jones")))
 (define (ticket-query qstring)
-  (let* ([list-t  (string-tokenize
-                   (first (py_script_execute 
-                           (string-append xmlrpc "/ticket_query.py") 
-                           (list url qstring) #t)))]
+  (let* ([pre-list (py_script_execute
+                           (string-append xmlrpc "/ticket_query.py")
+                           (list url qstring) #t)]
+	 [list-t  (if (cons? pre-list) 
+		     (string-tokenize
+                       (first pre-list))
+	             '("[]"))] 
          [empty-query? (equal? list-t '("[]"))])
     (if empty-query?
         '()
