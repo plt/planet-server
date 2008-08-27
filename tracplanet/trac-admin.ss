@@ -188,7 +188,7 @@
         (map (lambda (x)
                (get-table 
                 (string-append 
-                 (string-append "http://accessory.cs.uchicago.edu:8080/trac/ticket/"
+                 (string-append "http://planet.plt-scheme.org/trac/ticket/"
                                 (number->string x))
                  "?format=tab")))
              query))))
