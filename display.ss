@@ -468,7 +468,7 @@
   (define (table-with-fields list-of-fields tickets row-function)
     (append
         (if (null? tickets)
-                `(section "This user has no tickets.")
+                `(section "This user has no tickets. ")
                 `(table ((width "100%"))
                         (tr (b
                           ,@(map (lambda(x) `(td ,x)) list-of-fields)))
@@ -549,7 +549,7 @@
 
   (define (fill-bug-table name bugs)
     `((tr ((bgcolor "#ddddff"))
-          (td ((valign "top") (class "User")) ,name)
+          (td ((valign "top") (class "User")) (a ((href ,(format "/display.ss?owner=~a" name))) ,name))
           (td ((valign "center") (class "Bugs")) ,(number->string bugs)))))
 
   (define (make-bug-closer-table)

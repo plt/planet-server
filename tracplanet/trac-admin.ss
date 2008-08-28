@@ -1,7 +1,10 @@
 #lang scheme/base
+
 ;; the file for administrating trac; for a list of full commands, see
 ;http://trac.edgewall.org/wiki/TracAdmin
 ;TAKE CARE: CALLING MOST OF THESE FUNCTIONS LEAVES THE RETURN VALUE, A PORT ;(STDIN) OPEN; CLOSE IT WHEN FINISHED!!
+
+;; /local/pythont/bin/trac-admin /local/bugs/tracfiles/
 
 (require scheme/system
          scheme/string
@@ -26,7 +29,6 @@
 
 (provide/contract 
  ;[send-command (-> (listof string?) port?)]
- [ticket-get (-> integer? (listof string?))]
  [ticket-get-wrapper (-> integer? ticket?)]
  [ticket-remove (-> (or/c string?  number?) void)]
  [add-component (-> string? string? void?)]
@@ -52,18 +54,20 @@
     (close-input-port (ports-process-error returns))
     (ports-process-output returns)))
 
-
-
-;int -> listof string
-(define (ticket-get tickid)
-  (let* ([pre (pre-table-write (string-append "id=" (number->string tickid)))])
-    (if (null? pre)
-        pre
-        (car (cdr (car pre))))))
-
-;int -> ticket
+; ticket-get-wrapper : int -> ticket
 (define (ticket-get-wrapper tickid)
-  (apply make-ticket (ticket-get tickid)))
+  (let* ([url (string->url (format "http://localhost:8080/trac/ticket/~a?format=tab" tickid))]
+         [page (get-pure-port url)])
+    (read-line page) ;; flush out the table of contents line
+    (let ([line (get-one-line-of-table page)])
+      (close-input-port page)
+      (if (equal? (length line)
+                  (procedure-arity make-ticket))
+          (apply make-ticket line)
+          (error 'ticket-get-wrapper 
+                 "parsed line ~s, expected ~a elements"
+                 line
+                 (procedure-arity make-ticket))))))
 
 ;;ticket-remove:str or num->port
 ;;removes the given ticket from the repository
@@ -182,33 +186,60 @@
 
 ;=====================================Helper functions
 
-;get-table (-> string? (listof (listof string?)))
-(define (get-table url)
-  (let ([page (get-pure-port (string->url  url))])
-    (begin0 
-      (let loop () 
-        (let ([line (read-line page)])
-          (if (eof-object? line)
-              '()
-              (cons (regexp-split "\t" line) (loop)))))
-      (close-input-port page))))
+;; get-one-line-of-table : port -> (listof string?)
+;; parses a single line of the output, where
+;; fields are separated by tabs, but also support
+;; quoted fields (which may then contain newlines and other things)
+(define (get-one-line-of-table page)
+  (let loop ([in-quotes? #f]
+	     [pending-word '()]
+	     [prev-char #f])
+    (let ([c (read-char page)])
+      (if (eof-object? c)
+	  (finish pending-word)
+	  (case c
+	    [(#\newline) 
+	     (if in-quotes?
+		 (loop #t (cons #\newline pending-word) #\newline)
+		 (finish pending-word))]
+	    [(#\") 
+	     (cond
+	      [in-quotes?
+	       ;; must be closing quote, so just skip
+	       (loop #f pending-word #\")]
+	      [(or (equal? prev-char #\tab) (not prev-char))
+	       (loop #t '() c)]
+	      [else
+	       (error 'get-one-line-of-table "found a quote not following a tab")])]
+	    [(#\\)
+	     (let ([nc (read-char page)])
+	       (if (eof-object? nc)
+		   (error 'get-one-line-of-table "found a backslash followed by eof")
+		   (loop in-quotes? (cons nc pending-word) #\")))]
+	    [(#\tab) (cons (apply string (reverse pending-word))
+			   (loop #f '() #\tab))]
+	    [else (loop in-quotes? (cons c pending-word) c)])))))
 
-;performs a query, goes to each matching ticket's page and collects the ticket info
-;string? -> listof (listof string?)
-(define (pre-table-write querystring)
-  (let* ([query (ticket-query querystring)])
-    (if (null? query)
-        '()
-        (map (lambda (x)
-               (get-table 
-                (string-append 
-                 (string-append "http://localhost:8080/trac/ticket/"
-                                (number->string x))
-                 "?format=tab")))
-             query))))
+(define (finish pending-word) 
+  (if (null? pending-word)
+      '()
+      (list (apply string (reverse pending-word)))))
 
+#;
+(begin
+ (equal? (get-one-line-of-table (open-input-string "a\tb\tc\nd\te\tf"))
+         '("a" "b" "c"))
+ (equal? (get-one-line-of-table (open-input-string "\"a\""))
+	 '("a"))
+ (equal? (get-one-line-of-table (open-input-string "b\t\"a\""))
+	 '("b" "a"))
+ (equal? (get-one-line-of-table (open-input-string "a\t\"a\nb\"\tc"))
+         '("a" "a\nb" "c"))
+ (equal? (get-one-line-of-table (open-input-string "a\t\"a\nb\""))
+         '("a" "a\nb"))
+ (equal? (get-one-line-of-table (open-input-string "a\\\""))
+	 '("a\"")))
 
-    
 
 ;==================Wrapper for modifications to password file
 ;; with-lock : (string? string?-> void) (-> void) -> void
