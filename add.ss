@@ -276,6 +276,7 @@
           (cond
             [(null? problems)
              ; update the user's password and then send to the logged-in state
+	     (user-change-password (user-username user) (get r 'password1))
              (update-user-password user (get r 'password1))
              (user-change-password (user-username user) (get r 'password1))
              (main-interaction-loop (car (request->repository r)) user)]
@@ -921,6 +922,7 @@ function update(status) {
              (cond
                [(null? problems)
                 (begin
+		  (user-change-password (user-username user) (get request 'newpass1))
                   (update-user-password user (get request 'newpass1))
                   (loop '((general "Password updated."))))]
                [else (loop problems)]))]
