@@ -58,6 +58,7 @@
 (define (ticket-get-wrapper tickid)
   (let* ([url (string->url (format "http://localhost:8080/trac/ticket/~a?format=tab" tickid))]
          [page (get-pure-port url)])
+   (fprintf (current-error-port) "fetching ~a\n" (url->string url))
     (read-line page) ;; flush out the table of contents line
     (let ([line (get-one-line-of-table page)])
       (close-input-port page)
@@ -205,17 +206,21 @@
 	    [(#\") 
 	     (cond
 	      [in-quotes?
-	       ;; must be closing quote, so just skip
-	       (loop #f pending-word #\")]
+	       (let ([next (peek-char page)])
+		 (cond
+		  [(equal? #\" next)
+		   (begin
+		     (read-char page)
+		     (loop #t (cons #\" pending-word) #\"))]
+		  [(member next (list #\newline eof))
+		   (list (apply string (reverse pending-word)))]
+		  [else
+		   ;; must be closing quote, so just skip
+		   (loop #f pending-word #\")]))]
 	      [(or (equal? prev-char #\tab) (not prev-char))
 	       (loop #t '() c)]
 	      [else
 	       (error 'get-one-line-of-table "found a quote not following a tab")])]
-	    [(#\\)
-	     (let ([nc (read-char page)])
-	       (if (eof-object? nc)
-		   (error 'get-one-line-of-table "found a backslash followed by eof")
-		   (loop in-quotes? (cons nc pending-word) #\")))]
 	    [(#\tab) (cons (apply string (reverse pending-word))
 			   (loop #f '() #\tab))]
 	    [else (loop in-quotes? (cons c pending-word) c)])))))
@@ -237,8 +242,10 @@
          '("a" "a\nb" "c"))
  (equal? (get-one-line-of-table (open-input-string "a\t\"a\nb\""))
          '("a" "a\nb"))
- (equal? (get-one-line-of-table (open-input-string "a\\\""))
-	 '("a\"")))
+ (equal? (get-one-line-of-table (open-input-string "a\t\"\""))
+	 '("a" ""))
+ (equal? (get-one-line-of-table (open-input-string "a\\\tb"))
+	 '("a\\" "b")))
 
 
 ;==================Wrapper for modifications to password file
