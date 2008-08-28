@@ -31,7 +31,7 @@
  [ticket-remove (-> (or/c string?  number?) void)]
  [add-component (-> string? string? void?)]
  [list-component (-> (listof string?))]
- [remove-component (-> string? null?)]
+ [remove-component (-> string? string? null?)]
  [permission-add (-> string? string? null?)]
  [permission-remove (-> string? string? null?)]
  [permission-list (-> (listof string?))]
@@ -76,7 +76,9 @@
 
 ;;add-component:str str->port
 (define (add-component name owner)
-  (let ([command (list "component add"  name  owner)])
+  (let ([command (list "component add" 
+		       (build-component-name name owner)
+		       owner)])
     (close-input-port (send-command command))))
 
 ;;permission-add: str str ->null
@@ -96,10 +98,12 @@
   (port-wrapper (send-command (list "component list"))))
 
 ;;remove-component:str->null
-(define (remove-component comp)
-  (let ([command (list "component remove " comp)])
+(define (remove-component name owner)
+  (let ([command (list "component remove " (build-component-name name owner))])
     (port-wrapper (send-command command))))
 
+(define (build-component-name name owner)
+  (format "~a/~a" owner name))
 
 (define (user-exists? username)
   (let* ([passfile (open-input-file "/local/password/users.txt")]
