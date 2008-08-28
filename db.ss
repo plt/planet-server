@@ -1246,7 +1246,7 @@
                   (get-all-packages-with-version (-> (listof cons?))))
 
 (define (get-all-packages-no-version)
-  (send *db* map "SELECT NAME, USER FROM all_packages" (lambda(x y) (cons x y))))
+  (send *db* map "SELECT NAME, username FROM all_packages" (lambda(x y) (cons x y))))
 
 (define (get-all-packages-with-version)
   (send *db* map "SELECT NAME, maj, min FROM all_packages" (lambda(x y z) (list

@@ -1,4 +1,3 @@
-
 #lang scheme/base
 
 (require  (lib "contract.ss") 
@@ -14,6 +13,7 @@
           "trac-admin.ss"
           "xmlrpc/xml-rpc.ss")          
 
+(provide random-password)
 (provide/contract 
  [get-all-packages (-> (listof package?))]
  [add-all-packages-to-trac (->  void)]

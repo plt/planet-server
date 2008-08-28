@@ -7,6 +7,7 @@
          scheme/string
          scheme/contract
          scheme/runtime-path
+	 scheme/port
          net/url
          "xmlrpc/xml-rpc.ss")
 (require (for-syntax scheme/base))
@@ -130,26 +131,35 @@
 ;adds a user to trac's authentication system
 ;returns string written to permission file
 (define (user-add-unwrapped username password)
-  (let* ([passfile (open-output-file "/local/password/users.txt" #:exists'append )]
-         [command (string-append (path->string (build-path here "users.py"))
-                                 " -u " 
-                                 username
-                                 " -p "
-                                 password)]
-         [process  
-          (apply make-ports (process (string-append "/local/pythont/bin/python " command)))]
-         [wait ((ports-proc process) 'wait)]
-         [line (read-line (ports-process-output process))])
-    (begin
-      (when (not (eof-object? line))
-        (write-string line passfile)
-        (write-string "\n" passfile)
-        (flush-output passfile)
-        (close-output-port passfile)
-        (close-input-port (ports-process-output process))
-        (close-output-port (ports-process-input process))
-        (close-input-port (ports-process-error process))
-        line))))
+  (let* ([process  
+          (apply make-ports (process* "/local/pythont/bin/python"
+				      "/local/svn/iplt/planet/tracplanet/users.py"
+				      "-u"
+				      username
+				      "-p"
+				      password))]
+         [line (read-line (ports-process-output process))]
+	 [err-string-port (open-output-string)]
+         [stderr-thd
+	  (thread
+	   (lambda () 
+	     (copy-port (ports-process-error process) err-string-port)))])
+    ((ports-proc process) 'wait)
+    (thread-wait stderr-thd)
+    (close-input-port (ports-process-output process))
+    (close-output-port (ports-process-input process))
+    (close-input-port (ports-process-error process))
+    (cond
+     [(eof-object? line)
+      (error 'user-add-unwrapped "python script failed: ~s" (get-output-string err-string-port))]
+     [else
+      (call-with-output-file  "/local/password/users.txt"
+	(lambda (passfile)
+	  (fprintf passfile "~a\n" line))
+	#:exists 'append)])
+    (if (eof-object? line)
+	(void)
+	line)))
 
 (define (user-remove-unwrapped user)
   (let* ([old-p-file       (open-input-file "/local/password/users.txt" )]
@@ -222,7 +232,9 @@
 
 
 (provide/contract
- [user-add (-> (and/c string?  (not/c user-exists?)) string? string?)]
+ [user-add (-> string?
+	       string? 
+	       (or/c void? string?))]
  [user-remove (-> (and/c string? user-exists?) void)]
  [user-change-password (-> (and/c string? user-exists?) string? void)]
  [user-add-to-group (-> string? string? void)])
