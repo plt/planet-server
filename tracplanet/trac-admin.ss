@@ -58,7 +58,6 @@
 (define (ticket-get-wrapper tickid)
   (let* ([url (string->url (format "http://localhost:8080/trac/ticket/~a?format=tab" tickid))]
          [page (get-pure-port url)])
-   (fprintf (current-error-port) "fetching ~a\n" (url->string url))
     (read-line page) ;; flush out the table of contents line
     (let ([line (get-one-line-of-table page)])
       (close-input-port page)

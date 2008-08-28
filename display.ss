@@ -15,6 +15,7 @@
            (lib "list.ss")
 	   web-server/managers/none
            (prefix srfi1: (lib "1.ss" "srfi")))
+  (require (lib "string.ss"))
   
   (define instance-expiration-handler #f)
   (define manager
@@ -52,7 +53,7 @@
          (error 'rep-id->name (format "no such repository: ~a" id))]
         [else 
          therep])))
-  
+
   (define rep-id->name (t-compose repository-name rep-id->rep))
   
   
@@ -165,8 +166,7 @@
 			(section (strong "Top Bug Closers       "))
 			(a ((href ,(string-append local-url "trac/reports/1"))) "[Trac]") 
 			(p (table ((width "100%"))  ,@(make-bug-closer-table)))))))))
-             (table ,@(srfi1:append-map summary-table-rows (get-package-listing
-(rep-id))))))))
+             (table ,@(srfi1:append-map summary-table-rows (get-package-listing (rep-id))))))))
 
  
   ;; ===========================================================a
@@ -385,10 +385,10 @@
                            (td "Total downloads: ")
                            (td ,(number->string (foldl (λ (t r) (+ (pkgversion-downloads t) r)) 0 (package-versions pkg)))))
                           (tr
-		           (td "Number of bug reports:")
+		           (td "Tickets:")
                            (td ,(number->string (length tq))))
                           (tr
-                           (td "Number of open bug reports:")
+                           (td "Open tickets:")
                            (td ,(number->string (length ttq))))
 	           	  (tr
                            (td ((valign "top")) "Primary files: ")
@@ -401,16 +401,15 @@
                '()
                `((section "Current version")
                  ,(pvs->table pkg (list (car available)) load-current)
-		,@(if (null?  tq)
+		,@(let ((new-ticket-url (string-append
+                                         local-url
+                                         (format "trac/newticket?component=~a/~a" (package-owner pkg) (package-name pkg)))))
+                    (if (null?  tq)
                        `((section "No Tickets Currently open for this Package")
 			 "["
-                         (a ((href ,(string-append
-                                     local-url
-                                     "trac/newticket"
-                                    )))
+                         (a ((href ,new-ticket-url))
                             "New Ticket")
-                         "]"
-)
+                         "]")
                        `((section "Open Tickets available for this Package")
                         "["
                          (a ((href ,(string-append
@@ -418,15 +417,11 @@
                                      "trac/"
                                      (package-name pkg))))
                             "All Tickets")
+                         "] "
+                         "["
+                         (a ((href ,new-ticket-url)) "New Ticket")
                          "]"
-		 "["
-                         (a ((href ,(string-append
-                                     local-url
-                                     "trac/newticket"
-                                    )))
-                            "New Ticket")
-                         "]"
-			,(package->bug-table (package-name pkg))))
+			,(package->bug-table (package-name pkg)))))
                  ,@(let ([old-versions (cdr available)])
                      (if (null? old-versions)
                          '()
@@ -466,14 +461,12 @@
 
   ;(listof string? ) (listof ticket?) (-> ticket? (listof xexpr?))-> (listof xexpr)
   (define (table-with-fields list-of-fields tickets row-function)
-    (append
         (if (null? tickets)
                 `(section "This user has no tickets. ")
                 `(table ((width "100%"))
                         (tr (b
                           ,@(map (lambda(x) `(td ,x)) list-of-fields)))
-                                ,@(srfi1:append-map row-function tickets)))
-                `((a ((href ,(string-append local-url "trac/newticket")))) "[New Ticket]")))
+                                ,@(srfi1:append-map row-function tickets))))
 
 
   (define (ticket->gen-row t second-field)
@@ -484,15 +477,18 @@
                           "trac/ticket/"
                           (ticket-id t))))) ,(ticket-id t))
           ,@(cond [(equal? second-field ticket-component)
+                   (let* ([raw-package-info (regexp-split #rx"/" (ticket-component t))]
+                          [owner (if (= (length raw-package-info) 2) (list-ref raw-package-info 0) "??")]
+                          [component (if (= (length raw-package-info) 2) (list-ref raw-package-info 1) "??")])
                    `((td ((valign "center") (class "owner"))
                         (a ((href ,(string-append
                                     local-url
                                     "display.ss?package="
-                                    (ticket-component t)
+                                    component
                                     "&owner="
-                                    (ticket-owner t)
+                                    owner
                                     ))))
-                        ,(ticket-component t)))]
+                        ,(ticket-component t))))]
                   [(equal? second-field ticket-owner)
                    `((td ((valign "center") (class "owner"))
                         (a ((href ,(string-append
