@@ -13,6 +13,7 @@
            (lib "pretty.ss")
            (lib "match.ss")
            (lib "list.ss")
+	   (lib "url.ss" "net")
 	   web-server/managers/none
            (prefix srfi1: (lib "1.ss" "srfi")))
   (require (lib "string.ss"))
@@ -401,9 +402,7 @@
                '()
                `((section "Current version")
                  ,(pvs->table pkg (list (car available)) load-current)
-		,@(let ((new-ticket-url (string-append
-                                         local-url
-                                         (format "trac/newticket?component=~a/~a" (package-owner pkg) (package-name pkg)))))
+		,@(let ((new-ticket-url (url->string (pkg->submit-bug-url pkg))))
                     (if (null?  tq)
                        `((section "No Tickets Currently open for this Package")
 			 "["
@@ -500,12 +499,11 @@
           (td ((valign "center")) ,(ticket-type t))
           (td ((valign "center")) ,(ticket-version t)))
       (tr (td ((valign "top")) ,(ticket-summary t)))))
+
+
    ;ticket -> (listof xexpr)
   (define (ticket->owner-row t)
     (ticket->gen-row t ticket-component))
-
-
-
 
   ;ticket->listof[xepr]
   ;takes a ticket and turns it into html as the first item in a list
@@ -554,7 +552,24 @@
       ,@(bug-closer-rows)))
 
 
- 
+  (define (pkg->submit-bug-url pkg)
+(make-url
+ "http"
+ #f
+ "planet.plt-scheme.org"
+ #f
+ #t
+ (list (make-path/param "trac" '())
+       (make-path/param "newticket" '()))
+ (list (cons 'component 
+	     (format "~a/~a" (package-owner pkg) (package-name pkg)))
+       (cons 'planetversion
+	     (let ([pkgv (car (package-versions pkg))])
+	       (format "~a.~a" 
+		       (pkgversion-maj pkgv)
+		       (pkgversion-min pkgv)))))
+ #f))
+
   ;; ============================================================
   ;; USER PAGE
   
