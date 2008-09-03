@@ -99,10 +99,10 @@
          `((p "Thanks for deciding to contribute a package to PLaneT! "
               "You can either create an account using the form below, or, "
               "if you already have an account, log in directly.")
-           (section "Log in")
+           ,(section "Log in")
            ,@general-error-messages
            (div 
-            (div ((id "logIn"))
+            (div ((id "logIn") (class "filledin"))
                  (form ((action ,k) (method "post"))
                        (input ((type "hidden") (name "mode") (value "login")))
                        (p (b "Already have a user account? Then log in here."))
@@ -117,7 +117,7 @@
                                 (br)
                                 (small (a ((href ,(string-append k "?mode=resetpass"))) "I forgot my password")))))))
             
-            (div ((id "createUser"))
+            (div ((id "createUser") (class "filledin"))
                  (form ((action ,k) (method "post"))
                        (input ((type "hidden") (name "mode") (value "create")))
                        (p (b "Need a user account? Create one now."))
@@ -159,7 +159,7 @@
   
   (define (reset-password)
     (let loop ([problems '()])
-      (let ([r (send/suspend (RESET-PASSWORD-PAGE problems))])
+      (let ([r (send/suspend/doctype (RESET-PASSWORD-PAGE problems))])
         (let* ([demands 
                 (all-demands
                  (list
@@ -177,7 +177,7 @@
                (begin
                  ; send an email to the address associated with the account, 
                  ; the followup to which resets the password
-                 (send/suspend (PASSWORD-RESET-EMAIL/PAGE user))
+                 (send/suspend/doctype (PASSWORD-RESET-EMAIL/PAGE user))
                  ; if send-email returns the email recipient got the message
                  ; and is in control, so go ahead and let them change the password
                  (do-passwordless-reset user)))]
@@ -234,7 +234,7 @@
   
   
   (define (verify-email-address email)
-    (send/suspend 
+    (send/suspend/doctype
      (lambda (k) 
        (when (SEND-EMAILS?)
          (send-mail-message "PLaneT <planet@plt-scheme.org>" 
@@ -271,7 +271,7 @@
                'password1 'password2)))]
            [PAGE (PASSWORDLESS-RESET-PAGE user)])
       (let loop ([problems '()])
-        (let* ([r (send/suspend (PAGE problems))]
+        (let* ([r (send/suspend/doctype (PAGE problems))]
                [problems (demands (request-bindings r))])
           (cond
             [(null? problems)
@@ -288,7 +288,7 @@
        '("password reset")
        `((p "You have now validated yourself as user " (b ,(user-username user))
             " by responding to email. Please use this form to reset your password.")
-         (section "Reset your password")
+         ,(section "Reset your password")
          (form ((action ,k) (method "post"))
                (table
                 (tr (td "Username:")     (td (b ,(user-username user))))
@@ -329,7 +329,9 @@
 (define (main-interaction-loop repository user)
   
   (define (page titles bodies)
-    (mkdisplay* titles bodies repository user))
+    (let ((d (mkdisplay* titles bodies repository user)))
+    (fprintf (current-error-port) "build.1 ~s\n" d)
+    d))
   
   ;; html pages
   (define (main-loop-page problems)
@@ -339,7 +341,7 @@
                        (define packages (user->packages user)) 
                        (define (package->rows pkg)
                          (let ([v (car (package-versions pkg))])
-                           `((tr ((class "pkgStats")) 
+                           `((tr ((class "filledin")) 
                                  (td (a ((href ,(string-append k "?action=fulledit&package=" (number->string (package-id pkg)))))
                                         ,(package-name pkg))) 
                                  (td ,(format "~a.~a"
@@ -354,9 +356,9 @@
                                                                       (number->string (pkgversion-id v)))))
                                                "edit package metadata")
                                             "]")))
-                             (tr ((class "pkgBlurb"))
+                             (tr ((class "filledin"))
                                  (td ((colspan "3")) ,@(or (package-blurb pkg) '("[no package description]"))))
-                             (tr ((class "pkgVersionBlurb"))
+                             (tr ((class "filledin"))
                                  (td ((colspan "3")) ,@(or (pkgversion-blurb v)
                                                            `("[no version notes]")))))))
                        (page
@@ -366,20 +368,20 @@
                                 `((div ,@(map (λ (msg) `(p ,msg)) general-errors))))
                           
                           
-                          (section "Contribute a package")
+                          ,(section "Contribute a package")
                           (form ((action ,k) (method "post") (enctype "multipart/form-data"))
                                 (p "Contribute a new package: "
                                    (input ((type "file") (name "file")))
                                    (input ((type "submit") (value "Upload")))
                                    (input ((type "hidden") (name "action") (value "newpackage"))))
                                 ,@(message-for 'contribute))
-                          (section "Manage your packages")
+                          ,(section "Manage your packages")
                           ,@(cond
                               [(null? packages) '()]
                               [else
                                `((p "These are your packages:")
                                  (table ((id "yourPackages")) ,@(apply append (map package->rows packages))))])
-                          (section "Manage your account")
+                          ,(section "Manage your account")
                           (table ((width "95%"))
                                  (tr 
                                   (td ((valign "top"))
@@ -483,7 +485,7 @@ function update(status) {
   ;; manages a user-submitted update to the given package.
   (define (do-package-update pkg)
     (let loop ([problems '()])
-      (let* ([request (send/suspend (pkgversion-update-page pkg problems))] 
+      (let* ([request (send/suspend/doctype (pkgversion-update-page pkg problems))] 
              [file-contents (get request 'file)]
              [minor-update?/list (get-all request 'minor)])
         (cond
@@ -831,7 +833,7 @@ function update(status) {
   
   ;; this should be merged with the above
   (define (verify-changed-address email)
-    (send/suspend 
+    (send/suspend/doctype 
      (lambda (k) 
        (when (SEND-EMAILS?)
          (send-mail-message "PLaneT <planet@plt-scheme.org>" 

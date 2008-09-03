@@ -1,28 +1,34 @@
 #lang scheme/base
 (require 
- (lib "contract.ss")
+ "cookie-monster.ss"
+ scheme/contract
  (lib "servlet.ss" "web-server")
  (lib "xml.ss" "xml")
  (lib "url.ss" "net"))
 
 (require
  "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
- (file "/local/svn/iplt/web/common/layout.ss"
-       #;"~/svn/iplt/web/common/layout.ss"
-       ))
+ (file "/local/svn/iplt/web/old/common/layout.ss"))
 
-(define bindings/c (listof (cons/c (union symbol? string?) string?)))
+(define bindings/c (listof (cons/c (or/c symbol? string?) string?)))
 (define title/c (or/c string? (list/c string? string?)))
 
 (provide/contract
+ [section (-> string? any)]
  [request->repository (request? . -> . (list/c natural-number/c boolean?))]
- [get-repository (bindings/c . -> . (union natural-number/c false/c))]
- [get-new-repository (bindings/c . -> . (union natural-number/c false/c))]
+ [get-repository (bindings/c . -> . (or/c natural-number/c false/c))]
+ [get-new-repository (bindings/c . -> . (or/c natural-number/c false/c))]
  [mkhtmlpage ((listof title/c) (listof any/c #|xexpr|#) . -> . any #|xexpr|#)]
- [mkdisplay ((listof title/c) any/c request? . -> . any #|xexpr|#)]
- [mkdisplay* (opt-> ((listof title/c) any/c natural-number/c user?)
-                    ((listof (cons/c (union string? symbol?) string?)))
-                    any)])
+ [mkdisplay (->* ((listof title/c) any/c request?)
+                  (#:navkey (or/c false/c symbol?))
+                  any #|xexpr|#)]
+ [mkdisplay* (->* ((listof title/c) any/c natural-number/c user?)
+                  ((listof (cons/c (or/c string? symbol?) string?)) 
+                   #:navkey (or/c false/c symbol?))
+                  any)])
+
+(define (section str) 
+  `(table ((width "100%") (cellspacing "0") (cellpadding "0")) (tr (td ((class "filledinwhite")) (b (font ((size "+1")) nbsp ,str))))))
 
 ;; ------------------------------------------------------------
 ;; binding stuff
@@ -67,13 +73,10 @@
 ;; ----------------------------------------
 ;; HTML generation
 
-(define mkdisplay*
-  (case-lambda
-    [(titles contents rep user)
-     (mkdisplay* titles contents rep user '())]
-    [(titles contents rep user bindings)
-     (mkhtmlpage
-      (cons (list "Home" home-link/base) titles)
+(define (mkdisplay* titles contents rep user [bindings '()] #:navkey [navkey #f])
+   (mkhtmlpage
+     #:navkey navkey
+      (cons (list "PLaneT" home-link/base) titles)
       `((div ((class "nav") (align "right")) 
              (small 
               "View packages: "
@@ -91,12 +94,12 @@
                                       ,@(item (ADD-URL-ROOT) "manage packages") nbsp "|" nbsp
                                       ,@(item (LOGOUT-PAGE) "log out"))
                     (item (ADD-URL-ROOT) "contribute a package / log in"))))
-        ,@contents))]))
+        ,@contents)))
 
-(define (mkdisplay titles contents req)
+(define (mkdisplay titles contents req #:navkey [navkey #f])
   (let* ([rep/? (request->repository req)]
          [rep (car rep/?)])
-    (mkdisplay* titles contents rep (logged-in-user req) (request-bindings req))))
+    (mkdisplay* titles contents rep (logged-in-user req) (request-bindings req) #:navkey navkey)))
 
 (define (item url text)
   (list "[" `(a ((href ,url)) ,@(if (string? text) (list text) text)) "]"))
@@ -114,27 +117,25 @@
 ;; title ::= string | (list string string)
 ;; mkhtmlpage : (listof title) (listof xexpr[xhtml body exprs] -> xexpr[xhtml]
 ;;  makes an html page with the given title path and body expressions
-(define (mkhtmlpage titles contents)
+(define (mkhtmlpage titles contents #:navkey [navkey #f])
   (apply
    tall-page 
-   ; I'd like to have the <title> attribute be the following, and the printed title on the page just be
-   ; "PLaneT Package Repository", but that doesn't appear to be possible with tall-page right now 
-   #;(apply string-append "PLaneT Package Repository : " (join '(" > ") (map title->string titles)))
-   "PLaneT Package Repository" 
-   `(div ((class "planetNav"))
-         ,@(join '(nbsp ">" nbsp) (map title->link titles)))
-   contents
+   (apply string-append "PLaneT Package Repository : " (join '(" > ") (map title->string titles)))
+   `(div ((class "planet"))
+         (div ((class "filledinwhite"))
+              (div ((class "planetNav"))
+                   ,@(join '(nbsp ">" nbsp) (map title->link titles)))))
+   (list `(div ((class "planet")) ,@contents))
+   #:navkey navkey
    #:head-stuff `((link ((rel "alternate")
                          (type "application/rss+xml")
                          (title "RSS")
                          (href "/300/planet.rss")))
                   (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
+                  (link ((rel "stylesheet") (href "http://www.plt-scheme.org/plt.css") (type "text/css")))
                   (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
-                  (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; "))
-   #:precomputed-img `(image ((src "/images/logo.jpg") (width "128px") (height "123px") (alt "[PLT logo]")))
-   
-   
-   ))
+                  (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; import \"http://www.plt-scheme.org/plt.css\"; ")
+                  )))
 
 ;; title->string : title -> string
 (define (title->string title)
@@ -150,7 +151,7 @@
 
 ;; ----------------------------------------
 ;; http helpers
-(provide send/suspend/nocache)
+(provide send/suspend/nocache send/suspend/doctype)
 (define (send/suspend/nocache response)
   (send/suspend
    (λ (k)
@@ -162,7 +163,19 @@
                            (list
                             (make-header #"Cache-Control" #"no-cache")
                             (make-header #"Pragma" #"no-cache"))
-                           (list (xexpr->string xexpr)))))))
+                           (list doctype (xexpr->string xexpr)))))))
+
+(define (send/suspend/doctype response)
+  (send/suspend
+   (λ (k)
+     (let ([xexpr (response k)])
+       (make-response/full 200 
+                           "Okay"
+                           (current-seconds)
+                           #"text/html" 
+                           '()
+                           (list doctype (xexpr->string xexpr)))))))
+
 
 ;; ----------------------------------------
 ;; url builders (for packages, users)

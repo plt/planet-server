@@ -265,10 +265,12 @@
 ;; rebuilds the web pages for the given package
 ;; assumes the package is already unpacked in its appropriate location
 (define (rebuild-package-pages user package maj min)
-  (code-to-html 
-   (build-path (create-package-directory user package maj min) "contents")
-   (create-web-directory user package maj min)
-   user package maj min))
+  (let ([dir (build-path (create-package-directory user package maj min) "contents")])
+    (when (directory-exists? dir) ;; this test should only fail if the db has a bogus entry
+      (code-to-html 
+       dir
+       (create-web-directory user package maj min)
+       user package maj min))))
 
 ;; rebuild-all-autoinstallers : -> void
 ;; creates the appropriate autoinstaller for every package version

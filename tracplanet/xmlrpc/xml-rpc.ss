@@ -67,8 +67,9 @@
 ;returns a list of numbers matching query string (using the format where "reporter=mr.jones" would be (list (cons "reporter" "mr.jones")))
 (define (ticket-query qstring)
   (let* ([pre-list (py_script_execute
-                           (string-append xmlrpc "/ticket_query.py")
-                           (list url qstring) #t)]
+                    (string-append xmlrpc "/ticket_query.py")
+                    (list url qstring)
+                    #t)]
 	 [list-t  (if (cons? pre-list) 
 		     (string-tokenize
                        (first pre-list))

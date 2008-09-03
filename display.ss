@@ -1,4 +1,4 @@
-(module display mzscheme
+#lang scheme/base
   
   ;; ============================================================
   ;; servlet that displays planet's contents to the world
@@ -7,16 +7,13 @@
   (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss" "configuration.ss")
   (require  "tracplanet/trac-admin.ss")
   (require "tracplanet/xmlrpc/xml-rpc.ss")
-  (require (lib "servlet.ss" "web-server")
-           (lib "xml.ss" "xml")
-           (lib "cookie.ss" "net")
-           (lib "pretty.ss")
-           (lib "match.ss")
-           (lib "list.ss")
-	   (lib "url.ss" "net")
+  (require scheme/list scheme/string scheme/match
+           scheme/pretty
+           net/url net/cookie
+           xml/xml
 	   web-server/managers/none
-           (prefix srfi1: (lib "1.ss" "srfi")))
-  (require (lib "string.ss"))
+           web-server/servlet
+           (prefix-in srfi1: (lib "1.ss" "srfi")))
   
   (define instance-expiration-handler #f)
   (define manager
@@ -31,12 +28,12 @@
            rep-explicit?
            rep)
   
+  (startup) ; initialize the database
+  
   (define interface-version 'v1)
   (define timeout +inf.0)
+  
   (define local-url "http://planet.plt-scheme.org/")
-  
-  
-  (startup) ; initialize the database
   
   (define (retract f p?)
     (λ (x) (if (p? x) (f x) #f)))
@@ -70,6 +67,7 @@
           (log-error 
            (request-client-ip req)
            (format "unhandled exception: ~a" exception-message))
+          (build-no-cookie-response
           (mkdisplay
            '("Error")
            `((p 
@@ -79,10 +77,10 @@
                    `((p "The error message was: ")
                      (pre ,exception-message))
                    '()))
-           req))))
+           req)))))
     
     (with-handlers
-        ([exn:user? (λ (e) (mkhtmlpage '("Error") `((div ((class "error")) ,(exn-message e)))))]
+        ([exn:user? (λ (e) (build-no-cookie-response (mkhtmlpage '("Error") `((div ((class "error")) ,(exn-message e))))))]
          [exn:fail? default-exception-handler])
         (real-start req)))
   
@@ -133,8 +131,8 @@
                       basic-operations)
                  basic-operations))))    
   
-  (define (page heads bodies)
-    (mkdisplay heads bodies (req)))
+  (define (page heads bodies #:navkey [navkey #f])
+    (mkdisplay heads bodies (req) #:navkey navkey))
   
   ;; ============================================================
   ;; MAIN LISTING
@@ -155,7 +153,10 @@
                      "software on your computer that could deliberately or accidentally harm your system. "
                      "Do not require from PLaneT any packages you do not trust.")
                   (p "For more about how to use PLaneT and for instructions on turning your own code into"
-                     " packages, look up PLaneT in the DrScheme Help Desk.")
+                     " packages, see the "
+                     (a ((href "http://docs.plt-scheme.org/planet/")) 
+                       "PLaneT documentation")
+                     " (also available in your local installation).")
                   (p "This page shows the latest versions of all available packages, sorted by category. ")
                   (p "You can be notified when new packages are added by subscribing to the "
                      (a ((href "/300/planet.rss")) "RSS feed") " or to the "
@@ -164,36 +165,42 @@
 		     (table ((width "100%")); ((bgcolor "lightblue") (width "100%") (height "100%")) ;; figure out a good color
 		      (tr
 		       (td
-			(section (strong "Top Bug Closers       "))
-			(a ((href ,(string-append local-url "trac/reports/1"))) "[Trac]") 
-			(p (table ((width "100%"))  ,@(make-bug-closer-table)))))))))
-             (table ,@(srfi1:append-map summary-table-rows (get-package-listing (rep-id))))))))
+			 (table ((width "100%"))  ,@(make-bug-closer-table))))))))
+            (table ,@(srfi1:append-map summary-table-rows (get-package-listing (rep-id))))))
+     #:navkey 'planet))
 
  
   ;; ===========================================================a
   ;; package tabling functions [utility for what follows]
   
   (define (summary-table-rows cat)
-    `((tr (td ((colspan "4") (class "heading")) (h3 ,(category-name cat))))
+    `((tr (td ((colspan "5") (class "heading")) ,(section (category-name cat))))
+      ,summary-row-heading
       ,@(map package->summary-row (category-packages cat))))
-  
+
+  (define summary-row-heading
+   `(tr ((class "filledin")) (th "Name") (th "PLaneT" (br) "Version") (th "External" (br) "Version") (th "Owner") (th "Description")))
+
   (define (package->summary-row pkg)
-    `(tr ((bgcolor "#ddddff")) 
+    (let ([p (car (package-versions pkg))])
+    `(tr ((class "filledin")) 
          (td ((valign "top")) 
              nbsp
              (a ((href ,(package->link pkg))) ,(package-name pkg)))
          (td ((valign "top"))
-             ,(let* ([p (car (package-versions pkg))]
-                     [version-str (or (pkgversion-name p) "")])
-                (format "~a.~a" (pkgversion-maj p) (pkgversion-min p))
-                )) 
+             ,@(let ([version-str (or (pkgversion-name p) "")])
+                (format-pkg-version p #t)))
+         (td ((valign "top")) 
+          ,(if (pkgversion-name p)
+               (pkgversion-name p)
+               'mdash))
          (td ((valign "top")) (a ((href ,(package->owner-link pkg))) ,(package-owner pkg)))
-         (td ((valign "top")) ,@(or (package-blurb pkg) '("[no description available]")))))
+         (td ((valign "top")) ,@(or (package-blurb pkg) '("[no description available]"))))))
   
   (define (pvs->table pkg pvs to-load-fn)
     `(table ((width "100%"))
-            (thead
-             (th "Package version") (th "Version") (th "Source") (th "DLs") (th "Docs") (th "Req. PLT") (th "To load"))
+            (thead ((class "filledin"))
+             (th "PLaneT version") (th "External Version") (th "Source") (th "DLs") (th "Docs") (th "Req. PLT"))
             ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
   
   (define (load-current pkg pv)
@@ -232,24 +239,26 @@
   ;; a given package and version.
   ;; Invariant: pv must be a version of the package pkg
   (define ((pkgversion->rows pkg to-load-fn) pv)
-    `((tr (td ((width "3em") (valign "top") (class "pv"))
-              (tt ,(number->string (pkgversion-maj pv)) "." ,(number->string (pkgversion-min pv))))
+    `((tr (td ((width "4em") (valign "center") (class "filledin"))
+              ,@(format-pkg-version pv #t))
           ,(if (pkgversion-name pv)
-               `(td ((width "5em") (valign "top") (class "v")) (b ,(pkgversion-name pv)))
-               `(td ((width "5em") (valign "top") (class "v")) mdash))
-          (td ((width "8em") (valign "top") (class "pv"))
-              "[" (a ((href ,(source-code-url pkg pv))) "browse") "]")
-          (td ((width "2em") (valign "top") (class "downloads"))
-              ,(number->string (pkgversion-downloads pv)))
-          (td ((width "8em") (valign "top") (class "docs"))
-              ,@(doc-link pkg pv `("[none]")))
-          (td ((width "8em") (valign "top") (class "pv"))
-              ,(or (pkgversion-required-core pv) "[none]"))
-          (td ((width "*") (valign "top") (class "toload"))
-              (tt ,(to-load-fn pkg pv))))
-      (tr (td ((colspan "4")) (small "Available in repositories: "
-                                     ,(string-join  ", " (map rep-id->name (pkgversion-repositories pv))))))
-      (tr (td ((colspan "4") (class "blurb"))
+               `(td ((width "4em") (valign "center") (class "filledin")) ,(pkgversion-name pv))
+               `(td ((width "4em") (valign "center") (class "filledin")) mdash))
+          (td ((width "8em") (valign "top") (class "filledin"))
+              (div "[" (a ((href ,(source-code-url pkg pv))) "browse") "]"))
+          (td ((width "2em") (valign "center") (class "filledin"))
+              (div ,(number->string (pkgversion-downloads pv))))
+         (td ((width "8em") (valign "center") (class "filledin"))
+	      (div
+                ,@(doc-link pkg pv `("[none]"))))
+          (td ((width "8em") (valign "center") (class "filledin"))
+              ,(or (pkgversion-required-core pv) "[none]")))
+      (tr
+          (td ((colspan "6") (width "*") (valign "top"))
+              "To load:  " (tt ,(to-load-fn pkg pv))))
+      (tr (td ((colspan "6")) (small "Available in repositories: "
+                                     ,(my-string-join  ", " (map rep-id->name (pkgversion-repositories pv))))))
+      (tr (td ((colspan "6") (class "blurb"))
               ,@(or (pkgversion-blurb pv)
                     `("[no release notes]"))))))
   
@@ -331,9 +340,6 @@
                   [else 
                    `(i "[no interface available]")]))))
   
- (define (tickets-open list-of-ids)
-     (filter (lambda(x)
-                (not (string=? "closed" (ticket-status (ticket-get-wrapper x))))) list-of-ids))
   ;; gen-package-page : package -> xexpr[xhtml]
   ;; generates the web page for a particular package
   (define (gen-package-page pkg)
@@ -347,8 +353,8 @@
                   [(current) (if (null? available)
                                  (car unavailable)
                                  (car available))]
-		  [(tq)  (ticket-query (string-append "component=" (package-name pkg)))]
-		  [(ttq) (tickets-open tq)])
+		  [(tq)  (open-tickets-query "component" (pkg->component pkg))]
+                  [(new-ticket-url) (url->string (pkg->submit-ticket-url pkg))])
       (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
              (list (package-name pkg) (package->link pkg)))
@@ -377,8 +383,8 @@
                                 '())
                           (tr 
                            (td ((valign "top")) "Package description: ")
-                           (td ((class "packageBlurb"))
-                               ,@(or (package-blurb pkg) '("[no description available]"))))
+                           (td ((class "filledin"))
+                              (div ,@(or (package-blurb pkg) '("[no description available]")))))
                           (tr
                            (td "Downloads this week: ")
                            (td ,(number->string (downloads-this-week current))))
@@ -390,7 +396,7 @@
                            (td ,(number->string (length tq))))
                           (tr
                            (td "Open tickets:")
-                           (td ,(number->string (length ttq))))
+                           (td ,(number->string (length tq))))
 	           	  (tr
                            (td ((valign "top")) "Primary files: ")
                            (td ,@(map 
@@ -400,54 +406,46 @@
                                    (λ (a b) (string<? (primary-file-name a) (primary-file-name b))))))))))
          ,@(if (null? available)
                '()
-               `((section "Current version")
+               `(,(section "Current version")
                  ,(pvs->table pkg (list (car available)) load-current)
-		,@(let ((new-ticket-url (url->string (pkg->submit-bug-url pkg))))
-                    (if (null?  tq)
-                       `((section "No Tickets Currently open for this Package")
-			 "["
+		,@(if (null?  tq)
+                       `((i "No Tickets Currently open for this Package")
+			 " ["
                          (a ((href ,new-ticket-url))
                             "New Ticket")
                          "]")
-                       `((section "Open Tickets available for this Package")
-                        "["
-                         (a ((href ,(string-append
-                                     local-url
-                                     "trac/"
-                                     (package-name pkg))))
+                       `(,(section "Open tickets")
+                        " ["
+                         (a ((href ,(url->string (pkg->all-tickets-url pkg))))
                             "All Tickets")
                          "] "
                          "["
                          (a ((href ,new-ticket-url)) "New Ticket")
                          "]"
-			,(package->bug-table (package-name pkg)))))
+			,@(table-with-component-fields tq)))
                  ,@(let ([old-versions (cdr available)])
                      (if (null? old-versions)
                          '()
-                         `((section "Old versions")
+                         `((br)
+                           ,(section "Old versions")
                            ,(pvs->table pkg old-versions load-specific))))))
          ,@(if (null? unavailable)
                `()
-               `((section "Packages in other repositories")
+               `(,(section "Packages in other repositories")
                  (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." 
                              (repository-name (rep))))
                  ,(pvs->table pkg unavailable load-specific)))))))
-  ;; ============================================================
- ;Functions for creating bug table on a page
 
-  ; string -> (listof xexpr?)
-  (define (package->bug-table component)
-    (table-with-component-fields (query->table "component" component)))
+
+ ;; ============================================================
+ ;; Functions for creating bug table on a page
 
   ;string? string? -> (listof ticket?)
-  (define (query->table type selector)
+  (define (open-tickets-query type selector)
     (filter (lambda (x)
-              (not (equal?
-                    (ticket-status x)
-                    "closed")))
+              (not (equal? (ticket-status x) "closed")))
             (map (lambda(x) (ticket-get-wrapper x))
-                 (ticket-query (string-append type "="
-                                              selector)))))
+                 (ticket-query (string-append type "=" selector)))))
 
 
   ;(listof ticket?)-> (listof xexpr)
@@ -461,15 +459,15 @@
   ;(listof string? ) (listof ticket?) (-> ticket? (listof xexpr?))-> (listof xexpr)
   (define (table-with-fields list-of-fields tickets row-function)
         (if (null? tickets)
-                `(section "This user has no tickets. ")
-                `(table ((width "100%"))
-                        (tr (b
-                          ,@(map (lambda(x) `(td ,x)) list-of-fields)))
-                                ,@(srfi1:append-map row-function tickets))))
+            (list '(i "No open tickets. "))
+            (list `(table ((width "100%"))
+                        (tr ((class "filledin"))
+                          ,@(map (lambda(x) `(th ,x)) list-of-fields))
+                        ,@(srfi1:append-map row-function tickets)))))
 
 
   (define (ticket->gen-row t second-field)
-    `((tr ((bgcolor "#ddddff"))
+    `((tr ((class "filledin"))
           (td ((valign "center") (halign "center") (class "Ticket"))
               (a ((href ,(string-append
                           local-url
@@ -478,12 +476,12 @@
           ,@(cond [(equal? second-field ticket-component)
                    (let* ([raw-package-info (regexp-split #rx"/" (ticket-component t))]
                           [owner (if (= (length raw-package-info) 2) (list-ref raw-package-info 0) "??")]
-                          [component (if (= (length raw-package-info) 2) (list-ref raw-package-info 1) "??")])
+                          [package (if (= (length raw-package-info) 2) (list-ref raw-package-info 1) "??")])
                    `((td ((valign "center") (class "owner"))
                         (a ((href ,(string-append
                                     local-url
                                     "display.ss?package="
-                                    component
+                                    package
                                     "&owner="
                                     owner
                                     ))))
@@ -498,7 +496,7 @@
           (td ((valign "center")) ,(ticket-reporter t))
           (td ((valign "center")) ,(ticket-type t))
           (td ((valign "center")) ,(ticket-version t)))
-      (tr (td ((valign "top")) ,(ticket-summary t)))))
+      (tr ((class "filledin")) (td ((colspan "5") (valign "top")) ,(ticket-summary t)))))
 
 
    ;ticket -> (listof xexpr)
@@ -513,62 +511,76 @@
 
   ; list? exact-nonneg-int? -> (and/c list? (=? (length list) exact-nonneg int))
   (define (take-it lista number)
-    (if (or (zero? number) (empty? lista))
+    (if (or (zero? number) (null? lista))
         empty
-        (cons (first lista) (take-it (rest lista) (- number 1)))))
+        (cons (car lista) (take-it (cdr lista) (- number 1)))))
 
   ;bug-closer-table: void -> listof xexpr?[tr]
   (define (bug-closer-rows)
     (let* ([query-results (ticket-query "status=closed")]
            [bug-closers (map ticket-owner (map ticket-get-wrapper  query-results))]
-           [hash-table (make-hash-table 'equal)])
+           [hash-table (make-hash)])
       (for-each (lambda(x)
-                  (let* ([value (hash-table-get hash-table x 0)])
-                    (hash-table-put! hash-table x (+ 1 value))))
+                  (let* ([value (hash-ref hash-table x 0)])
+                    (hash-set! hash-table x (+ 1 value))))
                 bug-closers)
-      (let* ([hash-list (hash-table-map hash-table
-                                        (lambda(x y)
-                                          (cons y x)))]
+      (let* ([hash-list (hash-map hash-table (lambda (x y) (cons y x)))]
              [sorted           (sort hash-list (lambda(x y)
-                                                 (> (first x) (first y))))]
+                                                 (> (car x) (car y))))]
              [top-three         (take-it sorted (min (length sorted) 3))])
         (if (null? top-three)
             (list `(tr (td ((colspan "2"))
                            (i "There are no current closed bug reports. Be the first to close a bug!"))))
-            (srfi1:append-map (lambda(x) (fill-bug-table
-                                          (rest x)
-                                          (first x)))
+            (srfi1:append-map (lambda (x) (fill-bug-table (cdr x) (car x)))
                               top-three)))))
 
 
   (define (fill-bug-table name bugs)
-    `((tr ((bgcolor "#ddddff"))
+    `((tr ((class "filledin"))
           (td ((valign "top") (class "User")) (a ((href ,(format "/display.ss?owner=~a" name))) ,name))
           (td ((valign "center") (class "Bugs")) ,(number->string bugs)))))
 
   (define (make-bug-closer-table)
-    `((tr (td ((class "heading")) (strong "Username"))
-          (td ((class "heading")) (strong "# Closed")))
+    `((tr (td ((colspan "2"))
+              (strong "Top Bug Closers       ")
+              "["
+              (a ((href ,(string-append local-url "trac/reports/1"))) "Trac")
+              "]"))
+
+      (tr (td ((class "heading")) "Username")
+          (td ((class "heading")) "# Closed"))
       ,@(bug-closer-rows)))
 
+  
+  (define (pkg->all-tickets-url pkg)
+    (make-url
+     "http"
+     #f
+     "planet.plt-scheme.org"
+     #f
+     #t
+     (list (make-path/param "trac" '())
+           (make-path/param "query" '()))
 
-  (define (pkg->submit-bug-url pkg)
-(make-url
- "http"
- #f
- "planet.plt-scheme.org"
- #f
- #t
- (list (make-path/param "trac" '())
-       (make-path/param "newticket" '()))
- (list (cons 'component 
-	     (format "~a/~a" (package-owner pkg) (package-name pkg)))
-       (cons 'planetversion
-	     (let ([pkgv (car (package-versions pkg))])
-	       (format "~a.~a" 
-		       (pkgversion-maj pkgv)
-		       (pkgversion-min pkgv)))))
- #f))
+     (list (cons 'component (pkg->component pkg)))
+     #f))
+
+  (define (pkg->submit-ticket-url pkg)
+    (make-url
+     "http"
+     #f
+     "planet.plt-scheme.org"
+     #f
+     #t
+     (list (make-path/param "trac" '())
+           (make-path/param "newticket" '()))
+     (list (cons 'component (pkg->component pkg))
+           (cons 'planetversion
+                 (let ([pkgv (car (package-versions pkg))])
+                   (format-pkg-version pkgv))))
+     #f))
+
+  (define (pkg->component pkg) (format "~a/~a" (package-owner pkg) (package-name pkg)))
 
   ;; ============================================================
   ;; USER PAGE
@@ -577,13 +589,11 @@
     (let ([pkgs (user->packages user (list (rep-id)))])
       (page
        (list (list (user-username user) (user->link user)))
-       `((div 
-          ((id "userInfo"))
-          "User " (b ,(user-username user)))
-         (section "Packages")
-         (table ,@(map package->summary-row pkgs))
-	(section "Open Tickets Owned by User")
-        ,(table-with-owner-fields (query->table "owner" (user-username user)))))))
+       `(,(section "Packages")
+         (table ((width "100%")) ,summary-row-heading  ,@(map package->summary-row pkgs))
+	(br)
+	,(section "Open tickets")
+        ,@(table-with-owner-fields (open-tickets-query "owner" (user-username user)))))))
 	 
   
   ;; ============================================================
@@ -621,15 +631,22 @@
     (let ([new-repository (get-new-repository (request-bindings (req)))])
       (if new-repository
           (build-cookie-response v (list (set-cookie "rep" (number->string new-repository))))
-          v)))
+          (build-no-cookie-response v))))
   
   
   
   ;; ============================================================
   ;; helpers
-  ;; [these are available in scheme/list or something similar now]
   
   
+  ;; format-pkg-version : pkgversion -> (or/c string (listof xexpr))
+  ;; if nb? is #t, we get a list of xexpr, with non-breaking information
+  ;; otherwise, just a string
+  (define (format-pkg-version p [nb? #f])
+    (if nb?
+        (list "(" (number->string (pkgversion-maj p)) 'nbsp (number->string (pkgversion-min p)) ")")
+        (format "~s" `(,(pkgversion-maj p) ,(pkgversion-min p)))))
+
   ; join : (listof x) (listof x) -> listof x
   ; intersperses all values in separator between each element of items
   (define (join separator items)
@@ -642,6 +659,6 @@
            (cond
              [(null? (cdr items)) (reverse (cons (car items) acc))]
              [else (loop (append rsep (list (car items)) acc) (cdr items))])))]))
-  
-  (define (string-join sep items)
-    (apply string-append (join (list sep) items))))
+
+  (define (my-string-join sep items)
+    (apply string-append (join (list sep) items)))

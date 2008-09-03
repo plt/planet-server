@@ -4,6 +4,8 @@
          xml/xml
          scheme/contract)
 
+(define doctype
+  "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">")
 
 (define-struct client-cookie 
   (name
@@ -16,7 +18,11 @@
          request-cookies
          (struct-out client-cookie))
 
+(define (not-response? x) (not (response/full? x)))
+
 (provide/contract
+ [doctype string?]
+ [build-no-cookie-response (not-response? . -> . response?)]
  [build-cookie-response (any/c (listof any/c) . -> . response?)]
  [build-cookie-forwarder (string? (listof any/c) . -> . response?)]
  [request-cookies* (request? . -> . (listof client-cookie?))])
@@ -61,13 +67,22 @@
   (make-header #"Set-Cookie" (string->bytes/utf-8 (print-cookie cookie))))
 
 ;; build-cookie-response : xexpr[xhtml] (listof cookie) -> response
+(define (build-no-cookie-response xexpr)
+  (make-response/full 200
+                      "Okay"
+                      (current-seconds)
+                      TEXT/HTML-MIME-TYPE
+		      '()
+                      (list doctype (xexpr->string xexpr))))
+
+;; build-cookie-response : xexpr[xhtml] (listof cookie) -> response
 (define (build-cookie-response xexpr cookies)
   (make-response/full 200
                       "Okay"
                       (current-seconds)
                       TEXT/HTML-MIME-TYPE
                       (map cookie->env-binding cookies) ; rfc2109 also recommends some cache-control stuff here
-                      (list (xexpr->string xexpr))))
+                      (list doctype (xexpr->string xexpr))))
 
 (define (build-cookie-forwarder url cookies)
   (make-response/full 303
@@ -78,6 +93,7 @@
                        (make-header #"Location" (string->bytes/utf-8 url))
                        (map cookie->env-binding cookies))
                       (list
+                       doctype
                        (xexpr->string `(html (body "Resource redirected to " (a ((href ,url)) ,url)))))))
 
 ;; ============================================================

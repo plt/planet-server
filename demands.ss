@@ -3,6 +3,7 @@
            (lib "contract.ss")
            (lib "match.ss")
            (lib "etc.ss")
+           "html.ss"
            (prefix srfi1: (lib "1.ss" "srfi")))
   
   
@@ -186,7 +187,7 @@
     (let ([problems->k->html (demand-page->problems->k->html demand-page)]
           [demands (demand-page->demands demand-page)])
       (let loop ([problems '()])
-        (let ([req (send/suspend (problems->k->html problems))])
+        (let ([req (send/suspend/doctype (problems->k->html problems))])
           (let ([new-problems (demands (request-bindings req))])
             (if (null? new-problems)
                 req
