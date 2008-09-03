@@ -195,8 +195,28 @@
                (pkgversion-name p)
                'mdash))
          (td ((valign "top")) (a ((href ,(package->owner-link pkg))) ,(package-owner pkg)))
-         (td ((valign "top")) ,@(or (package-blurb pkg) '("[no description available]"))))))
+         (td ((valign "top")) ,@(map remove-pre (or (package-blurb pkg) '("[no description available]")))))))
   
+  (define (remove-pre xexpr)
+    (match xexpr
+      [`(pre ,stuff ...) 
+       `(tt ,@(apply append (map split-newlines stuff)))]
+      [`(,stuff ...) (map remove-pre stuff)]
+      [else xexpr]))
+
+  (define (split-newlines stuff)
+     (cond
+       [(string? stuff) 
+        (let ([strs (regexp-split #rx"\n" stuff)])
+          (if (or (null? strs) (null? (cdr strs)))
+              strs
+              (let loop ([str (car strs)]
+                         [strs (cdr strs)])
+                (cond [(null? strs) (list str)]
+                      [else (list* str '(br) (loop (car strs) (cdr strs)))]))))]
+       [else (list stuff)]))
+
+
   (define (pvs->table pkg pvs to-load-fn)
     `(table ((width "100%"))
             (thead ((class "filledin"))
@@ -261,7 +281,6 @@
       (tr (td ((colspan "6") (class "blurb"))
               ,@(or (pkgversion-blurb pv)
                     `("[no release notes]"))))))
-  
   
   ;; ============================================================
   ;; PACKAGE PAGE
@@ -468,7 +487,7 @@
 
   (define (ticket->gen-row t second-field)
     `((tr ((class "filledin"))
-          (td ((valign "center") (halign "center") (class "Ticket"))
+          (td ((valign "center") (align "center") (class "Ticket") (rowspan "2"))
               (a ((href ,(string-append
                           local-url
                           "trac/ticket/"
@@ -496,7 +515,7 @@
           (td ((valign "center")) ,(ticket-reporter t))
           (td ((valign "center")) ,(ticket-type t))
           (td ((valign "center")) ,(ticket-version t)))
-      (tr ((class "filledin")) (td ((colspan "5") (valign "top")) ,(ticket-summary t)))))
+      (tr ((class "filledin")) (td ((colspan "4") (valign "top")) ,(ticket-summary t)))))
 
 
    ;ticket -> (listof xexpr)
