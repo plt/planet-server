@@ -211,10 +211,11 @@ except user postgres. Two files of interest in here:
 \subsection{Looking at the database}
 
 The sql client lives at \texttt{/local/pgsql/psql} --- you'll need to
-say the magic words \texttt{export PGDATA=/local/pgsql/data/}
-so that it can find the database, then run
-  \texttt{/local/pgsql/bin/psql planet}
-to make queries. 
+say the magic words 
+\begin{center}
+\tt env PGDATA=/local/pgsql/data/ /local/pgsql/bin/psql planet jacobm
+\end{center}
+to connect to the database to make queries.
 
 \textbf{WARNING: YOU ARE ACCESSING LIVE DATA! IT IS POSSIBLE
 TO SCREW THINGS UP BADLY WITH AN INCORRECT UPDATE, DELETE, OR INSERT
