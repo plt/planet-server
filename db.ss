@@ -21,6 +21,8 @@
   ;; always retrieved completely. When you get packages for a specific repository (using functions
   ;; such as get-n-most-recent-packages), the packages' package-version information will not contain
   ;; the other repositories those package versions may belong to.
+  ;;
+  ;; Also, the function user->packages/no-repositories always has empty lists for the repositories.
   
   (provide/contract
    
@@ -36,11 +38,12 @@
    [valid-password? (user? string? . -> . boolean?)]
    [update-user-email (user? string? . -> . void?)]
    [update-user-password (user? string? . -> . void?)]
-   [user->packages (opt-> (user?) ((union (listof natural-number/c) false/c))  (listof package?))]
+   [user->packages (-> user? (listof natural-number/c)  (listof package?))]
+   [user->packages/no-repositories (-> user? (listof package?))]
    [get-category-names (-> (listof category?))]
    [add-package-to-db!
     (user? string? (or/c (listof xexpr?) false/c) (or/c string? false/c) . -> . package?)]
-   [get-package-listing (natural-number/c . -> . (listof category?))]
+   [get-package-listing (-> natural-number/c (listof category?))]
    [get-matching-packages
     (opt->*
      (string? string? string? (union natural-number/c false/c) natural-number/c (union natural-number/c false/c))
@@ -359,20 +362,25 @@
   (define (blurb->blurb-string b)
     (format "~s" b))
   
-  (define user->packages
-    (opt-lambda (u [repositories #f])
+  (define (user->packages u repositories)
       (let* ([query (concat-sql "SELECT * FROM all_packages ap WHERE contributor_id = "[integer (user-id u)]
                                 [#:sql
-                                 (if repositories 
-                                     (string-append
+                                   (string-append
                                       " AND repository_id IN "
-                                      "(" (srfi13:string-join (map number->string repositories) ", ") ")")
-                                     "")]
+                                      "(" (srfi13:string-join (map number->string repositories) ", ") ")")]
                                 " ORDER BY package_id, maj DESC, min DESC;")]
              [pkgversion-rows (send *db* map query list)])
         (sort 
          (version-rows->packages (all_packages) pkgversion-rows)
-         (lambda (a b) (string<? (package-name a) (package-name b)))))))
+         (lambda (a b) (string<? (package-name a) (package-name b))))))
+            
+  (define (user->packages/no-repositories u)
+      (let* ([query (concat-sql "SELECT * FROM all_packages_without_repositories ap WHERE contributor_id = "[integer (user-id u)]
+                                " ORDER BY package_id, maj DESC, min DESC;")]
+             [pkgversion-rows (send *db* map query list)])
+        (sort 
+         (version-rows->packages (all_packages_without_repositories) pkgversion-rows)
+         (lambda (a b) (string<? (package-name a) (package-name b))))))
             
   ;; get-category-names : -> (listof category?)
   ;; produces the current list of all available categories and their corresponding ids,
@@ -488,17 +496,17 @@
                               most_recent_packages
                               packages_with_categories
                               packages_without_categories))))
-  
+
   (define (fld table-cols row column)
     (let ([ans (list-ref row (idx-of column table-cols))])
       (if (sql-null? ans)
           #f
           ans)))
   
-  (define (idx-of s l)
-    (let loop ([n 0] [l l])
+  (define (idx-of s orig-l)
+    (let loop ([n 0] [l orig-l])
       (cond
-        [(null? l) (error 'idx-of "couldn't find item in list: ~e" s)]
+        [(null? l) (error 'idx-of "couldn't find item: ~e in list: ~e" s orig-l)]
         [(eq? s (car l)) n]
         [else (loop (add1 n) (cdr l))])))
   
@@ -553,22 +561,24 @@
   
   ;; get-package-by-id : nat nat -> (union package #f)
   ;; gets the given package id, but only if its owner is the given owner
+  ;; uses all_packages_without_repositories, so the repository info is bogus
   (define (get-package-by-id pkg-id user-id)
     (let* ([query 
             (concat-sql
-             "SELECT * FROM all_packages WHERE contributor_id = "[integer user-id]
+             "SELECT * FROM all_packages_without_repositories WHERE contributor_id = "[integer user-id]
              " AND package_id = "[integer pkg-id]
              " ORDER BY maj DESC, min DESC;")]
            [pkgversion-rows (send *db* map query list)])
-      (version-rows->package (all_packages) pkgversion-rows)))
+      (version-rows->package (all_packages_without_repositories) pkgversion-rows)))
          
   (define (version-rows->packages columns pkgversion-rows)
     (map
      (λ (rows) (version-rows->package columns rows))
      (groupby (λ (pvr) (fld columns pvr 'package_id)) pkgversion-rows)))
   
-  ;; this function relies on the idea the rows passed in will be from a derivative of the all_packages
-  ;; query and at least have its rows as a prefix
+  ;; this function relies on the idea the rows passed in will be 
+  ;; a derivative of the all_packages or all_packages_without_repositories
+  ;; query and at least have their common rows as a prefix
   (define (version-rows->package columns pkgversion-rows)
     (cond
       [(null? pkgversion-rows) #f]
@@ -586,7 +596,9 @@
                      [maj (fld columns leader-row 'maj)]
                      [min (fld columns leader-row 'min)])
                 (let loop ([items (cdr rows)]
-                           [reps (list (fld columns leader-row 'repository_id))])
+                           [reps (if (member 'repository_id columns)
+				     (list (fld columns leader-row 'repository_id))
+				     '())])
                   (cond
                     [(or (null? items)
                          (not (and (= maj (fld columns (car items) 'maj))
@@ -598,7 +610,9 @@
                     [else
                      (loop
                       (cdr items)
-                      (cons (fld columns (car items) 'repository_id) reps))])))))
+		      (if (member 'repository_id columns)
+			  (cons (fld columns (car items) 'repository_id) reps)
+			  '()))])))))
         (fld columns (car pkgversion-rows) 'bugtrack_id))]))
   
   

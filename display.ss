@@ -54,7 +54,6 @@
 
   (define rep-id->name (t-compose repository-name rep-id->rep))
   
-  
   (define (start req)
     
     (define (default-exception-handler e)
@@ -219,8 +218,8 @@
 
   (define (pvs->table pkg pvs to-load-fn)
     `(table ((width "100%"))
-            (thead ((class "filledin"))
-             (th "PLaneT version") (th "External Version") (th "Source") (th "DLs") (th "Docs") (th "Req. PLT"))
+            (tr ((class "filledin"))
+             (td ((align "center")) (b "PLaneT version")) (td ((align "center")) (b "External Version")) (td  ((align "center")) (b "Source")) (td  ((align "center")) (b "DLs")) (td  ((align "center")) (b "Docs")) (td  ((align "center")) (b "Req. PLT")))
             ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
   
   (define (load-current pkg pv)
@@ -274,13 +273,13 @@
           (td ((width "8em") (valign "center") (class "filledin"))
               ,(or (pkgversion-required-core pv) "[none]")))
       (tr
-          (td ((colspan "6") (width "*") (valign "top"))
-              "To load:  " (tt ,(to-load-fn pkg pv))))
+          (td ((colspan "6") (valign "top"))
+              "To load: " (tt ,(to-load-fn pkg pv))))
       (tr (td ((colspan "6")) (small "Available in repositories: "
                                      ,(my-string-join  ", " (map rep-id->name (pkgversion-repositories pv))))))
       (tr (td ((colspan "6") (class "blurb"))
-              ,@(or (pkgversion-blurb pv)
-                    `("[no release notes]"))))))
+              ,@(map remove-pre (or (pkgversion-blurb pv)
+                    `("[no release notes]")))))))
   
   ;; ============================================================
   ;; PACKAGE PAGE

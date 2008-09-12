@@ -195,7 +195,8 @@
   
   (provide/contract
    [with-problems
-    (((listof problem?) 
+    (opt->
+     ((listof problem?) 
       (->
        (listof string?)
        (opt-> (symbol?) ((any/c . -> . any)) any)
@@ -203,7 +204,7 @@
        any))
      ((-> any/c any)
       (-> any/c any))
-     . opt-> . any)])
+     any)])
   
   (define (extract key items)
     (srfi1:filter-map (lambda (pr) (and (eq? (car pr) key) (cadr pr))) items))

@@ -328,17 +328,14 @@
 ;; logged-in-user stuff
 (define (main-interaction-loop repository user)
   
-  (define (page titles bodies)
-    (let ((d (mkdisplay* titles bodies repository user)))
-    (fprintf (current-error-port) "build.1 ~s\n" d)
-    d))
+  (define (page titles bodies) (mkdisplay* titles bodies repository user))
   
   ;; html pages
   (define (main-loop-page problems)
     (with-problems problems
                    (λ (general-errors value-for message-for)
                      (lambda (k)
-                       (define packages (user->packages user)) 
+                       (define packages (user->packages/no-repositories user)) 
                        (define (package->rows pkg)
                          (let ([v (car (package-versions pkg))])
                            `((tr ((class "filledin")) 
@@ -868,7 +865,7 @@ function update(status) {
               ((error-display-handler) (format "~a:\n ~a" (current-date-string) (exn-message e)) e)
               (flush-output (current-error-port)))
             (flush-output)
-            (loop `((general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))))])
+            (loop `(,general-oops)))])
       (let* ([request (send/suspend/nocache (main-loop-page problems))]
              [bindings (request-bindings request)]
              [action (get request 'action)])
@@ -881,10 +878,10 @@ function update(status) {
           [(fulledit)
            (with-handlers ([exn:fail? 
                             (λ (e) 
-                              ((error-display-handler) 
-                               (format "fulledit: ~a:\n ~a" (current-date-string) (exn-message e))
-                               e)
-                              (loop `((general "An internal error occured. Sorry about that."))))])
+			       ((error-display-handler) 
+				(format "fulledit: ~a:\n ~a" (current-date-string) (exn-message e))
+				e)
+			       (loop `(,general-oops)))])
              (let ([pkg (get-package-by-id (string->number (get request 'package)) 
                                            (user-id user))])
                (do-pkg-edit pkg)
@@ -897,7 +894,7 @@ function update(status) {
                                 ((error-display-handler) 
                                  (format "edit: ~a:\n ~a" (current-date-string) (exn-message e))
                                  e)
-                                (loop `((general "An internal error occured. Sorry about that."))))])
+                                (loop `(,general-oops)))])
                
                (do-pkgversion-edit pkgver)
                (loop '())))]
@@ -1039,3 +1036,5 @@ function update(status) {
 
 (define (legal-core-version? s)
   (core-version-string->code s))
+
+(define general-oops '(general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))
