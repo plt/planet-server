@@ -621,14 +621,13 @@
   ;; [note: why does this need the user id, when pkgversion is more specific than user id?]
   (define (get-package-version-by-id id user-id)
     (let* ([query (concat-sql
-                   "SELECT * FROM all_packages WHERE package_version_id = "[integer id]
+                   "SELECT * FROM all_packages_without_repositories WHERE package_version_id = "[integer id]
                    " AND contributor_id = "[integer user-id]";")]
            [resls (send *db* map query list)])
       (cond
         [(null? resls) #f]
         [else
-         (let ([reps (srfi1:filter-map (λ (row) (fld (all_packages) row 'repository_id)) resls)])
-           (row->pkgversion (all_packages) (car resls) reps))])))
+	 (row->pkgversion (all_packages_without_repositories) (car resls) '())])))
     
   (define (reassociate-package-with-categories pkg categories)
     (let ([t (send *db* get-transaction)])
