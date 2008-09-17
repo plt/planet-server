@@ -617,7 +617,8 @@
   
   
   ;; get-package-version-by-id : natural-number[id] natural-number[id] -> pkgversion | #f
-  ;; gets the package version named by the given ids
+  ;; gets the package version named by the given ids, doing two queries in order
+  ;; to get the correct repository information
   ;; [note: why does this need the user id, when pkgversion is more specific than user id?]
   (define (get-package-version-by-id id user-id)
     (let* ([query (concat-sql
@@ -627,8 +628,12 @@
       (cond
         [(null? resls) #f]
         [else
-	 (row->pkgversion (all_packages_without_repositories) (car resls) '())])))
-    
+	 (let* ([rep-query (concat-sql
+			    "SELECT package_version_id, repository_id FROM version_repositories WHERE package_version_id = "
+			    [integer id])]
+		[rep-resls (send *db* map rep-query list)])
+	   (row->pkgversion (all_packages_without_repositories) (car resls) (map (lambda (x) (list-ref x 1)) rep-resls)))])))
+  
   (define (reassociate-package-with-categories pkg categories)
     (let ([t (send *db* get-transaction)])
       (send t exec (concat-sql "DELETE FROM package_categories WHERE package_id = "[integer (package-id pkg)]"; ")) 
