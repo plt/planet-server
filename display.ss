@@ -4,10 +4,12 @@
   ;; servlet that displays planet's contents to the world
   
   
-  (require "db.ss" "data-structures.ss" "html.ss" "cookie-monster.ss" "configuration.ss")
-  (require  "tracplanet/trac-admin.ss")
-  (require "tracplanet/xmlrpc/xml-rpc.ss")
-  (require scheme/list scheme/string scheme/match
+  (require "db.ss" "data-structures.ss" "html.ss" 
+           "cookie-monster.ss" "configuration.ss")
+  (require  "tracplanet/trac-admin.ss"
+            "tracplanet/xmlrpc/xml-rpc.ss"
+            "top-bug-closers.ss")
+  (require scheme/list scheme/string scheme/match scheme/date
            scheme/pretty
            net/url net/cookie
            xml/xml
@@ -164,7 +166,7 @@
 		     (table ((width "100%")); ((bgcolor "lightblue") (width "100%") (height "100%")) ;; figure out a good color
 		      (tr
 		       (td
-			 (table ((width "100%"))  ,@(make-bug-closer-table))))))))
+                        ,(make-bug-closer-table)))))))
             (table ,@(srfi1:append-map summary-table-rows (get-package-listing (rep-id))))))
      #:navkey 'planet))
 
@@ -527,48 +529,43 @@
     (ticket->gen-row ticketa ticket-owner))
 
 
-  ; list? exact-nonneg-int? -> (and/c list? (=? (length list) exact-nonneg int))
-  (define (take-it lista number)
-    (if (or (zero? number) (null? lista))
-        empty
-        (cons (car lista) (take-it (cdr lista) (- number 1)))))
-
-  ;bug-closer-table: void -> listof xexpr?[tr]
-  (define (bug-closer-rows)
-    (let* ([query-results (ticket-query "status=closed")]
-           [bug-closers (map ticket-owner (map ticket-get-wrapper  query-results))]
-           [hash-table (make-hash)])
-      (for-each (lambda(x)
-                  (let* ([value (hash-ref hash-table x 0)])
-                    (hash-set! hash-table x (+ 1 value))))
-                bug-closers)
-      (let* ([hash-list (hash-map hash-table (lambda (x y) (cons y x)))]
-             [sorted           (sort hash-list (lambda(x y)
-                                                 (> (car x) (car y))))]
-             [top-three         (take-it sorted (min (length sorted) 3))])
-        (if (null? top-three)
-            (list `(tr (td ((colspan "2"))
-                           (i "There are no current closed bug reports. Be the first to close a bug!"))))
-            (srfi1:append-map (lambda (x) (fill-bug-table (cdr x) (car x)))
-                              top-three)))))
-
-
   (define (fill-bug-table name bugs)
     `((tr ((class "filledin"))
           (td ((valign "top") (class "User")) (a ((href ,(format "/display.ss?owner=~a" name))) ,name))
           (td ((valign "center") (class "Bugs")) ,(number->string bugs)))))
 
   (define (make-bug-closer-table)
-    `((tr (td ((colspan "2"))
-              (strong "Top Bug Closers       ")
+    `(table 
+      ((width "100%")) 
+      (tr (td ((colspan "2"))
+              (strong "Top Bug Closers")
               "["
               (a ((href ,(string-append local-url "trac/reports/1"))) "Trac")
               "]"))
-
-      (tr (td ((class "heading")) "Username")
-          (td ((class "heading")) "# Closed"))
-      ,@(bug-closer-rows)))
-
+      ,@(let-values ([(date top-three) (top-bug-closers)])
+          (cond
+            [(not date) `((tr (td ((colspan "2")) 
+                                  (center
+                                   (table ((width "80%"))
+                                          (tr
+                                           (td
+                                            (i "Top bug closer records are not available now"))))))))]
+            [else
+             `((tr (td 
+                    ((colspan "2")) 
+                    (font 
+                     ((size "-2"))
+                     "as of " 
+                     ,(parameterize ([date-display-format 'rfc2822])
+                        (date->string date #t)))))
+               
+               (tr (td ((class "heading")) "Username")
+                   (td ((class "heading")) "# Closed"))
+               ,@(if (null? top-three)
+                     (list `(tr (td ((colspan "2"))
+                                    (i "There are no current closed bug reports. Be the first to close a bug!"))))
+                     (srfi1:append-map (lambda (x) (fill-bug-table (cadr x) (car x)))
+                                       top-three)))]))))
   
   (define (pkg->all-tickets-url pkg)
     (make-url
