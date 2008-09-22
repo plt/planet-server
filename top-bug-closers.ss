@@ -7,25 +7,31 @@
 
 (define delay (* 60 60)) ;; one hour
 (define results-file "/local/planet/top-bug-closers")
+;(define results-file "/tmp/top-bug-closers")
 
 (define (spawn-bug-closer-thread)
   (thread
    (lambda ()
      (sleep 2) ;; wait a little before the first time it is recomputed after a restart
      (let loop ()
-       (let ([now (struct->vector (seconds->date (current-seconds)))]
-             [top (compute-top-bug-closers)])
-         (with-lock
-          (lambda ()
-            (call-with-output-file results-file
-              (lambda (port)
-                (write now port)
-                (display "\n" port)
-                (write top port)
-                (display "\n" port))
-              #:exists 'truncate))))
+       (compute-and-write-top-bug-closers)
        (sleep delay)
        (loop)))))
+
+(define (compute-and-write-top-bug-closers)
+  (let ([now (struct->vector (seconds->date (current-seconds)))])
+    (let-values ([(vals cpu real gc) (time-apply (lambda () (compute-top-bug-closers)) '())])
+      (with-lock
+       (lambda ()
+         (call-with-output-file results-file
+           (lambda (port)
+             (write now port)
+             (newline port)
+             (write (car vals) port)
+             (newline port)
+             (write (list 'time-to-compute 'cpu cpu 'real real 'gc gc) port)
+             (newline port))
+           #:exists 'truncate))))))
 
 ;; top-bug-closers : -> (values (or/c #f number) (listof (list number string)))
 (define (top-bug-closers)
@@ -44,9 +50,10 @@
   (let* ([query-results (ticket-query "status=closed")]
          [bug-closers (map ticket-owner (map ticket-get-wrapper query-results))]
          [hash-table (make-hash)])
-    (for-each (lambda(x)
-                (let* ([value (hash-ref hash-table x 0)])
-                  (hash-set! hash-table x (+ 1 value))))
+    (for-each (lambda (x)
+                (unless (equal? x "robby")
+                  (let* ([value (hash-ref hash-table x 0)])
+                    (hash-set! hash-table x (+ 1 value)))))
               bug-closers)
     (let* ([hash-list (hash-map hash-table (lambda (x y) (list y x)))]
            [sorted (sort hash-list compare-rows)])
@@ -65,7 +72,6 @@
       '()
       (cons (car lista) (take-it (cdr lista) (- number 1)))))
 
-
 (define with-lock
   (let ([lock (make-semaphore 1)])
     (lambda (f)
@@ -73,5 +79,3 @@
        (lambda () (semaphore-wait lock))
        f
        (lambda () (semaphore-post lock))))))
-
-(compute-top-bug-closers)
