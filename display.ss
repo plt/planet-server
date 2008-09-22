@@ -538,7 +538,7 @@
     `(table 
       ((width "100%")) 
       (tr (td ((colspan "2"))
-              (strong "Top Bug Closers")
+              (strong "Top Bug Closers ")
               "["
               (a ((href ,(string-append local-url "trac/reports/1"))) "Trac")
               "]"))
