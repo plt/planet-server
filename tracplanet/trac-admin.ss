@@ -56,7 +56,7 @@
 
 ; ticket-get-wrapper : int -> ticket
 (define (ticket-get-wrapper tickid)
-  (let* ([url (string->url (format "http://localhost:8080/trac/ticket/~a?format=tab" tickid))]
+  (let* ([url (string->url (format "http://~a:8080/trac/ticket/~a?format=tab" trac-host tickid))]
          [page (get-pure-port url)])
     (read-line page) ;; flush out the table of contents line
     (let ([line (get-one-line-of-table page)])
@@ -191,6 +191,17 @@
 ;; fields are separated by tabs, but also support
 ;; quoted fields (which may then contain newlines and other things)
 (define (get-one-line-of-table page)
+
+  ;; the sexp below prints out the contents
+  ;; of the port to the logfile, for use debugging
+  #;
+  (let ([p (peeking-input-port page)])
+    (let loop ()
+      (let ([c (read-char p)])
+	(unless (eof-object? c)
+		(display c (current-error-port))
+		(loop)))))
+
   (let loop ([in-quotes? #f]
 	     [pending-word '()]
 	     [prev-char #f])

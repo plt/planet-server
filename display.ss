@@ -513,7 +513,7 @@
                   [else `((td ((valign "center") (class "reporter")) ,(second-field t)))])
           (td ((valign "center")) ,(ticket-reporter t))
           (td ((valign "center")) ,(ticket-type t))
-          (td ((valign "center")) ,(ticket-version t)))
+          (td ((valign "center")) ,(ticket-planetversion t)))
       (tr ((class "filledin")) (td ((colspan "4") (valign "top")) ,(ticket-summary t)))))
 
 

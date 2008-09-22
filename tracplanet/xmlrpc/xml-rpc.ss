@@ -6,13 +6,15 @@
          (lib "string.ss")
          (lib "list.ss")
          (lib "srfi/13.ss"))
-(define url "http://localhost:8080/trac/xmlrpc")
+
+
+(define trac-host "localhost")
+(define url (format "http://~a:8080/trac/xmlrpc" trac-host))
 (define newfiles "/local/svn/iplt/planet/tracplanet")
 (define xmlrpc (string-append newfiles "/xmlrpc"))
 
-
-
 (provide/contract 
+ [trac-host string?]
  [py_script_execute (-> string? (listof string?) boolean? (or/c port? (listof string?)))]
  [a_string (-> (listof (cons/c string? string?)) (listof string?))]
  [port-wrapper (-> port? (listof string?))]
@@ -41,10 +43,11 @@
    priority
    milestone
    component
-   version
    resolution
    keywords
-   cc))
+   cc
+   planetversion
+   pltversion))
 (provide (struct-out ports))
 (provide (struct-out ticket))
 
