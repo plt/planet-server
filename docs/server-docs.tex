@@ -1,7 +1,7 @@
 \documentclass{article}
+\usepackage{pslatex}
 
 \title{PLaneT Server Deployment Documentation}
-\author{Jacob Matthews}
 
 \begin{document}
 \maketitle
@@ -28,19 +28,20 @@ machine has an NFS mount and you can access normal CS home directories
 from there, currently all PLaneT-specific configuration lives in
 subdirectories off of /local (see below for details of what lives where).
 
-\subsection{Core PLaneT Services}
+\section{Core PLaneT Services}
 
 The planet server's job is to run three services:
 \begin{itemize}
 \item Apache
 \item the PLT Scheme Web Server
 \item PostgreSQL
+\item Trac
 \end{itemize}
 
-All three of these services must be running for the system to
-function. Their roles are as follows:
+All four of these services must be running for the system to
+function. Their roles are described in the following subsections
 
-\subsubsection{Apache}
+\subsection{Apache}
 
 Apache's job is to serve static content (other than PLaneT packages
 themselves), rewrite URLs using \texttt{mod\_rewrite}, and to proxy incoming
@@ -208,20 +209,38 @@ except user postgres. Two files of interest in here:
 \end{itemize}
 \end{itemize}
 
-\subsection{Looking at the database}
+\subsubsection{Looking at the database}
 
 The sql client lives at \texttt{/local/pgsql/psql} --- you'll need to
 say the magic words 
 \begin{center}
 \tt env PGDATA=/local/pgsql/data/ /local/pgsql/bin/psql planet jacobm
 \end{center}
-to connect to the database to make queries.
+to connect to the database to make queries. The database password is \texttt{matrix}.
+
+~
 
 \textbf{WARNING: YOU ARE ACCESSING LIVE DATA! IT IS POSSIBLE
 TO SCREW THINGS UP BADLY WITH AN INCORRECT UPDATE, DELETE, OR INSERT
 HERE! TRY IT ELSEWHERE FIRST!}
 
-\subsection{Additional utility}
+\subsection{Trac}
+
+To install Trac, we had to install a newer version of python that is easily available. It is in \texttt{/local/pythont}.
+
+To administer trac, run
+\begin{center}
+\texttt{/local/pythont/bin/trac-admin /local/bugs/tracfiles/}
+\end{center}
+
+The \texttt{trac} code for the trac installation is in the python directory
+\begin{center}
+ \texttt{/local/pythont/lib/python2.5/site-packages/}
+\end{center}
+
+The code has been modified. Specifically the file \texttt{trac/ticket/web\_ui.py} has been changed to include validation of the PLT version number as an anti-spam measure.
+
+\section{Starting \& Stopping the Services}
 
 \texttt{/local/planet/bin} contains helpers that make it easier to bring up
 and take down planet services as necessary.
