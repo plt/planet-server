@@ -48,13 +48,17 @@
 
 (define (compute-top-bug-closers)
   (let* ([query-results (ticket-query "status=closed")]
-         [bug-closers (map ticket-owner (map ticket-get-wrapper query-results))]
+         [tickets (map ticket-get-wrapper query-results)]
          [hash-table (make-hash)])
-    (for-each (lambda (x)
-                (unless (equal? x "robby")
-                  (let* ([value (hash-ref hash-table x 0)])
-                    (hash-set! hash-table x (+ 1 value)))))
-              bug-closers)
+    (for-each (lambda (ticket)
+		(let ([closer (ticket-owner ticket)])
+		  (unless 
+		   (equal? closer "robby")
+		   (unless
+		    (equal? (ticket-reporter ticket) closer)
+		    (let* ([value (hash-ref hash-table closer 0)])
+		      (hash-set! hash-table closer (+ 1 value)))))))
+              tickets)
     (let* ([hash-list (hash-map hash-table (lambda (x y) (list y x)))]
            [sorted (sort hash-list compare-rows)])
       (take-it sorted (min (length sorted) 3)))))

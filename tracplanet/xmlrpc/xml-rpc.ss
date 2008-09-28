@@ -7,7 +7,6 @@
          (lib "list.ss")
          (lib "srfi/13.ss"))
 
-
 (define trac-host "localhost")
 (define url (format "http://~a:8080/trac/xmlrpc" trac-host))
 (define newfiles "/local/svn/iplt/planet/tracplanet")
