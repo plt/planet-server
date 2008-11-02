@@ -129,6 +129,9 @@
                   ((eof-object? c)
                    '(span ([class "selfeval"]) "#"))
                   ((char=? c #\|) (scm-output-extended-comment))
+                  ((char=? c #\;) 
+                   (get-actual-char)
+                   `(span ((class "comment")) "#;"))
                   (else (toss-back-char #\#) (scm-output-token (scm-get-token))))))]
 
            [scm-output-next-chunk
@@ -244,11 +247,13 @@
                         (reverse
                          (let loop ((s '()) (esc? #f))
                            (let ((c (get-actual-char)))
-                             (case c
-                               ((#\") (if esc? (loop (cons c s) #f)
-                                          s))
-                               ((#\\) (loop (cons c s) (not esc?)))
-                               (else  (loop (cons c s) #f)))))))
+                             (if (eof-object? c)
+                                 s
+                                 (case c
+                                   ((#\") (if esc? (loop (cons c s) #f)
+                                              s))
+                                   ((#\\) (loop (cons c s) (not esc?)))
+                                   (else  (loop (cons c s) #f))))))))
                        "\"")))])
 
         (^formatter snoop-actual-char scm-output-next-chunk))))
