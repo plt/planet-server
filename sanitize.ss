@@ -27,14 +27,19 @@ This cuts out unrecognized html tags and attributes from xexprs to try to preven
   (match xexpr
     [`(pre ,attrs ,stuff ...) 
      `(tt ,@(apply append (map split-newlines stuff)))]
-    [`(,tag ,attrs ,stuff ...)
+    [`(,tag ((,attrs ,bindings) ...) ,stuff ...)
      (if (good-tag? tag)
-         `(,tag ,(filter-attrs attrs) ,@(map sanitize stuff))
+         `(,tag ,(filter-attrs attrs bindings) ,@(map sanitize stuff))
+         `(div ,@(map sanitize stuff)))]
+    [`(,tag ,stuff ...)
+     (if (good-tag? tag)
+         `(,tag ,@(map sanitize stuff))
          `(div ,@(map sanitize stuff)))]
     [else xexpr]))
 
-(define (filter-attrs attrs)
-  (filter (λ (x) (good-attribute? (car x))) attrs))
+(define (filter-attrs attrs bindings)
+  (filter (λ (x) (good-attribute? (car x)))
+          (map list attrs bindings)))
 
 (define (split-newlines stuff)
   (cond
@@ -47,3 +52,9 @@ This cuts out unrecognized html tags and attributes from xexprs to try to preven
              (cond [(null? strs) (list str)]
                    [else (list* str '(br) (loop (car strs) (cdr strs)))]))))]
     [else (list stuff)]))
+
+#|
+(sanitize "x")
+(sanitize `(abbr ((style "x") (href "y")) nbsp))
+(sanitize `(abbr (script ((style "x") (href "y")) nbsp)))
+|#
