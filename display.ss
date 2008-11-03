@@ -5,7 +5,8 @@
   
   
   (require "db.ss" "data-structures.ss" "html.ss" 
-           "cookie-monster.ss" "configuration.ss")
+           "cookie-monster.ss" "configuration.ss"
+           "sanitize.ss")
   (require  "tracplanet/trac-admin.ss"
             "tracplanet/xmlrpc/xml-rpc.ss"
             "top-bug-closers.ss")
@@ -196,27 +197,7 @@
                (pkgversion-name p)
                'mdash))
          (td ((valign "top")) (a ((href ,(package->owner-link pkg))) ,(package-owner pkg)))
-         (td ((valign "top")) ,@(map remove-pre (or (package-blurb pkg) '("[no description available]")))))))
-  
-  (define (remove-pre xexpr)
-    (match xexpr
-      [`(pre ,stuff ...) 
-       `(tt ,@(apply append (map split-newlines stuff)))]
-      [`(,stuff ...) (map remove-pre stuff)]
-      [else xexpr]))
-
-  (define (split-newlines stuff)
-     (cond
-       [(string? stuff) 
-        (let ([strs (regexp-split #rx"\n" stuff)])
-          (if (or (null? strs) (null? (cdr strs)))
-              strs
-              (let loop ([str (car strs)]
-                         [strs (cdr strs)])
-                (cond [(null? strs) (list str)]
-                      [else (list* str '(br) (loop (car strs) (cdr strs)))]))))]
-       [else (list stuff)]))
-
+         (td ((valign "top")) ,@(map sanitize (or (package-blurb pkg) '("[no description available]")))))))
 
   (define (pvs->table pkg pvs to-load-fn)
     `(table ((width "100%"))
@@ -280,7 +261,7 @@
       (tr (td ((colspan "6")) (small "Available in repositories: "
                                      ,(my-string-join  ", " (map rep-id->name (pkgversion-repositories pv))))))
       (tr (td ((colspan "6") (class "blurb"))
-              ,@(map remove-pre (or (pkgversion-blurb pv)
+              ,@(map sanitize (or (pkgversion-blurb pv)
                     `("[no release notes]")))))))
   
   ;; ============================================================
