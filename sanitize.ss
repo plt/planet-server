@@ -15,11 +15,11 @@ This cuts out unrecognized html tags and attributes from xexprs to try to preven
 (define good-attributes
   '(abbr accept accept-charset accesskey action align alt axis border cellpadding cellspacing char charoff charset checked cite class clear cols colspan color compact coords datetime dir disabled enctype for frame headers height href hreflang hspace id ismap label lang longdesc maxlength media method multiple name nohref noshade nowrap prompt readonly rel rev rows rowspan rules scope selected shape size span src start summary tabindex target title type usemap valign value vspace width))
 
-(define tag-ht (make-hash))
+(define tag-ht (make-hasheq))
 (for-each (λ (x) (hash-set! tag-ht x #t)) good-tags)
 (define (good-tag? x) (hash-ref tag-ht x #f))
 
-(define attr-ht (make-hash))
+(define attr-ht (make-hasheq))
 (for-each (λ (x) (hash-set! attr-ht x #t)) good-attributes)
 (define (good-attribute? x) (hash-ref attr-ht x #f))
 
