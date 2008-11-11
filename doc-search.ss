@@ -1,16 +1,18 @@
-#lang scheme/base
+#lang scheme
 
 (require 
+ web-server/managers/none
+ web-server/servlet
  "configuration.ss"
  "data-structures.ss"
  "db.ss"
- "html.ss" 
- 
- web-server/servlet)
+ "html.ss")
 
-(provide interface-version timeout start)
-(define interface-version 'v1)
-(define timeout +inf.0)
+(define instance-expiration-handler #f)
+(define manager
+  (create-none-manager instance-expiration-handler))
+(define interface-version 'v2)
+(provide interface-version manager start)
 
 (define (start req)
   (define (default-exception-handler e)

@@ -21,9 +21,8 @@
   (define instance-expiration-handler #f)
   (define manager
         (create-none-manager instance-expiration-handler))
-
- 
-  (provide interface-version timeout start)
+  (define interface-version 'v2)
+  (provide interface-version manager start)
   
   (provide gen-package-page
            req           
@@ -33,8 +32,7 @@
   
   (startup) ; initialize the database
   
-  (define interface-version 'v1)
-  (define timeout +inf.0)
+  
   
   (define local-url "http://planet.plt-scheme.org/")
   

@@ -1,30 +1,33 @@
 (module planet-servlet mzscheme
-
+  
   ;; this servlet implements the PLaneT response mechanism over HTTP
   ;; it does not support all the features planned for the full
   ;; PLaneT protocol (in particular it won't do negotiation) but
   ;; then again the regular planet server doesn't either so why
   ;; make firewalls angry?
-
+  
   (require (only "planet-server.ss" handle-one-request)
            "db.ss"
            "data-structures.ss"
            (all-except (lib "planet-shared.ss" "planet" "private") legal-language?)
-
+           
            (lib "servlet.ss" "web-server")
+           web-server/managers/none
            (lib "string.ss"))
-
-  (provide interface-version timeout start)
-  (define interface-version 'v1)
-  (define timeout +inf.0)
-
+  
+  (define instance-expiration-handler #f)
+  (define manager
+    (create-none-manager instance-expiration-handler))
+  (define interface-version 'v2)
+  (provide interface-version manager start)
+  
   (define (nat-or-false? x) (or (not x) (nat? x)))
   (define (list-of-strings? v)
     (and (list? v) (andmap string? v)))
-
+  
   ; start : request -> response
   (define (start initial-request)
-
+    
     ;; error-code->status-code : error-code -> (list number string)
     ;; get the HTTP status code that goes with the given error
     (define (error-code->status-code err)
@@ -33,8 +36,8 @@
         [(bad-language) (list 400 "Bad Request")]
         [(malformed-input) (list 400 "Bad Request")]
         [else (error 'error-code->status-code (format "Unknown error code: ~s" err))]))
-
-
+    
+    
     ; transmit-failure/exit : PKG-SPEC ERROR-CODE string -> void
     ; reports a failure to handle a get request
     (define (transmit-failure/exit thepkg error-code msg)
@@ -50,8 +53,8 @@
           #"text/plain"
           '()
           (list msg)))))
-
-
+    
+    
     (with-handlers ([exn? (lambda (e)
                             (send/finish
                              (make-response/full
@@ -61,7 +64,7 @@
                               #"text/plain"
                               '()
                               (list (exn-message e)))))])
-
+      
       (startup)
       (let* ([bindings (request-bindings initial-request)]
              [get (lambda (n ok?)
