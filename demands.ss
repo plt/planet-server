@@ -29,19 +29,19 @@
  [field-in-range (-> symbol? natural-number/c natural-number/c demand/c)]
  [fields-exist (-> (listof symbol?) demand/c)]
  [fields-nonblank (-> (listof symbol?) demand/c)]
- [fields-ascii (->* () (listof symbol?) (demand/c))]
+ [fields-ascii (->* () () #:rest (listof symbol?) demand/c)]
  [field-constraint ((procedure? #|should take the number of strings = to the given # of symbols, at least, and return problems|#) 
                     (listof symbol?)
                     . ->* .
-                    (demand/c))]
- [field-lengths<= (->* (natural-number/c) (listof symbol?) (demand/c))]
- [field-lengths-in (->* (natural-number/c natural-number/c) (listof symbol?) (demand/c))]
- [field-lengths>= (->* (natural-number/c) (listof symbol?) (demand/c))]
+                    demand/c)]
+ [field-lengths<= (->* (natural-number/c) () #:rest (listof symbol?) demand/c)]
+ [field-lengths-in (->* (natural-number/c natural-number/c) () #:rest (listof symbol?) demand/c)]
+ [field-lengths>= (->* (natural-number/c) () #:rest (listof symbol?) demand/c)]
  ;; surely this next one is a bad api
  [wrap-as-demand-p (;(->* () (listof string?) any) (->* () (listof string?) ((listof problem?))) ;; i want an -> that says "i'm not enforcing arity"
                     procedure? procedure?
                                . -> .
-                               (->* () (listof string?) ((listof problem?))))]
+                               (->* () () #:rest (listof string?) (listof problem?)))]
  [problem? (-> any/c boolean?)]
  [demand/c contract?])
 
