@@ -16,7 +16,28 @@
 
 (provide interface-version start manager)
 (define interface-version 'v2)
-(define manager (make-threshold-LRU-manager #f 768))
+(define memory-threshold (* 768 1024 1024))
+(define manager 
+  #;(make-threshold-LRU-manager #f memory-threshold)
+  (create-LRU-manager
+   ;; Called when an instance has expired.
+   #f
+   ;; The condition below is checked every 5 seconds
+   5
+   ;; One 'life point' is deducted every 10 minutes
+   (* 10 60)
+   ;; If this condition is true a 'life point' is deducted
+   ;; from the continuation
+   (lambda ()
+     (define memory-use (current-memory-use))
+     (define collect?   (or (>= memory-use memory-threshold)
+                            (< memory-use 0)))
+     collect?)
+   ;; The number of 'life points' an continuation starts with
+   #:initial-count 24
+   ;; Logging done whenever an continuation is collected
+   #:inform-p (lambda args
+                (void))))
 
 (startup)
 
@@ -154,9 +175,9 @@
                [password (get r 'password1)])
            (verify-email-address email)
            (let ([user (create-new-user username realname email password)]
-                     [trac-user (when (not (user-exists? username))
+                 [trac-user (when (not (user-exists? username))
                               (user-add username password #f))])
-        
+             
              (main-interaction-loop (car (request->repository r)) user)))])))
   
   (define (reset-password)
@@ -278,7 +299,7 @@
           (cond
             [(null? problems)
              ; update the user's password and then send to the logged-in state
-	     (user-change-password (user-username user) (get r 'password1))
+             (user-change-password (user-username user) (get r 'password1))
              (update-user-password user (get r 'password1))
              (user-change-password (user-username user) (get r 'password1))
              (main-interaction-loop (car (request->repository r)) user)]
@@ -527,7 +548,7 @@ function update(status) {
     ;;  - required core version
     (let* ([pkg (or pkg (get-package-by-id (pkgversion-package-id pkgversion) (user-id user)))]
            [head-revision? (pv=? pkgversion (package->current-version pkg))]
-             
+           
            [current-categories (get-package-categories pkg)]
            [req (send/suspend/demand 
                  (pkgversion-edit-page pkg
@@ -662,9 +683,9 @@ function update(status) {
           (field-in-range 'pv 0 (length (package-versions pkg))))))))
     
     (make-demand-page page-producer demands))
-                                
-                                
-    
+  
+  
+  
   
   ;; this page represents the "new style" and is intended for use with send/suspend/demand
   ;; i should probably switch over the others if this works out
@@ -713,7 +734,7 @@ function update(status) {
                             (tr (td ((valign "top")) "Home page")
                                 (td ,@(on-head 
                                        `((input ((type "text") (name "homepage")
-                                                          (value ,(or homepage ""))))
+                                                               (value ,(or homepage ""))))
                                          ,@(errors-for 'homepage))
                                        `(,(->string* homepage)))))
                             (tr (td ((valign "top")) "Release notes") 
@@ -782,14 +803,14 @@ function update(status) {
                                      (map
                                       (λ (r) 
                                         (let ([rid (repository-id r)])
-                                        `(tr 
-                                          (td (input ((type "checkbox") 
-                                                      (name "repository") 
-                                                      (value ,(number->string rid))
-                                                      ,@(if (memq rid (pkgversion-repositories pkgversion))
-                                                            `((checked "checked"))
-                                                            '()))))
-                                          (td ,(repository-name r)))))
+                                          `(tr 
+                                            (td (input ((type "checkbox") 
+                                                        (name "repository") 
+                                                        (value ,(number->string rid))
+                                                        ,@(if (memq rid (pkgversion-repositories pkgversion))
+                                                              `((checked "checked"))
+                                                              '()))))
+                                            (td ,(repository-name r)))))
                                       reps))))
                             
                             (tr (td ((colspan "2")) (input ((type "submit") (value "Update"))))))))))))
@@ -880,10 +901,10 @@ function update(status) {
           [(fulledit)
            (with-handlers ([exn:fail? 
                             (λ (e) 
-			       ((error-display-handler) 
-				(format "fulledit: ~a:\n ~a" (current-date-string) (exn-message e))
-				e)
-			       (loop `(,general-oops)))])
+                              ((error-display-handler) 
+                               (format "fulledit: ~a:\n ~a" (current-date-string) (exn-message e))
+                               e)
+                              (loop `(,general-oops)))])
              (let ([pkg (get-package-by-id (string->number (get request 'package)) 
                                            (user-id user))])
                (do-pkg-edit pkg)
@@ -923,7 +944,7 @@ function update(status) {
              (cond
                [(null? problems)
                 (begin
-		  (user-change-password (user-username user) (get request 'newpass1))
+                  (user-change-password (user-username user) (get request 'newpass1))
                   (update-user-password user (get request 'newpass1))
                   (loop '((general "Password updated."))))]
                [else (loop problems)]))]
