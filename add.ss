@@ -1,20 +1,22 @@
-#lang scheme/base
-(require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss" "demands.ss"
-         "user-utilities.ss" "cookie-monster.ss")
+#lang scheme
+(require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss" "demands.ss" "demands-servlet.ss"
+         "user-utilities.ss" "cookie-monster.ss" "servlet-helpers.ss")
 (require "tracplanet/trac-admin.ss")
-(require web-server/servlet
-         xml/xml
+(require xml/xml
+         web-server/servlet
          scheme/path
          scheme/list
+         web-server/servlet/bindings
+         web-server/managers/lru
          net/url
          net/sendmail
          scheme/date
          (prefix-in srfi1: srfi/1)
          (prefix-in srfi13: srfi/13))
 
-(provide interface-version timeout start)
-(define interface-version 'v1)
-(define timeout +inf.0)
+(provide interface-version start manager)
+(define interface-version 'v2)
+(define manager (make-threshold-LRU-manager #f 768))
 
 (startup)
 
@@ -65,10 +67,10 @@
          => 
          (λ (u)
            (let* ([passcode (log-user-in u)]
-                  [req (send/forward 
+                  [req (send/suspend
                         (λ (k) 
                           (build-cookie-forwarder 
-                           k 
+                           k
                            (list (build-cookie "username" login #:path "/") 
                                  (build-cookie "passcode" passcode #:path "/")))))])
              (logged-in-actions u req)))]

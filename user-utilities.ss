@@ -1,7 +1,8 @@
 (module user-utilities mzscheme
 
   (require
-   (lib "servlet.ss" "web-server")
+   web-server/servlet/bindings
+   web-server/private/request-structs
    (lib "contract.ss")
    "cookie-monster.ss" "db.ss" "data-structures.ss")
 

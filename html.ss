@@ -2,12 +2,13 @@
 (require 
  "cookie-monster.ss"
  scheme/contract
- (lib "servlet.ss" "web-server")
- (lib "xml.ss" "xml")
+ web-server/private/request-structs
+ web-server/servlet/bindings
  (lib "url.ss" "net"))
 
 (require
  "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
+ #;(file "../web/old/common/layout.ss")
  (file "/local/svn/iplt/web/old/common/layout.ss"))
 
 (define bindings/c (listof (cons/c (or/c symbol? string?) string?)))
@@ -148,34 +149,6 @@
   (cond
     [(string? title) title]
     [else `(a ((href ,(cadr title))) ,(car title))]))
-
-;; ----------------------------------------
-;; http helpers
-(provide send/suspend/nocache send/suspend/doctype)
-(define (send/suspend/nocache response)
-  (send/suspend
-   (λ (k)
-     (let ([xexpr (response k)])
-       (make-response/full 200 
-                           "Okay"
-                           (current-seconds)
-                           #"text/html" 
-                           (list
-                            (make-header #"Cache-Control" #"no-cache")
-                            (make-header #"Pragma" #"no-cache"))
-                           (list doctype (xexpr->string xexpr)))))))
-
-(define (send/suspend/doctype response)
-  (send/suspend
-   (λ (k)
-     (let ([xexpr (response k)])
-       (make-response/full 200 
-                           "Okay"
-                           (current-seconds)
-                           #"text/html" 
-                           '()
-                           (list doctype (xexpr->string xexpr)))))))
-
 
 ;; ----------------------------------------
 ;; url builders (for packages, users)

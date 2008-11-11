@@ -1,6 +1,8 @@
 #lang scheme/base
 (require net/cookie
-         web-server/servlet
+         web-server/servlet/bindings
+         web-server/private/request-structs
+         web-server/private/response-structs
          xml/xml
          scheme/contract)
 
