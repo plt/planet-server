@@ -45,7 +45,7 @@
                  (parameterize ((print-struct #t))
                    (format "~a: ~s" msg thepkg)))
       (let ((status-code (error-code->status-code error-code)))
-        (send/finish
+        (send/back
          (make-response/full
           (car status-code)
           (cadr status-code)
@@ -56,7 +56,7 @@
     
     
     (with-handlers ([exn? (lambda (e)
-                            (send/finish
+                            (send/back
                              (make-response/full
                               500
                               "PLaneT server error"
@@ -92,7 +92,7 @@
                                      (apply values thepkgver))])
                      (when (pkgversion? thepkgver)
                        (log-download (request-client-ip initial-request) thepkgver language-version))
-                     (send/finish
+                     (send/back
                       (make-response/full
                        200
                        "Okay"
