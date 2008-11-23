@@ -6,7 +6,7 @@ This cuts out unrecognized html tags and attributes from xexprs to try to preven
 
 |#
 
-(require scheme/match)
+(require scheme/match xml)
 (provide sanitize)
 
 (define good-tags
@@ -35,7 +35,15 @@ This cuts out unrecognized html tags and attributes from xexprs to try to preven
      (if (good-tag? tag)
          `(,tag ,@(map sanitize stuff))
          `(div ,@(map sanitize stuff)))]
-    [else xexpr]))
+    [else 
+     (if (or (string? xexpr)
+	     (symbol? xexpr)
+	     (exact-nonnegative-integer? xexpr)
+	     (cdata? xexpr)
+	     (comment? xexpr)
+	     (pcdata? xexpr))
+	 xexpr
+	 "")]))
 
 (define (filter-attrs attrs bindings)
   (filter (λ (x) (good-attribute? (car x)))
