@@ -204,12 +204,34 @@
             ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
   
   (define (load-current pkg pv)
-    (format "(require (planet \"~a\" (\"~a\" \"~a\" ~a ~a)))" 
-            (or (pkgversion-default-file pv) "[file]")
-            (package-owner pkg)
-            (package-name pkg)
-            (pkgversion-maj pv)
-            (pkgversion-min pv)))
+    (cond
+     [(equal? (pkgversion-default-file pv) "main.ss")
+      (format 
+       "~s"
+       `(require (planet ,(string->symbol
+			   (format "~a/~a:~a:~a"
+				   (package-owner pkg)
+				   (remove-plt (package-name pkg))
+				   (pkgversion-maj pv)
+				   (pkgversion-min pv))))))]
+     [(and (pkgversion-default-file pv)
+	   (regexp-match #rx"\\.ss$" (pkgversion-default-file pv)))
+      (format 
+       "~s"
+       `(require (planet ,(string->symbol
+			   (format "~a/~a:~a:~a/~a"
+				   (package-owner pkg)
+				   (remove-plt (package-name pkg))
+				   (pkgversion-maj pv)
+				   (pkgversion-min pv)
+				   (regexp-replace #rx"\\.ss$" (pkgversion-default-file pv) ""))))))]
+     [else
+      (format "(require (planet \"~a\" (\"~a\" \"~a\" ~a ~a)))" 
+	      (or (pkgversion-default-file pv) "[file]")
+	      (package-owner pkg)
+	      (package-name pkg)
+	      (pkgversion-maj pv)
+	      (pkgversion-min pv))]))
   
   (define (load-specific pkg pv)
     (format "(require (planet \"~a\" (\"~a\" \"~a\" ~a (= ~a))))" 
@@ -219,6 +241,8 @@
             (pkgversion-maj pv)
             (pkgversion-min pv)))
   
+  (define (remove-plt x) (regexp-replace #rx"\\.plt$" x ""))
+
   ;; doc-link : pkg pkgversion (listof xexpr) -> (listof xexpr)
   ;; produces a link to the documentation of the given package, given a default "no docs exist" xexpr
   (define (doc-link pkg pv failure)
