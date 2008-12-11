@@ -225,13 +225,15 @@
 				   (pkgversion-maj pv)
 				   (pkgversion-min pv)
 				   (regexp-replace #rx"\\.ss$" (pkgversion-default-file pv) ""))))))]
-     [else
+     [else (load-old-style pkg pv)]))
+
+  (define (load-old-style pkg pv)
       (format "(require (planet \"~a\" (\"~a\" \"~a\" ~a ~a)))" 
 	      (or (pkgversion-default-file pv) "[file]")
 	      (package-owner pkg)
 	      (package-name pkg)
 	      (pkgversion-maj pv)
-	      (pkgversion-min pv))]))
+	      (pkgversion-min pv)))
   
   (define (load-specific pkg pv)
     (format "(require (planet \"~a\" (\"~a\" \"~a\" ~a (= ~a))))" 
@@ -398,16 +400,19 @@
                    (table ((width "95%"))
                           (tr
                            (td ((width "18%")) "To load: ")
-                           (td (tt ,(load-current pkg current))))
+                           (td (tt (b ,(load-current pkg current)))))
+			  ,@(if (equal? (load-current pkg current) (load-old-style pkg current))
+				'()
+				(list `(tr (td "Old style:") (td (tt ,(load-old-style pkg current))))))
                           ,@(if (pkgversion-required-core current)
                                 `((tr
-                                   (td "Required PLT Scheme version: ")
+                                   (td "Min PLT Scheme version: ")
                                    (td (tt ,(pkgversion-required-core current)))))
                                 '())
                           (tr 
                            (td ((valign "top")) "Package description: ")
                            (td ((class "filledin"))
-                              (div ,@(or (package-blurb pkg) '("[no description available]")))))
+                              (div ,@(map sanitize (or (package-blurb pkg) '("[no description available]"))))))
                           (tr
                            (td "Downloads this week: ")
                            (td ,(number->string (downloads-this-week current))))

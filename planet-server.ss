@@ -33,7 +33,7 @@
     (startup)
     (cond
       [(legal-language? language-version)
-       (let-values ([(cache-pkg-list client-too-old?)
+       (let-values ([(cache-pkg-list client-mismatch?)
                      (get-matching-packages language-version
                                             (car (pkg-spec-path pkg-spec))
                                             (pkg-spec-name pkg-spec)
@@ -55,8 +55,8 @@
              (begin
                (transmit-failure pkg-spec 
                                  'not-found
-                                 (if client-too-old?
-                                     "Your version of PLT Scheme is too old to run the specified package"
+                                 (if client-mismatch?
+                                     "There are packages matching the criteria, but none match your version of PLT Scheme"
                                      "No package matched the specified criteria"))
                (proceed-k))]))]
       [(regexp-match #rx"^20.+" language-version)

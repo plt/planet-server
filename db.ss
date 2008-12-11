@@ -412,10 +412,11 @@
   ;; ------------------------------------------------------------
   ;; package lookup
   
-  ;; matching-packages : string string string (union nat #f) [nat (union nat #f) | if maj \in nat] -> list pkg-version
+  ;; get-matching-packages : string string string (union nat #f) [nat (union nat #f) | if maj \in nat] -> (values (listof pkg-version) boolean)
   ;; gets all the matching package versions, sorted from best to worst
   ;; [note that ordering by hidden means that all the entries where hidden = true are after all the ones where
   ;;  it is false; this means that hidden packages are only selected if no non-hidden packages fit the request]
+  ;; the boolean indicates if there are any packages at all, without considering the verison of mzscheme
   (define get-matching-packages
     (opt-lambda (requester-core-version pkgowner pkgname maj minlo minhi 
                                         [repository (repository-for-version (core-version-string->code requester-core-version))])
