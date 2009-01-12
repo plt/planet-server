@@ -159,7 +159,7 @@
                      " (also available in your local installation).")
                   (p "This page shows the latest versions of all available packages, sorted by category. ")
                   (p "You can be notified when new packages are added by subscribing to the "
-                     (a ((href "/300/planet.rss")) "RSS feed") " or to the "
+                     (a ((href "/4.x/planet.rss")) "RSS feed") " or to the "
                      (a ((href "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")) "PLaneT-Announce mailing list")"."))
                  (td ((width "30%")(halign "RIGHT")(valign "top"))
 		     (table ((width "100%")); ((bgcolor "lightblue") (width "100%") (height "100%")) ;; figure out a good color
