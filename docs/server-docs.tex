@@ -217,6 +217,15 @@ say the magic words
 \tt env PGDATA=/local/pgsql/data/ /local/pgsql/bin/psql planet jacobm
 \end{center}
 to connect to the database to make queries. The database password is \texttt{matrix}.
+To back up the database, use:
+\begin{center}
+\verb|env PGDATA=/local/pgsql/data/ /local/pgsql/bin/pg_dumpall -c > db.x|
+\end{center}
+and restore it like this:
+\begin{center}
+\verb|env PGDATA=/local/pgsql/data/ /local/pgsql/bin/psql -f db.x postgres|
+\end{center}
+where \texttt{db.x} is the file in the backup.
 
 ~
 
