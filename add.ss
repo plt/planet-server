@@ -176,7 +176,7 @@
            (verify-email-address email)
            (let ([user (create-new-user username realname email password)]
                  [trac-user (when (not (user-exists? username))
-                              (user-add username password #f))])
+                              (user-add username password))])
              
              (main-interaction-loop (car (request->repository r)) user)))])))
   
@@ -1061,3 +1061,4 @@ function update(status) {
   (core-version-string->code s))
 
 (define general-oops '(general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))
+
