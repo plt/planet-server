@@ -1,5 +1,6 @@
 #lang scheme
 (require "db.ss" "package-creation.ss" "data-structures.ss" "html.ss" "configuration.ss" "demands.ss" "demands-servlet.ss"
+         "sanitize.ss"
          "user-utilities.ss" "cookie-monster.ss" "servlet-helpers.ss")
 (require "tracplanet/trac-admin.ss")
 (require xml/xml
@@ -377,10 +378,9 @@
                                                "edit package metadata")
                                             "]")))
                              (tr ((class "filledin"))
-                                 (td ((colspan "3")) ,@(or (package-blurb pkg) '("[no package description]"))))
+                                 (td ((colspan "3")) ,@(map sanitize (or (package-blurb pkg) '("[no package description]")))))
                              (tr ((class "filledin"))
-                                 (td ((colspan "3")) ,@(or (pkgversion-blurb v)
-                                                           `("[no version notes]")))))))
+                                 (td ((colspan "3")) ,@(map sanitize (or (pkgversion-blurb v) `("[no version notes]"))))))))
                        (page
                         (list "Your packages")
                         `(,@(if (null? general-errors)
