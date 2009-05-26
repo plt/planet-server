@@ -141,6 +141,11 @@
          (rename-file-or-directory dir-to-move dir)
          dir]))))
 
+(define (status str . fmt)
+   (printf "package-creation.ss: ~a\n" (apply format str fmt))
+   (flush-output) 
+   (flush-output (current-error-port)))
+
 ;; update/internal : user? string nat nat bytes ((listof xexpr) -> pkg) -> void
 (define (update/internal user pkgname maj min file-bytes getpkg)
   (let* ([username (user-username user)]
@@ -153,7 +158,8 @@
     (dynamic-wind
      void
      (λ ()
-       (let* ([_ (with-output-to-file tmpfilepath (lambda () (write-bytes file-bytes)) #:exists 'truncate/replace)]
+       (let* ([_ (status "starting to unpack")]
+              [_ (with-output-to-file tmpfilepath (lambda () (write-bytes file-bytes)) #:exists 'truncate/replace)]
               [_ 
                (with-handlers ([exn:fail?
                                 (λ (e) 
@@ -166,10 +172,12 @@
                                      "you are uploading is a .plt file that was built with the "(tt "planet")
                                      " command-line tool.")))])
                  (unpack-planet-package tmpfilepath tmpsrcdir))]
+              [_ (status "finished unpacking")]
               
               ;; once we've unpacked, we're sure that the package is valid (at least valid enough)
               ;; so create permanent directories and move things over to them.
               [pkgdir (create-package-directory username pkgname maj min)]
+	      [_ (status "created package directory")]
               [permanent-file-path (build-path pkgdir pkgname)] 
               [srcdir (build-path pkgdir "contents")]
               
@@ -199,9 +207,10 @@
                       (path->string relocated-path-location))))]
               [_ (copy-file tmpfilepath permanent-file-path)]
               [_ (rename-file-or-directory tmpsrcdir srcdir)]
-              
+              [_ (status "getting metadata")]
               ;; get metainfo, add to database
               [info.ss (get-metainfo srcdir)]
+              [_ (status "got info.ss")]
               [pkg (getpkg info.ss)]
               [repository-strings (info.ss 'repositories (λ () #f))]
               [repositories
@@ -216,8 +225,12 @@
                                          permanent-file-path
                                          srcdir
                                          info.ss)])
+	 (status "added to database")
          (for-each (λ (r) (associate-pkgversion-with-repository! id r)) repositories)
-         (for-each (λ (task) (task srcdir username pkgname maj min)) *post-install-tasks*)
+         (for-each (λ (task) (status "post-install ~s" task)
+                             (task srcdir username pkgname maj min)
+                             (status "post-install ~s done" task))
+                    *post-install-tasks*)
          (when (ANNOUNCE-NEW-PACKAGES?)
            (let ([pkgversion (get-package-version-by-id id (user-id user))])
              (unless pkgversion
@@ -527,8 +540,12 @@
                [html-path   (build-path target-directory path)])
            (case type
              [(file)
-              (let ([ext (filename-extension source-path)])
-                (if (not (member ext '(#"ss" #"scm" #"txt")))
+              (let ([ext (filename-extension source-path)]
+                    [too-big? (>= (file-size source-path) (* 100 1024))])
+                (when too-big?
+                  (status "code-to-html skipping ~s" source-path))
+                (if (or (not (member ext '(#"ss" #"scm" #"txt")))
+                        too-big?)
                     ; copy file
                     (begin
                       (when (file-exists? html-path)
