@@ -77,7 +77,7 @@
 (define (mkdisplay* titles contents rep user [bindings '()] #:navkey [navkey #f])
    (mkhtmlpage
      #:navkey navkey
-     #:rss-feed (format "/~a/planet.rss" (repository-urlname rep))
+     #:rss-feed (repository-id->rss-feed-url rep)
       (cons (list "PLaneT" home-link/base) titles)
       `((div ((class "nav") (align "right")) 
              (small 
@@ -97,6 +97,13 @@
                                       ,@(item (LOGOUT-PAGE) "log out"))
                     (item (ADD-URL-ROOT) "contribute a package / log in"))))
         ,@contents)))
+
+(define (repository-id->rss-feed-url id)
+  (let ([this-one (ormap (lambda (x) (and (equal? id (repository-id x)) x))
+		         (get-all-repositories))])
+    (unless this-one
+      (error 'repository-id->rss-feed-url "unknown id ~s" id))
+    (format "/~a/planet.rss" (repository-urlname this-one))))
 
 (define (mkdisplay titles contents req #:navkey [navkey #f])
   (let* ([rep/? (request->repository req)]
@@ -130,10 +137,10 @@
    (list `(div ((class "planet")) ,@contents))
    #:navkey navkey
    #:head-stuff `(,@(if rss-feed-url
-                        `(link ((rel "alternate")
-                                (type "application/rss+xml")
-                                (title "RSS")
-                                (href ,rss-feed-url)))
+                        (list `(link ((rel "alternate")
+                                      (type "application/rss+xml")
+                                      (title "RSS")
+                                      (href ,rss-feed-url))))
                         '())
                   (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
                   (link ((rel "stylesheet") (href "http://www.plt-scheme.org/plt.css") (type "text/css")))
