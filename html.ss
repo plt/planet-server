@@ -77,6 +77,7 @@
 (define (mkdisplay* titles contents rep user [bindings '()] #:navkey [navkey #f])
    (mkhtmlpage
      #:navkey navkey
+     #:rss-feed (format "/~a/planet.rss" (repository-urlname rep))
       (cons (list "PLaneT" home-link/base) titles)
       `((div ((class "nav") (align "right")) 
              (small 
@@ -118,7 +119,7 @@
 ;; title ::= string | (list string string)
 ;; mkhtmlpage : (listof title) (listof xexpr[xhtml body exprs] -> xexpr[xhtml]
 ;;  makes an html page with the given title path and body expressions
-(define (mkhtmlpage titles contents #:navkey [navkey #f])
+(define (mkhtmlpage titles contents #:navkey [navkey #f] #:rss-feed [rss-feed-url #f])
   (apply
    tall-page 
    (apply string-append "PLaneT Package Repository : " (join '(" > ") (map title->string titles)))
@@ -128,10 +129,12 @@
                    ,@(join '(nbsp ">" nbsp) (map title->link titles)))))
    (list `(div ((class "planet")) ,@contents))
    #:navkey navkey
-   #:head-stuff `((link ((rel "alternate")
-                         (type "application/rss+xml")
-                         (title "RSS")
-                         (href "/300/planet.rss")))
+   #:head-stuff `(,@(if rss-feed-url
+                        `(link ((rel "alternate")
+                                (type "application/rss+xml")
+                                (title "RSS")
+                                (href ,rss-feed-url)))
+                        '())
                   (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
                   (link ((rel "stylesheet") (href "http://www.plt-scheme.org/plt.css") (type "text/css")))
                   (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
