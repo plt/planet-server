@@ -24,8 +24,11 @@
   
   ;; email announcements
   (define PLANET-FROM-ADDRESS (make-parameter "PLaneT <planet@plt-scheme.org>"))
-  (define TO-ADDRESSES (make-parameter '("planet-announce@mailman.cs.uchicago.edu")))
-  (define MAIL-SUBSCRIBE-URL (make-parameter (string->url "http://mailman.cs.uchicago.edu/mailman/listinfo/planet-announce")))
+  (define TO-ADDRESSES (make-parameter '("plt-planet-announce@list.cs.brown.edu")))
+  (define MAIL-SUBSCRIBE-URL 
+    (make-parameter 
+     (string->url 
+      "http://list.cs.brown.edu/mailman/listinfo/plt-planet-announce")))
   (define NEW-MAIL-SUBJECT
     (make-parameter (lambda (owner pkgname reps) (format "New PLaneT package: ~a/~a for ~a" owner pkgname reps))))
   (define UPDATED-MAIL-SUBJECT
