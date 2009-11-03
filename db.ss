@@ -146,21 +146,6 @@
              (send conn disconnect)
              #;(timing-log query (- (current-milliseconds) start-time)))
             )))
-      
-      #;(define timing-log
-        (let ([c (make-channel)])
-          (thread 
-           (λ ()
-             (let loop ()
-               (let-values ([(q t) (apply values (channel-get c))])
-                 (with-output-to-file "/local/planet/logs/timing-log.ss"
-                     (λ () (write (list q t (current-seconds))) (newline))
-                     'append)
-                 (loop)))))
-          (λ (q t) (channel-put c (list q t)))))
-        
-      (define/public (query-value q . args)
-        (perform-action q (λ (c) (send/apply c query-value q args))))
       (define/public (query-row q . args)
         (perform-action q (λ (c) (send/apply c query-row q args))))
       (define/public (exec q . args)
@@ -910,7 +895,7 @@
                  =>
                  (λ (scribble)
                    (match scribble
-                     [`((,(? string? file-str) (,flags ...)) ,_ ...)
+                     [`((,(? string? file-str) ,other-stuff ...) ,_ ...)
                       (let* ([filename (file-name-from-path file-str)]
                              [pathname (regexp-match #rx"(.*)\\.scrbl$" (path->bytes filename))])
                         (concat-sql [varchar (path->string (build-path "planet-docs" (bytes->path (cadr pathname))))]))]
