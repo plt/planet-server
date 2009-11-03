@@ -146,6 +146,9 @@
              (send conn disconnect)
              #;(timing-log query (- (current-milliseconds) start-time)))
             )))
+      
+      (define/public (query-value q . args)
+        (perform-action q (λ (c) (send/apply c query-value q args))))
       (define/public (query-row q . args)
         (perform-action q (λ (c) (send/apply c query-row q args))))
       (define/public (exec q . args)
