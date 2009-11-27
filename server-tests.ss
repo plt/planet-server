@@ -22,7 +22,7 @@
 ;; the testing database has a specific setup that exercises weird cases,
 ;; so we set it up the same way each time
 (define (initialize-testing-database!)
-  #;(system "/local/pgsql/bin/psql -f testing-db.sql")
+  #;(system "/home/wwwplanet/pgsql/bin/psql -f testing-db.sql")
   (void))
 
 (define (files=? f1 f2)
@@ -44,7 +44,7 @@
    
    
 (define (pkg-path owner pkg maj min)
-  (build-path "/local/planet/archives" owner pkg (number->string maj) (number->string min) pkg))
+  (build-path "/home/wwwplanet/planet/archives" owner pkg (number->string maj) (number->string min) pkg))
 
 (define (pv->summary pv)
   (list (pkgversion-maj pv) (pkgversion-min pv)))

@@ -8,6 +8,7 @@
           (planet "spgsql.ss" ("schematics" "spgsql.plt" 2 3))
           net/sendmail
           srfi/13
+	  "../configuration.ss"
           "../data-structures.ss"
           "../db.ss"
           "trac-admin.ss"
@@ -56,7 +57,7 @@
 ;========================================================================================================================
 ;Compare PLaneT users/packages with Trac users/components and bring them into sync if they aren't already
 (define (compare-users)
-  (let* ([trac-users (file-parser "/local/password/users.txt")]
+  (let* ([trac-users (file-parser TRAC-PASSWORDS)]
          [plt-users-email (map (lambda (x) (first x)) (get-all-user-email))]
          [plt-users (foldl (lambda(x y ) (cons x y)) '() plt-users-email)]
          [extra-trac-users '()])

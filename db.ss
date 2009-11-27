@@ -146,7 +146,6 @@
              (send conn disconnect)
              #;(timing-log query (- (current-milliseconds) start-time)))
             )))
-      
       (define/public (query-value q . args)
         (perform-action q (λ (c) (send/apply c query-value q args))))
       (define/public (query-row q . args)
@@ -509,8 +508,8 @@
        (f 'package_id)
        (f 'maj)
        (f 'min)
-       (string->path (f 'plt_path))
-       (string->path (f 'src_path))
+       (string->path (convert-old-paths (f 'plt_path)))
+       (string->path (convert-old-paths (f 'src_path)))
        (f 'default_file)
        (f 'doctxt)
        (blurb-string->blurb (f 'release_blurb))
@@ -1099,8 +1098,8 @@
                  (f 'package_id)
                  (f 'maj)
                  (f 'min)
-                 (string->path (f 'plt_path))
-                 (string->path (f 'src_path))
+                 (string->path (convert-old-paths (f 'plt_path)))
+                 (string->path (convert-old-paths (f 'src_path)))
                  (f 'default_file)
                  (f 'doctxt)
                  (blurb-string->blurb (f 'release_blurb))
@@ -1114,6 +1113,11 @@
                  (f 'downloads))])
            (fn pkg pkgver))))))
   
+  (define (convert-old-paths str)
+    (regexp-replace #rx"^/local/planet" 
+		    str
+		    "/home/wwwplanet/planet"))
+
   ;; get-n-most-recent-packages : natural-number/c (union repository? natural-number/c) -> (listof package?)
   ;; gets the n most recently-updated packages in the given repository, sorted
   ;; newest-first. The pkgversions field only contains the most recent

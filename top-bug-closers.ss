@@ -1,12 +1,13 @@
 #lang scheme/base
 
 (provide spawn-bug-closer-thread
+	 compute-top-bug-closers
          top-bug-closers)
 (require  "tracplanet/trac-admin.ss"
           "tracplanet/xmlrpc/xml-rpc.ss")
 
 (define delay (* 60 60)) ;; one hour
-(define results-file "/local/planet/top-bug-closers")
+(define results-file "/home/wwwplanet/planet/top-bug-closers")
 ;(define results-file "/tmp/top-bug-closers")
 
 (define (spawn-bug-closer-thread)
@@ -20,7 +21,11 @@
 
 (define (compute-and-write-top-bug-closers)
   (let ([now (struct->vector (seconds->date (current-seconds)))])
-    (let-values ([(vals cpu real gc) (time-apply (lambda () (compute-top-bug-closers)) '())])
+    (let-values ([(vals cpu real gc) 
+		  (time-apply (lambda () 
+				(with-handlers ([exn:fail? exn->message])
+					       (compute-top-bug-closers)))
+			      '())])
       (with-lock
        (lambda ()
          (call-with-output-file results-file
@@ -33,16 +38,22 @@
              (newline port))
            #:exists 'truncate))))))
 
-;; top-bug-closers : -> (values (or/c #f number) (listof (list number string)))
+(define (exn->message exn)
+  (let ([sp (open-output-string)])
+    (parameterize ([current-error-port sp])
+		  ((error-display-handler) (exn-message exn) exn))
+    (get-output-string sp)))
+
+;; top-bug-closers : -> (values (or/c #f number) (or/c string? (listof (list number string))))
 (define (top-bug-closers)
-  (with-handlers ((exn:fail:filesystem? (lambda (x) (values #f '())))
-                  (exn:fail:read? (lambda (x) (values #f '()))))
+  (with-handlers ((exn:fail:filesystem? (lambda (x) (values #f "")))
+                  (exn:fail:read? (lambda (x) (values #f ""))))
     (with-lock
      (lambda ()
        (call-with-input-file results-file
          (lambda (port)
            (values (vec->date (read port))
-                   (read port))))))))
+		   (read port))))))))
 
 (define (vec->date v) (apply make-date (cdr (vector->list v))))
 

@@ -9,7 +9,7 @@
 (require
  "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
  #;(file "../web/old/common/layout.ss")
- (file "/local/svn/iplt/web/old/common/layout.ss"))
+ (file "/home/wwwplanet/svn/iplt/web/old/common/layout.ss"))
 
 (define bindings/c (listof (cons/c (or/c symbol? string?) string?)))
 (define title/c (or/c string? (list/c string? string?)))

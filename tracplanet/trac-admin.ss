@@ -9,26 +9,16 @@
 (require scheme/system
          scheme/string
          scheme/contract
-         scheme/runtime-path
 	 scheme/port
          net/url
+	 "../configuration.ss"
          "xmlrpc/xml-rpc.ss")
 (require (for-syntax scheme/base))
 
 
-(define tracpath "/local/bugs/tracfiles")
-(define templatepath "/usr/share/trac/templates")
-(define repospath "/local/bugs/tracrepos")
-(define dbstring "sqlite:db/trac.db")
-;(define here "/local/svn/iplt/planet/tracplanet")
-(define-runtime-path here ".")
-;when we know where the stuff is, switch to postgres
-;(define dbstring "postgres://johndoe:letmein@localhost/trac")
-
-
-
 (provide/contract 
  ;[send-command (-> (listof string?) port?)]
+ [tickets-get-wrapper (-> (or/c string? false/c) (or/c string? false/c) (listof ticket?))]
  [ticket-get-wrapper (-> integer? ticket?)]
  [ticket-remove (-> (or/c string?  number?) void)]
  [add-component (-> string? string? void?)]
@@ -40,34 +30,86 @@
  [user-exists? (-> string? boolean?)])
 
 ;send-command:listofstr->PORT
-;send a trac-admin command to trac; see Trac wiki for more info on trac commands
 ;NOTE:THIS RETURNS A LIVE (INPUT PORT) PROCESS-OUTPUT PORT. CLOSE IT!
 (define (send-command type)
-  (let ([returns (apply make-ports 
-                        (apply process* (append (list 
-                                                 "/local/pythont/bin/trac-admin" 
-                                                 tracpath)
-                                                type)))])
-    ;wait until the process has finished before returning to thread; avoids a race-condition
+  (let ([returns (apply make-ports (apply process* (list* TRAC-ADMIN TRAC-PATH type)))])
     ((ports-proc returns) 'wait)
     (close-output-port (ports-process-input returns))
     (close-input-port (ports-process-error returns))
     (ports-process-output returns)))
-
 ; ticket-get-wrapper : int -> ticket
 (define (ticket-get-wrapper tickid)
-  (let* ([url (string->url (format "http://~a:8080/trac/ticket/~a?format=tab" trac-host tickid))]
-         [page (get-pure-port url)])
-    (read-line page) ;; flush out the table of contents line
+  (let* ([url (string->url (format TRAC-LOCAL-TICKET-URL tickid))]
+         [page (get-pure-port url)]
+	 [toc-line (read-line page)])  ;; flush out the table of contents line
+    
+    ;; (printf "toc-line ~s\n" toc-line)
+
     (let ([line (get-one-line-of-table page)])
       (close-input-port page)
       (if (equal? (length line)
                   (procedure-arity make-ticket))
           (apply make-ticket line)
           (error 'ticket-get-wrapper 
-                 "parsed line ~s, expected ~a elements"
-                 line
-                 (procedure-arity make-ticket))))))
+                 "ticket-get-wrapper, expected ~a elements, got ~a; line:\n ~s"
+                 (procedure-arity make-ticket)
+		 (length line)
+                 line)))))
+
+(define (tickets-get-wrapper owner-filter component-filter)
+  (let ([url (string->url (tickets-get-wrapper-url owner-filter component-filter))])
+    (call/input-url
+     url
+     get-pure-port
+     (lambda (page)
+       (let ([toc-line (read-line page)])  ;; flush out the table of contents line
+    
+	 ;; (printf "toc-line ~s\n" toc-line)
+
+	 (let loop ()
+	   (let ([raw-line (get-one-line-of-table page)])
+	     (cond
+	      [(null? raw-line)
+	       '()]
+	      [else 
+	       (let ([line (patch-line raw-line owner-filter component-filter)])
+		 (unless (equal? (length line)
+				 (procedure-arity make-ticket))
+			 (error 'tickets-get-wrapper "expected ~a elements, got ~a; line:\n ~s"
+				(procedure-arity make-ticket)
+				(length line)
+				line))
+		 (cons (apply make-ticket line)
+		       (loop)))]))))))))
+
+(define (patch-line line owner-filter component-filter)
+  (let loop ([line line]
+	     [fields ticket-fields])
+    (cond
+     [(null? fields) '()]
+     [else
+      (let ([field-ent (car fields)])
+	(cond
+	 [(and owner-filter (eq? field-ent 'owner))
+	  (cons owner-filter (loop line (cdr fields)))]
+	 [(and component-filter (eq? field-ent 'component))
+	  (cons component-filter (loop line (cdr fields)))]
+	 [else
+	  (cons (car line) (loop (cdr line) (cdr fields)))]))])))
+
+(define (tickets-get-wrapper-url owner-filter component-filter)
+  (apply
+   string-append
+   TRAC-LOCAL-TICKETS-URL
+   (map (lambda (x) 
+	  (cond
+	   [(and (eq? x 'owner) owner-filter)
+	    (format "&owner=~a" owner-filter)]
+	   [(and (eq? x 'component) component-filter)
+	    (format "&component=~a" component-filter)]
+	   [else
+	    (format "&col=~a" x)]))
+	ticket-fields)))
 
 ;;ticket-remove:str or num->port
 ;;removes the given ticket from the repository
@@ -110,7 +152,7 @@
   (format "~a/~a" owner name))
 
 (define (user-exists? username)
-  (let* ([passfile (open-input-file "/local/password/users.txt")]
+  (let* ([passfile (open-input-file TRAC-PASSWORDS)]
          [exists? (regexp-match (regexp (string-append username ":")) passfile)])
     (if (boolean? exists?)
         #f
@@ -140,8 +182,8 @@
 ;returns string written to permission file
 (define (user-add-unwrapped username password)
   (let* ([process  
-          (apply make-ports (process* "/local/pythont/bin/python"
-				      "/local/svn/iplt/planet/tracplanet/users.py"
+          (apply make-ports (process* PYTHON
+				      USERS.PY
 				      "-u"
 				      username
 				      "-p"
@@ -161,7 +203,7 @@
      [(eof-object? line)
       (error 'user-add-unwrapped "python script failed: ~s" (get-output-string err-string-port))]
      [else
-      (call-with-output-file  "/local/password/users.txt"
+      (call-with-output-file TRAC-PASSWORDS
 	(lambda (passfile)
 	  (fprintf passfile "~a\n" line))
 	#:exists 'append)])
@@ -170,15 +212,15 @@
 	line)))
 
 (define (user-remove-unwrapped user)
-  (let* ([old-p-file       (open-input-file "/local/password/users.txt" )]
-         [temporary (open-output-file "/local/password/temp.tmp" #:exists'replace)])
+  (let* ([old-p-file       (open-input-file TRAC-PASSWORDS)]
+         [temporary (open-output-file TRAC-PASSWORDS-TMP #:exists'replace)])
     (let loop ()
       (let ([line (read-line old-p-file)])
         (if (eof-object? line)
             (begin0
               (close-output-port temporary)
               (close-input-port old-p-file)
-              (system* "/bin/mv" "/local/password/temp.tmp" "/local/password/users.txt"))
+              (system* "/bin/mv" TRAC-PASSWORDS-TMP TRAC-PASSWORDS))
             (if (boolean? (regexp-match (regexp user) line))
                 (and (write-string (string-append line "\n") temporary)
                      (loop))
@@ -231,8 +273,11 @@
 	       (loop #t '() c)]
 	      [else
 	       (error 'get-one-line-of-table "found a quote not following a tab")])]
-	    [(#\tab) (cons (apply string (reverse pending-word))
-			   (loop #f '() #\tab))]
+	    [(#\tab) 
+	     (if in-quotes?
+		 (loop in-quotes? (cons c pending-word) c)
+		 (cons (apply string (reverse pending-word))
+		       (loop #f '() #\tab)))]
 	    [else (loop in-quotes? (cons c pending-word) c)])))))
 
 (define (finish pending-word) 
@@ -273,10 +318,10 @@
                                                [(3 2) 1/5]
                                                [(1) 1/2])) 
                            (loop (- i 1)))])
-                     (close-output-port (open-output-file "/local/password/lockfile.lock" #:exists 'error))))))
+                     (close-output-port (open-output-file TRAC-PASSWORD-LOCKFILE #:exists 'error))))))
            (lambda() (t user pass))
            (lambda() (with-handlers ((exn:fail:filesystem:exists? (lambda (x) (void))))
-             (delete-file "/local/password/lockfile.lock")))))
+             (delete-file TRAC-PASSWORD-LOCKFILE)))))
  
 ;raises an exception if the lockfile persists.
 (define (fail)

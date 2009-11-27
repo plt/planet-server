@@ -2,18 +2,17 @@
 
 (require scheme/port
          scheme/system
+	 "../../configuration.ss"
          (lib "process.ss")
          (lib "string.ss")
          (lib "list.ss")
          (lib "srfi/13.ss"))
 
-(define trac-host "localhost")
-(define url (format "http://~a:8080/trac/xmlrpc" trac-host))
-(define newfiles "/local/svn/iplt/planet/tracplanet")
-(define xmlrpc (string-append newfiles "/xmlrpc"))
+(define url (format "http://~a/trac/xmlrpc" TRAC-HOST))
+(define xmlrpc "/home/wwwplanet/svn/iplt/planet/tracplanet/xmlrpc")
 
 (provide/contract 
- [trac-host string?]
+ [ticket-fields (listof symbol?)]
  [py_script_execute (-> string? (listof string?) boolean? (or/c port? (listof string?)))]
  [a_string (-> (listof (cons/c string? string?)) (listof string?))]
  [port-wrapper (-> port? (listof string?))]
@@ -31,22 +30,32 @@
    process-error  ;port
    proc)   ;function
   )
-(define-struct ticket 
-  (id
-   summary
-   reporter
-   owner
-   description
-   type
-   status
-   priority
-   milestone
-   component
-   resolution
-   keywords
-   cc
-   planetversion
-   pltversion))
+
+(define-syntax (ticket-fields/ds stx)
+  (syntax-case stx ()
+    [(_ ticket ticket-fields)
+     (with-syntax ([fields
+		    #'(id
+		       summary
+		       reporter
+		       owner
+		       description
+		       type
+		       status
+		       priority
+		       milestone
+		       component
+		       resolution
+		       keywords
+		       cc
+		       planetversion
+		       pltversion)])
+		  #'(begin
+		      (define-struct ticket fields)
+		      (define ticket-fields 'fields)))]))
+
+(ticket-fields/ds ticket ticket-fields)
+
 (provide (struct-out ports))
 (provide (struct-out ticket))
 

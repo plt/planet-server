@@ -121,11 +121,9 @@
 ;; get-metainfo : path[directory] -> (symbol (-> TST) -> TST)
 ;; gets an info.ss -retrieving thunk for the given package which is unpacked in the given directory
 (define (get-metainfo unpacked-package-path)
-  (printf "getting info for ~s\n" unpacked-package-path)
   (let ([default-metainfo (lambda (s t) (t))])
     (with-handlers ([exn:fail? (λ (e) default-metainfo)])
       (let ([metainfo (get-info/full unpacked-package-path)])
-        (printf "got ~s\n" metainfo)
         (or metainfo
             default-metainfo)))))
 

@@ -2,8 +2,8 @@
   (require (lib "url.ss" "net"))
   
   (provide (all-defined))
-  (define FILE-STORAGE-PATH     (make-parameter (build-path "/local/planet/archives")))
-  (define STATIC-CONTENT-ROOT   (make-parameter (build-path "/local/webroot/htdocs/")))
+  (define FILE-STORAGE-PATH     (make-parameter (build-path "/home/wwwplanet/planet/archives")))
+  (define STATIC-CONTENT-ROOT   (make-parameter (build-path "/home/wwwplanet/webroot/htdocs/")))
   (define WEB-PACKAGES-ROOT     (make-parameter (build-path (STATIC-CONTENT-ROOT) "package-source")))
   (define AUTOINSTALLERS-ROOT   (make-parameter (build-path (STATIC-CONTENT-ROOT) "autoinstallers")))
   
@@ -42,4 +42,20 @@
   (define REPOSITORIES-STATIC-CONTENT-URL-ROOT URL-ROOT)
   (define REPOSITORIES-STATIC-CONTENT-FILE-ROOT STATIC-CONTENT-ROOT)
 
+  ;; trac
+  (define TRAC-PASSWORDS "/local/password/users.txt")
+  (define TRAC-PASSWORDS-TMP "/local/password/temp.tmp")
+  (define TRAC-PATH "/local/bugs/tracfiles")
+  (define TRAC-PASSWORD-LOCKFILE "/local/password/lockfile.lock")
+
+  (define PYTHON-ROOT "/home/wwwplanet/python2.6/")
+  (define PYTHON (string-append PYTHON-ROOT "bin/python"))
+  (define TRAC-ADMIN (string-append PYTHON-ROOT "bin/trac-admin"))
+  (define USERS.PY "/home/wwwplanet/svn/iplt/planet/tracplanet/users.py")
+  (define TRAC-LOCAL-TICKET-URL "http://planet1.plt-scheme.org/trac/ticket/~a?format=tab")
+  (define TRAC-LOCAL-TICKETS-URL "http://planet1.plt-scheme.org/trac/query?format=tab")
+  (define TRAC-HOST "planet1.plt-scheme.org")
+
   )
+
+;; note to self: find-str 8080

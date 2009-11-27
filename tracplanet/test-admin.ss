@@ -1,23 +1,21 @@
 #lang scheme/base
-(require 
-         "trac-admin.ss"
+
+;; These tests appear to be broken, but are left here 
+;; for when a proper test suite is built.
+
+#|
+(require "trac-admin.ss"
          "xmlrpc/xml-rpc.ss"
          (lib "scheme/system")
          (lib "scheme/file")
          (lib "list.ss")
-         (planet "digest.ss" ("soegaard" "digest.plt" 1 2))
-         (planet "test.ss" ("dherman" "test.plt" 1 3)))
-
-
-(define path-to-env "/local/bugs/tracfiles")
-(define env-path (string->path path-to-env))
-
-
-
+#;         (planet "digest.ss" ("soegaard" "digest.plt" 1 2))
+#;         (planet "test.ss" ("dherman" "test.plt" 1 3)))
 
 
 ;void->bool
 ;checks to see if the basic admin functions work properly.
+#;
 (define (test-trac-admin)
     (let* ([return-values (list (test-component-list)
                                 (test-component-add) ;also tests list-component;
@@ -94,7 +92,7 @@
 (define (test-change-password)
   (begin0 (user-add "jt" "pass")
           (user-change-password "jt" "pass"))
-  (let ([pfile (open-input-file "/local/password/users.txt")])
+  (let ([pfile (open-input-file TRAC-PASSWORDS)])
           (and (user-exists? "jt")
                (let loop()
                  (let* ([line (read-line pfile)])
@@ -105,3 +103,5 @@
                            #f
                            #t)
                        (loop)))))))
+
+|#

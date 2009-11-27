@@ -32,10 +32,6 @@
   
   (startup) ; initialize the database
   
-  
-  
-  (define local-url "http://planet.plt-scheme.org/")
-  
   (define (retract f p?)
     (λ (x) (if (p? x) (f x) #f)))
   
@@ -379,7 +375,7 @@
                   [(current) (if (null? available)
                                  (car unavailable)
                                  (car available))]
-		  [(tq)  (open-tickets-query "component" (pkg->component pkg))]
+		  [(tq)  (tickets-get-wrapper #f (pkg->component pkg))]
                   [(new-ticket-url) (url->string (pkg->submit-ticket-url pkg))])
       (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
@@ -473,7 +469,7 @@
   (define (open-tickets-query type selector)
     (filter (lambda (x)
               (not (equal? (ticket-status x) "closed")))
-            (map (lambda(x) (ticket-get-wrapper x))
+            (map (lambda (x) (ticket-get-wrapper x))
                  (ticket-query (string-append type "=" selector)))))
 
 
@@ -499,8 +495,7 @@
     `((tr ((class "filledin"))
           (td ((valign "center") (align "center") (class "Ticket") (rowspan "2"))
               (a ((href ,(string-append
-                          local-url
-                          "trac/ticket/"
+                          "/trac/ticket/"
                           (ticket-id t))))) ,(ticket-id t))
           ,@(cond [(equal? second-field ticket-component)
                    (let* ([raw-package-info (regexp-split #rx"/" (ticket-component t))]
@@ -508,8 +503,7 @@
                           [package (if (= (length raw-package-info) 2) (list-ref raw-package-info 1) "??")])
                    `((td ((valign "center") (class "owner"))
                         (a ((href ,(string-append
-                                    local-url
-                                    "display.ss?package="
+                                    "/display.ss?package="
                                     package
                                     "&owner="
                                     owner
@@ -518,8 +512,7 @@
                   [(equal? second-field ticket-owner)
                    `((td ((valign "center") (class "owner"))
                         (a ((href ,(string-append
-                                    local-url
-                                    "display.ss?owner="
+                                    "/display.ss?owner="
                                     (ticket-owner t) )))),(ticket-owner t)))]
                   [else `((td ((valign "center") (class "reporter")) ,(second-field t)))])
           (td ((valign "center")) ,(ticket-reporter t))
@@ -549,16 +542,22 @@
       (tr (td ((colspan "2"))
               (strong "Top Bug Closers ")
               "["
-              (a ((href ,(string-append local-url "trac/reports/1"))) "Trac")
+              (a ((href "/trac/report/1")) "Trac")
               "]"))
       ,@(let-values ([(date top-three) (top-bug-closers)])
           (cond
-            [(not date) `((tr (td ((colspan "2")) 
-                                  (center
-                                   (table ((width "80%"))
-                                          (tr
-                                           (td
-                                            (i "Top bug closer records are not available now"))))))))]
+            [(or (string? top-three)
+		 (not date))
+	     `((tr (td ((colspan "2")) 
+		       (center
+			(table ((width "80%"))
+			       (tr
+				(td
+				 (i "Top bug closer records are not available now"
+				    ,@(if (string? top-three)
+					  (list '(br)
+						top-three)
+					  '())))))))))]
             [else
              `((tr (td 
                     ((colspan "2")) 
@@ -580,7 +579,7 @@
     (make-url
      "http"
      #f
-     "planet.plt-scheme.org"
+     #f ;"planet.plt-scheme.org"
      #f
      #t
      (list (make-path/param "trac" '())
@@ -593,7 +592,7 @@
     (make-url
      "http"
      #f
-     "planet.plt-scheme.org"
+     #f ; "planet.plt-scheme.org"
      #f
      #t
      (list (make-path/param "trac" '())
@@ -617,7 +616,7 @@
          (table ((width "100%")) ,summary-row-heading  ,@(map package->summary-row pkgs))
 	(br)
 	,(section "Open tickets")
-        ,@(table-with-owner-fields (open-tickets-query "owner" (user-username user)))))))
+        ,@(table-with-owner-fields (tickets-get-wrapper (user-username user) #f))))))
 	 
   
   ;; ============================================================
