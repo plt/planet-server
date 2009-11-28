@@ -43,10 +43,10 @@
   (define REPOSITORIES-STATIC-CONTENT-FILE-ROOT STATIC-CONTENT-ROOT)
 
   ;; trac
-  (define TRAC-PASSWORDS "/local/password/users.txt")
-  (define TRAC-PASSWORDS-TMP "/local/password/temp.tmp")
-  (define TRAC-PATH "/local/bugs/tracfiles")
-  (define TRAC-PASSWORD-LOCKFILE "/local/password/lockfile.lock")
+  (define TRAC-PATH "/home/wwwplanet/Trac-environment/")
+  (define TRAC-PASSWORDS (string-append TRAC-PATH "users.txt"))
+  (define TRAC-PASSWORDS-TMP (string-append TRAC-PATH "temp.tmp"))
+  (define TRAC-PASSWORD-LOCKFILE (string-append TRAC-PATH "lockfile.lock"))
 
   (define PYTHON-ROOT "/home/wwwplanet/python2.6/")
   (define PYTHON (string-append PYTHON-ROOT "bin/python"))
