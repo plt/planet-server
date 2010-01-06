@@ -376,6 +376,7 @@
                                  (car unavailable)
                                  (car available))]
 		  [(tq)  (tickets-get-wrapper #f (pkg->component pkg))]
+		  [(open-tq)  (filter (lambda (x) (not (equal? "closed" (ticket-status x)))) tq)]
                   [(new-ticket-url) (url->string (pkg->submit-ticket-url pkg))])
       (page
        (list (list (package-owner pkg) (package->owner-link pkg)) 
@@ -421,7 +422,7 @@
                            (td ,(number->string (length tq))))
                           (tr
                            (td "Open tickets:")
-                           (td ,(number->string (length tq))))
+                           (td ,(number->string (length open-tq))))
 	           	  (tr
                            (td ((valign "top")) "Primary files: ")
                            (td ,@(map 
@@ -433,12 +434,13 @@
                '()
                `(,(section "Current version")
                  ,(pvs->table pkg (list (car available)) load-current)
-		,@(if (null?  tq)
+		,@(if (null?  open-tq)
                        `((i "No Tickets Currently open for this Package")
 			 " ["
                          (a ((href ,new-ticket-url))
                             "New Ticket")
-                         "]")
+                         "]"
+			 (br))
                        `(,(section "Open tickets")
                         " ["
                          (a ((href ,(url->string (pkg->all-tickets-url pkg))))
@@ -447,7 +449,7 @@
                          "["
                          (a ((href ,new-ticket-url)) "New Ticket")
                          "]"
-			,@(table-with-component-fields tq)))
+			,@(table-with-component-fields open-tq)))
                  ,@(let ([old-versions (cdr available)])
                      (if (null? old-versions)
                          '()
