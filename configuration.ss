@@ -52,9 +52,9 @@
   (define PYTHON (string-append PYTHON-ROOT "bin/python"))
   (define TRAC-ADMIN (string-append PYTHON-ROOT "bin/trac-admin"))
   (define USERS.PY "/home/wwwplanet/svn/iplt/planet/tracplanet/users.py")
-  (define TRAC-LOCAL-TICKET-URL "http://planet1.plt-scheme.org/trac/ticket/~a?format=tab")
-  (define TRAC-LOCAL-TICKETS-URL "http://planet1.plt-scheme.org/trac/query?format=tab")
-  (define TRAC-HOST "planet1.plt-scheme.org")
+  (define TRAC-LOCAL-TICKET-URL "http://planet.plt-scheme.org/trac/ticket/~a?format=tab")
+  (define TRAC-LOCAL-TICKETS-URL "http://planet.plt-scheme.org/trac/query?format=tab")
+  (define TRAC-HOST "planet.plt-scheme.org")
 
   )
 
