@@ -594,7 +594,7 @@
     (make-url
      "http"
      #f
-     #f ; "planet.plt-scheme.org"
+     "planet.plt-scheme.org"
      #f
      #t
      (list (make-path/param "trac" '())
