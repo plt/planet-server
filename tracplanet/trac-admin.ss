@@ -215,7 +215,7 @@
 (define (user-remove-unwrapped user)
   (let* ([old-p-file       (open-input-file TRAC-PASSWORDS)]
          [temporary (open-output-file TRAC-PASSWORDS-TMP #:exists'replace)]
-         [reg (regexp (regexp-quote user))
+         [reg (regexp (regexp-quote user))])
     (let loop ()
       (let ([line (read-line old-p-file)])
         (if (eof-object? line)
