@@ -153,7 +153,7 @@
 
 (define (user-exists? username)
   (let* ([passfile (open-input-file TRAC-PASSWORDS)]
-         [exists? (regexp-match (regexp (string-append username ":")) passfile)])
+         [exists? (regexp-match (regexp (string-append (regexp-quote username) ":")) passfile)])
     (if (boolean? exists?)
         #f
         #t)))
@@ -170,9 +170,10 @@
 
     
 (define (user-change-password user password)
-  (with-lock (lambda(x y)
-               (and (user-remove-unwrapped x)
-                    (user-add-unwrapped x y))) user password fail))
+  (with-lock (lambda (x y)
+               (begin (user-remove-unwrapped x)
+                      (user-add-unwrapped x y)))
+             user password fail))
 
 (define (user-remove user)
   (with-lock (lambda(x y)
@@ -213,7 +214,8 @@
 
 (define (user-remove-unwrapped user)
   (let* ([old-p-file       (open-input-file TRAC-PASSWORDS)]
-         [temporary (open-output-file TRAC-PASSWORDS-TMP #:exists'replace)])
+         [temporary (open-output-file TRAC-PASSWORDS-TMP #:exists'replace)]
+         [reg (regexp (regexp-quote user))
     (let loop ()
       (let ([line (read-line old-p-file)])
         (if (eof-object? line)
@@ -221,9 +223,9 @@
               (close-output-port temporary)
               (close-input-port old-p-file)
               (system* "/bin/mv" TRAC-PASSWORDS-TMP TRAC-PASSWORDS))
-            (if (boolean? (regexp-match (regexp user) line))
-                (and (write-string (string-append line "\n") temporary)
-                     (loop))
+            (if (boolean? (regexp-match reg line))
+                (begin  (write-string (string-append line "\n") temporary)
+                        (loop))
                 (loop)))))))
 
 ;=====================================Helper functions
@@ -307,25 +309,26 @@
 ;; with-lock : (string? string?-> void) (-> void) -> void
 (define (with-lock t user pass fail)
   (dynamic-wind
-           (lambda ()
-             (let loop ([i 5])
-               (if (zero? i)
-                   (fail)
-                   (with-handlers ([exn:fail:filesystem:exists?
-                                    (lambda (exn)
-                                      (sleep (case i
-                                               [(5 4) 1/10]
-                                               [(3 2) 1/5]
-                                               [(1) 1/2])) 
-                           (loop (- i 1)))])
-                     (close-output-port (open-output-file TRAC-PASSWORD-LOCKFILE #:exists 'error))))))
-           (lambda() (t user pass))
-           (lambda() (with-handlers ((exn:fail:filesystem:exists? (lambda (x) (void))))
-             (delete-file TRAC-PASSWORD-LOCKFILE)))))
+   (lambda ()
+     (let loop ([i 5])
+       (if (zero? i)
+           (fail)
+           (with-handlers ([exn:fail:filesystem:exists?
+                            (lambda (exn)
+                              (sleep (case i
+                                       [(5 4) 1/10]
+                                       [(3 2) 1/5]
+                                       [(1) 1/2])) 
+                              (loop (- i 1)))])
+             (close-output-port (open-output-file TRAC-PASSWORD-LOCKFILE #:exists 'error))))))
+   (lambda () (t user pass))
+   (lambda () 
+     (with-handlers ((exn:fail:filesystem:exists? (lambda (x) (void))))
+       (delete-file TRAC-PASSWORD-LOCKFILE)))))
  
 ;raises an exception if the lockfile persists.
 (define (fail)
-  (raise "Lockfile persists! Please contact administrator for more information."))
+  (error 'trac-admin.ss "Lockfile persists! Please contact administrator for more information."))
 
 
 (provide/contract
@@ -333,5 +336,5 @@
 	       string? 
 	       (or/c void? string?))]
  [user-remove (-> (and/c string? user-exists?) void)]
- [user-change-password (-> (and/c string? user-exists?) string? void)]
+ [user-change-password (-> string? string? void)]
  [user-add-to-group (-> string? string? void)])
