@@ -618,7 +618,8 @@
          (table ((width "100%")) ,summary-row-heading  ,@(map package->summary-row pkgs))
 	(br)
 	,(section "Open tickets")
-        ,@(table-with-owner-fields (tickets-get-wrapper (user-username user) #f))))))
+        ,@(table-with-owner-fields (filter (lambda (x) (not (equal? "closed" (ticket-status x))))
+                                           (tickets-get-wrapper (user-username user) #f)))))))
 	 
   
   ;; ============================================================
