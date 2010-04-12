@@ -4,6 +4,8 @@
   ;; servlet that displays planet's contents to the world
   
   
+  (require (planet "spgsql.ss" ("schematics" "spgsql.plt" 2 3)) ;; for date conversion utility
+           (prefix-in srfi: (lib "19.ss" "srfi")))
   (require "db.ss" "data-structures.ss" "html.ss" 
            "cookie-monster.ss" "configuration.ss"
            "sanitize.ss")
@@ -197,7 +199,13 @@
   (define (pvs->table pkg pvs to-load-fn)
     `(table ((width "100%"))
             (tr ((class "filledin"))
-             (td ((align "center")) (b "PLaneT version")) (td ((align "center")) (b "External Version")) (td  ((align "center")) (b "Source")) (td  ((align "center")) (b "DLs")) (td  ((align "center")) (b "Docs")) (td  ((align "center")) (b "Req. PLT")))
+		(td ((align "center")) (b "PLaneT version"))
+		(td ((align "center")) (b "External version"))
+		(td ((align "center")) (b "Source"))
+		(td ((align "center")) (b "DLs"))
+		(td ((align "center")) (b "Docs"))
+		(td ((align "center")) (b "Req. PLT"))
+		(td ((align "center")) (b "Date added")))
             ,@(srfi1:append-map (pkgversion->rows pkg to-load-fn) pvs)))
   
   (define (load-current pkg pv)
@@ -274,14 +282,16 @@
          (td ((width "8em") (valign "center") (class "filledin"))
 	      (div
                 ,@(doc-link pkg pv `("[none]"))))
-          (td ((width "8em") (valign "center") (class "filledin"))
-              ,(or (pkgversion-required-core pv) "[none]")))
+	 (td ((width "8em") (valign "center") (class "filledin"))
+              ,(or (pkgversion-required-core pv) "[none]"))
+	 (td ((valign "center") (class "filledin"))
+	     ,(srfi:date->string (sql-datetime->srfi-date (pkgversion-date-added pv)) "~1")))
       (tr
-          (td ((colspan "6") (valign "top"))
+          (td ((colspan "7") (valign "top"))
               "To load: " (tt ,(to-load-fn pkg pv))))
-      (tr (td ((colspan "6")) (small "Available in repositories: "
+      (tr (td ((colspan "7")) (small "Available in repositories: "
                                      ,(my-string-join  ", " (map rep-id->name (pkgversion-repositories pv))))))
-      (tr (td ((colspan "6") (class "blurb"))
+      (tr (td ((colspan "7") (class "blurb"))
               ,@(map sanitize (or (pkgversion-blurb pv)
                     `("[no release notes]")))))))
   
