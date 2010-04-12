@@ -284,7 +284,7 @@
                 ,@(doc-link pkg pv `("[none]"))))
 	 (td ((width "8em") (valign "center") (class "filledin"))
               ,(or (pkgversion-required-core pv) "[none]"))
-	 (td ((valign "center") (class "filledin"))
+	 (td ((width "8em") (valign "center") (class "filledin"))
 	     ,(srfi:date->string (sql-datetime->srfi-date (pkgversion-date-added pv)) "~1")))
       (tr
           (td ((colspan "7") (valign "top"))
