@@ -64,7 +64,7 @@
      (lambda (page)
        (let ([toc-line (read-line page)])  ;; flush out the table of contents line
     
-	 ;; (printf "toc-line ~s\n" toc-line)
+	 ;; (printf "url ~s toc-line ~s\n" (url->string url) toc-line)
 
 	 (let loop ()
 	   (let ([raw-line (get-one-line-of-table page)])
@@ -73,20 +73,24 @@
 	       '()]
 	      [else 
 	       (let ([line (patch-line raw-line owner-filter component-filter)])
-		 (unless (equal? (length line)
-				 (procedure-arity make-ticket))
-			 (error 'tickets-get-wrapper "expected ~a elements, got ~a; line:\n ~s"
+		 (if (equal? (length line)
+			     (procedure-arity make-ticket))
+		     (cons (apply make-ticket line)
+			   (loop))
+		     (begin
+		       (fprintf (current-error-port)
+				"tickets-get-wrapper: expected ~a elements, got ~a; line:\n ~s"
 				(procedure-arity make-ticket)
 				(length line)
-				line))
-		 (cons (apply make-ticket line)
-		       (loop)))]))))))))
+				line)
+		       '())))]))))))))
 
 (define (patch-line line owner-filter component-filter)
   (let loop ([line line]
 	     [fields ticket-fields])
     (cond
      [(null? fields) '()]
+     [(null? line) '()]
      [else
       (let ([field-ent (car fields)])
 	(cond
