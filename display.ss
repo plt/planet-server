@@ -70,7 +70,7 @@
            '("Error")
            `((p 
               "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
-              "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
+              "but you may get in touch with us at planet@racket-lang.org if you would like to tell us more about it.")
              ,@(if (DISPLAY-ERRORS-OVER-WEB?)
                    `((p "The error message was: ")
                      (pre ,exception-message))
@@ -152,7 +152,7 @@
                      "Do not require from PLaneT any packages you do not trust.")
                   (p "For more about how to use PLaneT and for instructions on turning your own code into"
                      " packages, see the "
-                     (a ((href "http://docs.plt-scheme.org/planet/")) 
+                     (a ((href "http://docs.racket-lang.org/planet/")) 
                        "PLaneT documentation")
                      " (also available in your local installation).")
                   (p "This page shows the latest versions of all available packages, sorted by category. ")
@@ -591,7 +591,7 @@
     (make-url
      "http"
      #f
-     #f ;"planet.plt-scheme.org"
+     #f ;"planet.racket-lang.org"
      #f
      #t
      (list (make-path/param "trac" '())
@@ -604,7 +604,7 @@
     (make-url
      "http"
      #f
-     "planet.plt-scheme.org"
+     "planet.racket-lang.org"
      #f
      #t
      (list (make-path/param "trac" '())

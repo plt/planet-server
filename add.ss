@@ -230,7 +230,7 @@
   (define (PASSWORD-RESET-EMAIL/PAGE user)
     (lambda (k) 
       (when (SEND-EMAILS?)
-        (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+        (send-mail-message "PLaneT <planet@racket-lang.org>" 
                            "A password reset request has been made for this account"
                            (list (user-email user))
                            '()
@@ -253,7 +253,7 @@
          ,(if (SEND-EMAILS?)
               `(p "We have sent an email to the address we have listed as belonging to the user " (b ,(user-username user))". "
                   "For security purposes, you must visit the link provided in that message within 48 hours to proceed. If you have further questions, "
-                  "please contact a PLaneT administrator by emailing planet@plt-scheme.org for help.")
+                  "please contact a PLaneT administrator by emailing planet@racket-lang.org for help.")
               `(p "Click " (a ((href ,k)) "here") " to continue."))))))
   
   
@@ -261,7 +261,7 @@
     (send/suspend/doctype
      (lambda (k) 
        (when (SEND-EMAILS?)
-         (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+         (send-mail-message "PLaneT <planet@racket-lang.org>" 
                             "Please verify your email address"
                             (list email)
                             '()
@@ -855,7 +855,7 @@ function update(status) {
     (send/suspend/doctype 
      (lambda (k) 
        (when (SEND-EMAILS?)
-         (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+         (send-mail-message "PLaneT <planet@racket-lang.org>" 
                             "Please verify your email address"
                             (list email)
                             '()
@@ -1059,5 +1059,5 @@ function update(status) {
 (define (legal-core-version? s)
   (core-version-string->code s))
 
-(define general-oops '(general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@plt-scheme.org."))
+(define general-oops '(general "Oops! An internal error occured. The problem has been logged, but if you have any further information to report, please email planet@racket-lang.org."))
 

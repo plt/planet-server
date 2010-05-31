@@ -7,7 +7,7 @@
   (define WEB-PACKAGES-ROOT     (make-parameter (build-path (STATIC-CONTENT-ROOT) "package-source")))
   (define AUTOINSTALLERS-ROOT   (make-parameter (build-path (STATIC-CONTENT-ROOT) "autoinstallers")))
   
-  (define EXTERNAL-URL-ROOT     (make-parameter (string->url "http://planet.plt-scheme.org/")))
+  (define EXTERNAL-URL-ROOT     (make-parameter (string->url "http://planet.racket-lang.org/")))
   (define URL-ROOT              (make-parameter "/"))
   (define URL-SERVLET-BASE      (make-parameter "/servlets"))
   (define DISPLAY-URL-ROOT      (make-parameter (string-append #;(URL-ROOT) #;(URL-SERVLET-BASE) "/display.ss")))
@@ -23,7 +23,7 @@
   (define ANNOUNCE-NEW-PACKAGES? (make-parameter #t))
   
   ;; email announcements
-  (define PLANET-FROM-ADDRESS (make-parameter "PLaneT <planet@plt-scheme.org>"))
+  (define PLANET-FROM-ADDRESS (make-parameter "PLaneT <planet@racket-lang.org>"))
   (define TO-ADDRESSES (make-parameter '("plt-planet-announce@list.cs.brown.edu")))
   (define MAIL-SUBSCRIBE-URL 
     (make-parameter 
@@ -52,9 +52,9 @@
   (define PYTHON (string-append PYTHON-ROOT "bin/python"))
   (define TRAC-ADMIN (string-append PYTHON-ROOT "bin/trac-admin"))
   (define USERS.PY "/home/wwwplanet/svn/iplt/planet/tracplanet/users.py")
-  (define TRAC-LOCAL-TICKET-URL "http://planet.plt-scheme.org/trac/ticket/~a?format=tab")
-  (define TRAC-LOCAL-TICKETS-URL "http://planet.plt-scheme.org/trac/query?format=tab")
-  (define TRAC-HOST "planet.plt-scheme.org")
+  (define TRAC-LOCAL-TICKET-URL "http://planet.racket-lang.org/trac/ticket/~a?format=tab")
+  (define TRAC-LOCAL-TICKETS-URL "http://planet.racket-lang.org/trac/query?format=tab")
+  (define TRAC-HOST "planet.racket-lang.org")
 
   )
 

@@ -586,7 +586,7 @@
 
 (define dummy-req
   (make-request 'GET 
-                (string->url "http://planet.plt-scheme.org")
+                (string->url "http://planet.racket-lang.org")
                 '()
                 '()
                 #f

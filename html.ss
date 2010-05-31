@@ -143,9 +143,9 @@
                                       (href ,rss-feed-url))))
                         '())
                   (link ((rel "stylesheet") (href "/css/main.css") (type "text/css")))
-                  (link ((rel "stylesheet") (href "http://www.plt-scheme.org/plt.css") (type "text/css")))
+                  (link ((rel "stylesheet") (href "http://www.racket-lang.org/plt.css") (type "text/css")))
                   (link ((rel "stylesheet") (href "/css/planet-browser-styles.css") (type "text/css")))
-                  (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; import \"http://www.plt-scheme.org/plt.css\"; ")
+                  (style ((type "text/css")) "import \"/css/main.css\"; import \"/css/planet-browser-styles.css\"; import \"http://www.racket-lang.org/plt.css\"; ")
                   )))
 
 ;; title->string : title -> string

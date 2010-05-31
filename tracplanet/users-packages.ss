@@ -152,12 +152,12 @@
                            )) users)))
 
 (define (send-notification-email email pass)
-  (send-mail-message "PLaneT <planet@plt-scheme.org>" 
+  (send-mail-message "PLaneT <planet@racket-lang.org>" 
                      "PLaneT has a new Bug-Tracker"
                      (list email)
                      '()
                      '()
-                     (list (string-append "Greetings! PLaneT has just been set up to use Trac, an issue-tracking system. We need you to update your password. Please go to planet.plt-scheme.org/, login using your username, and change your password at your earliest convenience.")
+                     (list (string-append "Greetings! PLaneT has just been set up to use Trac, an issue-tracking system. We need you to update your password. Please go to planet.racket-lang.org/, login using your username, and change your password at your earliest convenience.")
                                                       
                            "Thanks,"
                            "PLaneT")))

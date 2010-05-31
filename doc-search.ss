@@ -29,7 +29,7 @@
          '("Error")
          `((p 
             "Oops! The PLaneT server encountered an internal error and could not process your request. The error has been logged, "
-            "but you may get in touch with us at planet@plt-scheme.org if you would like to tell us more about it.")
+            "but you may get in touch with us at planet@racket-lang.org if you would like to tell us more about it.")
            ,@(if (DISPLAY-ERRORS-OVER-WEB?)
                  `((p "The error message was: ")
                    (pre ,exception-message))
