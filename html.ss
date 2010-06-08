@@ -1,6 +1,8 @@
 #lang scheme/base
 (require 
+ xml
  "cookie-monster.ss"
+ scheme/match
  scheme/contract
  web-server/private/request-structs
  web-server/servlet/bindings
@@ -8,8 +10,24 @@
 
 (require
  "configuration.ss" "data-structures.ss" "user-utilities.ss" "db.ss" "cookie-monster.ss"
- #;(file "../web/old/common/layout.ss")
- (file "/home/wwwplanet/svn/iplt/web/old/common/layout.ss"))
+ #;(file "/home/wwwplanet/svn/iplt/web/old/common/layout.ss")) ;; previous definition of 'tall-page'
+
+(define prefix-xml
+#<<--
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Download Racket</title><meta name="generator" content="Racket" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><link rel="icon" href="http://racket-lang.org/plticon.ico" type="image/ico" /><link rel="shortcut icon" href="http://racket-lang.org/plticon.ico" /><link rel="stylesheet" type="text/css" href="http://racket-lang.org/plt.css" title="default" /><link rel="stylesheet" href="/css/planet-browser-styles.css" type="text/css" /><link rel="stylesheet" href="/css/main.css" type="text/css" /></head><body><div class="navbar"><div class="titlecontent"><table border="0" cellspacing="0" cellpadding="0" width="100%"><tr><td><span style="font-size: 100px; vertical-align: middle;" class="navtitle">(</span><span style="font-size: 80px; vertical-align: middle;" class="navtitle">(</span><span style="font-size: 60px; vertical-align: middle;" class="navtitle">(</span><span style="font-size: 40px; vertical-align: middle;" class="navtitle">&nbsp;</span><img src="http://racket-lang.org/logo.png" alt="[logo]" style="vertical-align: middle; margin: 13px 0.25em 0 0; border: 0;" /><span style="font-size: 80px; vertical-align: middle;" class="navtitle">Racket</span><span style="font-size: 40px; vertical-align: middle;" class="navtitle">&nbsp;</span><span style="font-size: 60px; vertical-align: middle;" class="navtitle">)</span><span style="font-size: 80px; vertical-align: middle;" class="navtitle">)</span><span style="font-size: 100px; vertical-align: middle;" class="navtitle">)</span></td><td class="helpiconcell"><span class="helpicon"><a href="http://www.racket-lang.org/help.html">Need Help?</a></span></td></tr><tr><td colspan="2"><table width="100%"><tr><td class="navlinkcell"><span class="navitem"><span class="navlink"><a href="http://www.racket-lang.org">About</a></span></span></td><td class="navlinkcell"><span class="navitem"><span class="navlink"><a href="http://www.racket-lang.org/download/">Download</a></span></span></td><td class="navlinkcell"><span class="navitem"><span class="navlink"><a href="http://docs.racket-lang.org/">Documentation</a></span></span></td><td class="navlinkcell"><span class="navitem"><span class="navcurlink"><a href="http://planet.racket-lang.org/">PLaneT</a></span></span></td><td class="navlinkcell"><span class="navitem"><span class="navlink"><a href="http://www.racket-lang.org/community.html">Community</a></span></span></td><td class="navlinkcell"><span class="navitem"><span class="navlink"><a href="http://www.racket-lang.org/outreach+research.html">Outreach&nbsp;&amp;&nbsp;Research</a></span></span></td></tr></table></td></tr></table></div></div><div class="bodycontent"><div align="center"></div></div></body></html>
+--
+)
+
+(define copied-code (xml->xexpr (read-xml/element (open-input-string prefix-xml))))
+
+(define (tall-page title #:head-stuff head-stuff #:navkey navkey . content)
+  (match copied-code
+	 [`(html ,html-attrs
+		 (head ,head-attrs (title ,title-attrs ,title-ignore ...) ,head-stuff ...)
+		 (body ,body-attrs ,navbar (div ,div1-attr (div ,div2-attr ,ignored ...))))
+	  `(html ,html-attrs
+		 (head ,head-attrs (title ,title-attrs ,title) ,@head-stuff)
+		 (body ,body-attrs ,navbar (div ,div1-attr (div ,div2-attr ,@content))))]))
 
 (define bindings/c (listof (cons/c (or/c symbol? string?) string?)))
 (define title/c (or/c string? (list/c string? string?)))
