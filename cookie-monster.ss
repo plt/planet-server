@@ -4,8 +4,18 @@
          web-server/private/request-structs
          web-server/private/response-structs
          xml/xml
-         scheme/contract)
+         scheme/contract
+	 "configuration.ss")
 
+(define-values (doctype index-template)
+  (call-with-input-file INDEX-TEMPLATE 
+    (lambda (p)
+      (read-line p) ;; drop the xml spec line
+      (values
+       (read-line p)
+       (xml->xexpr (read-xml/element p))))))
+
+#;
 (define doctype
   "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
 
@@ -16,7 +26,8 @@
    [path #:mutable]) 
   #:transparent)
 
-(provide build-cookie
+(provide index-template
+	 build-cookie
          request-cookies
          (struct-out client-cookie))
 
