@@ -1,7 +1,8 @@
 #lang scheme/base
 ;current as of 8/25/2008	
 (require "db.ss" "data-structures.ss" "configuration.ss"
-         "html.ss" "scm2xexpr.scm" "announcements.ss")
+         "html.ss" "scm2xexpr.scm" "announcements.ss"
+	 "cookie-monster.ss")
 (require "tracplanet/trac-admin.ss")
 
 (require scheme/contract
@@ -337,6 +338,7 @@
                        ,body))])
     (with-output-to-file file
       (lambda ()
+	(printf "~a\n" doctype)
         (write-xml/content (xexpr->xml body)))
       #:exists 'replace)))
 
