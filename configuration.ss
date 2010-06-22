@@ -22,7 +22,7 @@
   (define SEND-EMAILS? (make-parameter #t))
   (define ANNOUNCE-NEW-PACKAGES? (make-parameter #t))
 
-  (define INDEX-TEMPLATE "/home/wwwplanet/svn/iplt/planet/index.html")
+  (define INDEX-TEMPLATE "/home/wwwplanet/html-stubs/index.html")
   
   ;; email announcements
   (define PLANET-FROM-ADDRESS (make-parameter "PLaneT <planet@racket-lang.org>"))
