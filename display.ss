@@ -144,9 +144,9 @@
      `((div ((class "description"))
             (table
              (tr (td ((width "60%"))
-                  (p (strong "PLaneT") " is PLT Scheme's centralized package distribution system. Here you "
+                  (p (strong "PLaneT") " is Racket's centralized package distribution system. Here you "
                      "will find user-contributed Scheme packages along with instructions for using them.")
-                  (p "The packages on this site are user-contributed and not part of PLT Scheme. Be aware "
+                  (p "The packages on this site are user-contributed and not part of Racket. Be aware "
                      "that when you download one of them for use in your programs, you are installing "
                      "software on your computer that could deliberately or accidentally harm your system. "
                      "Do not require from PLaneT any packages you do not trust.")
@@ -414,7 +414,7 @@
 				(list `(tr (td "Old style:") (td (tt ,(load-old-style pkg current))))))
                           ,@(if (pkgversion-required-core current)
                                 `((tr
-                                   (td "Min PLT Scheme version: ")
+                                   (td "Min Racket version: ")
                                    (td (tt ,(pkgversion-required-core current)))))
                                 '())
                           (tr 
@@ -469,7 +469,7 @@
          ,@(if (null? unavailable)
                `()
                `(,(section "Packages in other repositories")
-                 (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of PLT Scheme." 
+                 (p ,(format "These packages are not available in the ~a repository, but they are available for other versions of Racket." 
                              (repository-name (rep))))
                  ,(pvs->table pkg unavailable load-specific)))))))
 

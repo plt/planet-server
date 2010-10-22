@@ -236,7 +236,7 @@
                            '()
                            '()
                            (list "Greetings! You (or someone claiming to be you) has asked to reset the password for the "
-                                 "account " (user-username user) " on PLaneT, the PLT Scheme package repository. "
+                                 "account " (user-username user) " on PLaneT, the Racket package repository. "
                                  "Our records indicate that that account belongs to this email address. If you really want to "
                                  "reset your password, then please visit the following URL: "
                                  ""
@@ -267,7 +267,7 @@
                             '()
                             '()
                             (list "Greetings! You (or someone claiming to be you) have signed up for an account "
-                                  "with PLaneT, the PLT Scheme package repository. To verify your email address, "
+                                  "with PLaneT, the Racket package repository. To verify your email address, "
                                   "please visit the following URL: "
                                   ""
                                   (url->string (combine-url/relative (EXTERNAL-URL-ROOT) k))
@@ -513,7 +513,7 @@ function update(status) {
                      (member (car minor-update?/list) '("t" "f"))))
            (loop `((general 
                     ,(string-append "Please select whether you are submitting a minor "
-                                    "or a major update (see the PLT Scheme Help Desk "
+                                    "or a major update (see the Racket docs "
                                     "for more discussion of the difference between minor "
                                     "and major updates)"))))]                    
           [else

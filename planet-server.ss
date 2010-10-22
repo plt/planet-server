@@ -56,7 +56,7 @@
                (transmit-failure pkg-spec 
                                  'not-found
                                  (if client-mismatch?
-                                     "There are packages matching the criteria, but none match your version of PLT Scheme"
+                                     "There are packages matching the criteria, but none match your version of Racket"
                                      "No package matched the specified criteria"))
                (proceed-k))]))]
       [(regexp-match #rx"^20.+" language-version)

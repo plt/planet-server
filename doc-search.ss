@@ -40,5 +40,5 @@
       ([exn:user? (λ (e) (mkhtmlpage '("Error") `((div ((class "error")) ,(exn-message e)))))]
        [exn:fail? default-exception-handler])
     (mkdisplay '("Documentation Server")
-               '((p "Sorry, the documentation server is not yet operational. For now, search your local PLT Scheme documentation instead."))
+               '((p "Sorry, the documentation server is not yet operational. For now, search your local Racket documentation instead."))
                req)))
