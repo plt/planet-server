@@ -12,25 +12,12 @@ main focus is to explain how the deployment works.
 
 \section{The setup}
 
-The machine that runs the planet server is a dedicated computer
-running in the University of Chicago server room. It is known by two
-hostnames: coach.cs.uchicago.edu and planet.plt-scheme.org. Basic
-server administration for non-planet-related tasks is handled by
-University of Chicago CS Tech Staff (so they handle the machine's
-physical housing, hardware issues, and things like managing the
-firewall and keeping the kernel up to date if necessary). They are
-aware of the machine's role and they are in contact occasionally as
-the need arises. They have root access to the machine; PLT Scheme
-staff do not.
-
-PLaneT-specific administration must be handled by us. While the
-machine has an NFS mount and you can access normal CS home directories
-from there, currently all PLaneT-specific configuration lives in
-subdirectories off of /local (see below for details of what lives where).
+The machine that runs the planet server is winooski.ccs.neu.edu
+(administered by Eli Barzilay).
 
 \section{Core PLaneT Services}
 
-The planet server's job is to run three services:
+The planet server's job is to run four services:
 \begin{itemize}
 \item Apache
 \item the PLT Scheme Web Server
@@ -54,15 +41,18 @@ and servlets, so this may not be necessary anymore) and to allow us to
 run other services such as bug tracking software that are written
 assuming an Apache frontend in the future.
 
+\textit{This next paragraph is incorrect; Eli knows (or knows how to
+  find out) the correct status; I do not.}
 We run Apache Web Server version 2.0.54 as user wwwplanet listening
 on port 8080 of all interfaces. The firewall, administered by Tech
 Staff, forwards requests on port 80 to requests on port 8080. (The
 point of this scheme is to avoid the need for Apache to run as a
-privileged user.)  Its htdocs directory (where Apache-served content,
-including static HTML files and potentially PHP or other non-Scheme
-pages lives) is
+privileged user.)  
 
-  \texttt{/local/webroot/htdocs}
+The directory where Apache-served content, including static HTML files
+and potentially PHP or other non-Scheme pages lives is
+
+  \texttt{/home/wwwplanet/webroot/htdocs}
 
 Imporant subdirectories of htdocs are as follows:
 
@@ -111,11 +101,11 @@ and a variety of PLaneT packages.
 Imporant directories for this service:
 
 \begin{itemize}
-\item \texttt{/local/svn/plt/}: \\
+\item \texttt{/home/wwwplanet/svn/plt/}: \\
 Root of the SVN checkout that houses the version of PLT Scheme running
 the planet server.
 
-\item \texttt{/local/svn/iplt/}: \\
+\item \texttt{/home/wwwplanet/svn/iplt/}: \\
 Root of the iplt checkout for planet, which houses two important
   subdirectories: \texttt{web}, which is the root of the standard PLT web
   templates (maintained by Eli Barzilay) and planet, where all the
@@ -124,7 +114,7 @@ Root of the iplt checkout for planet, which houses two important
   repository should be treated as live (it generally requires
   restarting the server or refreshing servlets to observe changes, but
   it is unwise to rely on this behavior for staging).
-\item \texttt{/local/planet/archives/}: \\
+\item \texttt{/home/wwwplanet/planet/archives/}: \\
 This is the original package director hierarchy, though at this point
   the fact that it was the first one might only be of historical
   interest. The .plt file containing planet package "pkg.plt" owned by
@@ -132,11 +122,11 @@ This is the original package director hierarchy, though at this point
   \texttt{owner/pkg.plt/x/y/pkg.plt} off of this directory. The package's
   contents are also unpacked; they live in \texttt{owner/pkg.plt/x/y/contents/}
   (and whatever subdirectories may be present in the package itself).
-\item \texttt{/local/planet/logs/}: \\
+\item \texttt{/home/wwwplanet/planet/logs/}: \\
 the file "logfile" in this directory contains the output written by
   the web server. This is generally where internal error messages
   get written.
-\item \texttt{/local/planet/20x/}: \\
+\item \texttt{/home/wwwplanet/planet/20x/}: \\
 This is where very old packages live. The PLaneT server for the
   199-20x series of PLT Scheme releases had a different policy for
   repositories worked than the current policy. As a result when the
@@ -146,12 +136,12 @@ This is where very old packages live. The PLaneT server for the
   version 200 into the new system. This directory holds those old
   packages. I doubt highly that anyone ever accesses them anymore, but
   it doesn't hurt to keep them around.
-\item \texttt{/local/webroot/}: \\
+\item \texttt{/home/wwwplanet/webroot/}: \\
 Serves as the PLT Server's webroot, so mime.types, access log, and all
   the other standard PLT Server configuration stuff lives here with
   the exception of servlets. The servlets directory is actually a
-  symlink to \texttt{/local/svn/iplt/planet}, as discussed above.
-\item \texttt{/local/webroot/wwwplanet-home/}: \\
+  symlink to \texttt{/home/wwwplanet/svn/iplt/planet}, as discussed above.
+\item \texttt{/home/wwwplanet/webroot/wwwplanet-home/}: \\
 Home directory for user wwwplanet. This is significant because the
   subdirectory .plt-scheme in this directory contains all the planet
   packages used by the PLaneT server itself in serving PLaneT. It is
@@ -175,6 +165,9 @@ development link for a local fork of the package, copy the contents
 into that directory, and then rewrite the require line in
 iplt/planet/db.ss to point to that local copy; I just haven't done
 so.
+
+The modified file is in the planet cache:
+\texttt{spgsql.plt/2/3/private/sql-data.ss}.
 
 \subsection{PostgreSQL}
 
