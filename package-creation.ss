@@ -544,7 +544,7 @@
                     [too-big? (>= (file-size source-path) (* 100 1024))])
                 (when too-big?
                   (status "code-to-html skipping ~s" source-path))
-                (if (or (not (member ext '(#"ss" #"scm" #"txt")))
+                (if (or (not (member ext '(#"ss" #"scm" #"rkt" #"rktl" #"rktd" #"txt")))
                         too-big?)
                     ; copy file
                     (begin
@@ -555,7 +555,8 @@
                     (with-input-from-file source-path
                       (lambda ()
                         (let ([xexpr (cond
-                                       [(member ext '(#"ss" #"scm"))   (handle-scm)]
+                                       [(member ext '(#"ss" #"scm" #"rkt" #"rktl" #"rktd"))
+					(handle-scm)]
                                        [(equal? ext #"txt")            (handle-txt)]
                                        [else                           (error)])])
                           (write-planet-page html-path path
