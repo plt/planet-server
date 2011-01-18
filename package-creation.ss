@@ -47,7 +47,7 @@
            . -> .
            void?)]
  [rebuild-all-code-pages
-  (-> any)]
+  (->* () (symbol?) any)]
  [rebuild-all-autoinstallers
   (-> any)])
 
@@ -260,19 +260,33 @@
 
 ;; rebuild-all-code-pages : -> void
 ;; rebuilds the entire code pages site.
-(define (rebuild-all-code-pages)
+;; optionally starting from the user start-from
+;; start-from is expected to be a symbol to make
+;; this easier to call from the command-line
+(define (rebuild-all-code-pages [start-from #f])
+  (define pkg/pvs '())
+  ;; not sure if this guarantees any particular order, so we sort
+  ;; by user to make sure the start-from argument is doing something reasonable
   (for-each-package-version
    (λ (pkg pv)
-     (let ([user (package-owner pkg)]
-           [name (package-name pkg)]
-           [maj (pkgversion-maj pv)]
-           [min (pkgversion-min pv)])
-       (let ([webdir (create-web-directory user name maj min)])
-         (printf "deleting ~s\n" webdir)
-         (delete-directory* webdir)
-         (printf "building ~a/~a/~a/~a\n" user name maj min)
-         (rebuild-package-pages user name maj min))))))
-
+      (set! pkg/pvs (cons (list pkg pv) pkg/pvs))))
+  (for-each
+   (λ (pkg/pv)
+     (let* ([pkg (list-ref pkg/pv 0)]
+	    [pv (list-ref pkg/pv 1)]
+	    [user (package-owner pkg)]
+	    [name (package-name pkg)]
+	    [maj (pkgversion-maj pv)]
+	    [min (pkgversion-min pv)])
+       (when (or (not start-from)
+		 (string<=? (symbol->string start-from) user))
+	     (let ([webdir (create-web-directory user name maj min)])
+	       (printf "deleting ~s\n" webdir)
+	       (delete-directory* webdir)
+	       (printf "building ~a/~a/~a/~a\n" user name maj min)
+	       (rebuild-package-pages user name maj min)))))
+   (sort pkg/pvs string<=? #:key (lambda (x) (package-owner (list-ref x 0))))))
+  
 ;; rebuild-package-pages : string string nat nat -> void
 ;; rebuilds the web pages for the given package
 ;; assumes the package is already unpacked in its appropriate location
@@ -540,12 +554,15 @@
                [html-path   (build-path target-directory path)])
            (case type
              [(file)
-              (let ([ext (filename-extension source-path)]
-                    [too-big? (>= (file-size source-path) (* 100 1024))])
+              (let* ([ext (filename-extension source-path)]
+		     [size-limit (* 100 1024)]
+		     [the-size (file-size source-path)]
+		     [too-big? (>= the-size size-limit)]
+		     [wrong-extension (not (member ext '(#"ss" #"scm" #"rkt" #"rktl" #"rktd" #"txt")))])
                 (when too-big?
-                  (status "code-to-html skipping ~s" source-path))
-                (if (or (not (member ext '(#"ss" #"scm" #"rkt" #"rktl" #"rktd" #"txt")))
-                        too-big?)
+		      (unless wrong-extension
+			      (status "code-to-html skipping ~s, file is ~a, which is bigger than ~a" source-path the-size size-limit)))
+                (if (or wrong-extension too-big?)
                     ; copy file
                     (begin
                       (when (file-exists? html-path)
