@@ -159,12 +159,19 @@
   
   (define fields-ascii
     (fields-constraint
-     (λ (b) 
-       (with-handlers ([exn:fail:contract? (λ (e) #f)])
-         (begin 
-           (string->bytes/latin-1 b)
-           #t)))
-     (λ (b) `("Must consist entirely of ASCII characters"))))
+     (λ (b) (is-ascii-string? b))
+     (λ (b) `("Must consist entirely of printable ASCII characters"))))
+
+  (define (is-ascii-string? b)
+    (and (string? b)
+	 (let loop ([i 0])
+	   (cond
+	    [(= i (string-length b)) #t]
+	    [else
+	     (let ([c (string-ref b i)])
+	       (and (<= 0 (char->integer c) 127)
+		    (or (char-graphic? c) (char-whitespace? c))
+		    (loop (+ i 1))))]))))
   
   (define (wrap-as-demand-p pred formatter)
     (λ args
