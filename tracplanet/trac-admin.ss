@@ -186,13 +186,8 @@
 ;adds a user to trac's authentication system
 ;returns string written to permission file
 (define (user-add-unwrapped username password)
-  (let* ([process  
-          (apply make-ports (process* PYTHON
-				      USERS.PY
-				      "-u"
-				      username
-				      "-p"
-				      password))]
+  (let* ([pcall (list PYTHON USERS.PY "-u" username "-p" password)]
+         [process (apply make-ports (apply process* pcall))]
          [line (read-line (ports-process-output process))]
 	 [err-string-port (open-output-string)]
          [stderr-thd
@@ -206,7 +201,9 @@
     (close-input-port (ports-process-error process))
     (cond
      [(eof-object? line)
-      (error 'user-add-unwrapped "python script failed: ~s" (get-output-string err-string-port))]
+      (error 'user-add-unwrapped "python script failed: ~s => ~s" 
+	     pcall
+	     (get-output-string err-string-port))]
      [else
       (call-with-output-file TRAC-PASSWORDS
 	(lambda (passfile)
