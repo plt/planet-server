@@ -189,6 +189,7 @@
                  (list
                   (fields-nonblank '(username))
                   (fields-ascii 'username)
+                  (fields-no-dot 'username)
                   (field-constraint
                    (wrap-as-demand-p 
                     username-taken? 
@@ -989,6 +990,7 @@ function update(status) {
    (list
     (fields-nonblank '(username realname email password1 password2))
     (fields-ascii 'username 'realname 'email 'password1 'password2)
+    (fields-no-dot 'username)
     (field-constraint (wrap-as-demand-p
                        string=? 
                        (λ (a b) '(password1 (message "Passwords did not match"))))

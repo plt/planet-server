@@ -32,6 +32,7 @@
    [fields-exist (-> (listof symbol?) demand/c)]
    [fields-nonblank (-> (listof symbol?) demand/c)]
    [fields-ascii (->* () (listof symbol?) (demand/c))]
+   [fields-no-dot (->* () (listof symbol?) (demand/c))]
    [field-constraint ((procedure? #|should take the number of strings = to the given # of symbols, at least, and return problems|#) 
                       (listof symbol?)
                       . ->* .
@@ -161,6 +162,11 @@
     (fields-constraint
      (λ (b) (is-ascii-string? b))
      (λ (b) `("Must consist entirely of printable ASCII characters"))))
+  
+  (define fields-no-dot
+    (fields-constraint
+     (λ (b) (printf "checking ~s\n" b) (not (regexp-match #rx"[.]" b)))
+     (λ (b) `("Must not contain ``.''"))))
 
   (define (is-ascii-string? b)
     (and (string? b)
