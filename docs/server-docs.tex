@@ -156,7 +156,21 @@ These are the servlets and a brief description of them:
 \item \texttt{add.ss} --- adds packages
 \item \texttt{doc-search.ss} --- a stub that was supposed to be used for documentation searches, but never got done
 \item \texttt{planet-servlet.ss} --- the servlet that answers requests from \texttt{(require (planet ...))}
-\item \texttt{pkg-info.ss} --- produces a list of the latest versions of all of the packages.
+
+\item \texttt{pkg-info.ss} --- produces a list of the latest versions
+  of all of the packages. The output from this servlet will always
+  contain one \texttt{pre} tag whose body is a printed sexp of the
+  form:
+\begin{verbatim}
+(listof (list/c string? ;; owner
+                string? ;; package-name
+                ;; major/minor versions
+                (or/c (list/c exact-positive-integer? 
+                              exact-positive-integer?)
+                      #f)))
+\end{verbatim}
+listing all of the packages. The second alternative in the \texttt{or} should
+not happen, but could if the database gets in a strange state, I believe.
 \end{itemize}
 
 Note that as of this writing I've got a pretty gross thing going on in
