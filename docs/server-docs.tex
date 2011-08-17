@@ -150,6 +150,15 @@ Home directory for user wwwplanet. This is significant because the
   working either.
 \end{itemize}
 
+These are the servlets and a brief description of them:
+\begin{itemize}
+\item \texttt{display.ss} --- the main servlet (this is the home page)
+\item \texttt{add.ss} --- adds packages
+\item \texttt{doc-search.ss} --- a stub that was supposed to be used for documentation searches, but never got done
+\item \texttt{planet-servlet.ss} --- the servlet that answers requests from \texttt{(require (planet ...))}
+\item \texttt{pkg-info.ss} --- produces a list of the latest versions of all of the packages.
+\end{itemize}
+
 Note that as of this writing I've got a pretty gross thing going on in
 this directory. The database driver I use, \texttt{schematics/spgsql.plt}, has
 a bug that causes it to throw an exception when certain escape
