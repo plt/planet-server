@@ -82,11 +82,14 @@
   
   ;; escape-xexprs-as-xml-string : (listof xexpr) -> string
   (define (escape-xexprs-as-xml-string xprs)
-    (let ((op (open-output-string)))
-      (for-each
-       (lambda (x) (write-xml/content (xexpr->xml x) op))
-       xprs)
-      (get-output-string op)))
+    (let/ec k
+      (let ((op (open-output-string)))
+	(for-each
+	 (lambda (x) 
+	   (with-handlers ((exn:fail? (lambda (x) (k "<p>bad xexpr</p>"))))
+	     (write-xml/content (xexpr->xml x) op)))
+	 xprs)
+	(get-output-string op))))
 
   ;; ============================================================
   ;; EMAIL
