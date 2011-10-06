@@ -15,22 +15,32 @@
  #;(file "/home/wwwplanet/svn/iplt/web/old/common/layout.ss")) ;; previous definition of 'tall-page'
 
 (define (tall-page title #:head-stuff head-stuff #:navkey navkey . content)
-  (define found-title? #f)
-  (define found-body? #f)
-  (begin0 (let loop ([xpr index-template])
-	    (cond
-	     [(and (pair? xpr) (equal? (car xpr) "{{{HEAD}}}"))
-	      (append head-stuff (loop (cdr xpr)))]
-	     [(equal? xpr "{{{TITLE}}}") (set! found-title? #t) title]
-	     [(equal? xpr (list "{{{BODY}}}")) (set! found-body? #t) content]
-	     [(pair? xpr)
-	      (cons (loop (car xpr))
-		    (loop (cdr xpr)))]
-	     [(and (string? xpr) (regexp-match #rx"\\{\\{\\{.*\\}\\}\\}" xpr))
-	      (error 'html.ss "the index-template contains this, unexpected tag ~s" xpr)]
-	     [else xpr]))
-	  (unless found-title? (error 'html.ss "didn't find the title tag"))
-	  (unless found-body? (error 'html.ss "didn't find the body tag"))))
+  (define replacements
+    `(["HEAD"  ,head-stuff]
+      ["TITLE" (,title)]
+      ["BODY"  ,content]))
+  (define replaced '())
+  (begin0
+      (let loop ([xpr index-template])
+        (define m
+          (and (pair? xpr) (string? (car xpr))
+               (regexp-match #rx"^([\r\n\t ]*){{{([^{}]*)}}}([\r\n\t ]*)$"
+                             (car xpr))))
+        (cond [m (let-values ([(pfx tag sfx) (apply values (cdr m))])
+                   (cond [(member tag replaced)
+                          (error 'html.ss "duplicate tag: {{{~a}}}" tag)]
+                         [(assoc tag replacements)
+                          => (λ (r)
+                               (set! replaced (cons tag replaced))
+                               `(,pfx ,@(cadr r) ,sfx ,@(cdr xpr)))]
+                         [else
+                          (error 'html.ss "unexpected tag: {{{~a}}}" tag)]))]
+              [(pair? xpr) (cons (loop (car xpr)) (loop (cdr xpr)))]
+              [(string? xpr) xpr]
+              [else xpr]))
+    (unless (= (length replaced) (length replacements))
+      (error 'html.ss "didn't find some {{{?}}} tags: ~a"
+             (remove* replaced (map car replacements))))))
 
 (define bindings/c (listof (cons/c (or/c symbol? string?) string?)))
 (define title/c (or/c string? (list/c string? string?)))
