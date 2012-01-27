@@ -210,7 +210,8 @@
   
   (define (load-current pkg pv)
     (cond
-     [(equal? (pkgversion-default-file pv) "main.ss")
+     [(or (equal? (pkgversion-default-file pv) "main.ss")
+	  (equal? (pkgversion-default-file pv) "main.rkt"))
       (format 
        "~s"
        `(require (planet ,(string->symbol
@@ -220,7 +221,8 @@
 				   (pkgversion-maj pv)
 				   (pkgversion-min pv))))))]
      [(and (pkgversion-default-file pv)
-	   (regexp-match #rx"\\.ss$" (pkgversion-default-file pv)))
+	   (or (regexp-match #rx"\\.ss$" (pkgversion-default-file pv))
+	       (regexp-match #rx"\\.rkt$" (pkgversion-default-file pv))))
       (format 
        "~s"
        `(require (planet ,(string->symbol
