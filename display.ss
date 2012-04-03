@@ -231,7 +231,7 @@
 				   (remove-plt (package-name pkg))
 				   (pkgversion-maj pv)
 				   (pkgversion-min pv)
-				   (regexp-replace #rx"\\.ss$" (pkgversion-default-file pv) ""))))))]
+				   (regexp-replace #rx"\\..*$" (pkgversion-default-file pv) ""))))))]
      [else (load-old-style pkg pv)]))
 
   (define (load-old-style pkg pv)
