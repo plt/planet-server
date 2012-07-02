@@ -9,7 +9,7 @@
          (lib "srfi/13.ss"))
 
 (define url (format "http://~a/trac/xmlrpc" TRAC-HOST))
-(define xmlrpc "/home/wwwplanet/svn/iplt/planet/tracplanet/xmlrpc")
+(define xmlrpc "/home/wwwplanet/git/planet-server/tracplanet/xmlrpc")
 
 (provide/contract 
  [ticket-fields (listof symbol?)]

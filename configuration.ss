@@ -53,7 +53,7 @@
   (define PYTHON-ROOT "/home/wwwplanet/python2.6/")
   (define PYTHON (string-append PYTHON-ROOT "bin/python"))
   (define TRAC-ADMIN (string-append PYTHON-ROOT "bin/trac-admin"))
-  (define USERS.PY "/home/wwwplanet/svn/iplt/planet/tracplanet/users.py")
+  (define USERS.PY "/home/wwwplanet/git/planet-server/tracplanet/users.py")
   (define TRAC-LOCAL-TICKET-URL "http://planet.racket-lang.org/trac/ticket/~a?format=tab")
   (define TRAC-LOCAL-TICKETS-URL "http://planet.racket-lang.org/trac/query?format=tab")
   (define TRAC-HOST "planet.racket-lang.org")
