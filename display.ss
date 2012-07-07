@@ -232,6 +232,15 @@
 				   (pkgversion-maj pv)
 				   (pkgversion-min pv)
 				   (regexp-replace #rx"\\..*$" (pkgversion-default-file pv) ""))))))]
+     [(not (pkgversion-default-file pv))
+      (format 
+       "~s"
+       `(require (planet ,(string->symbol
+			   (format "~a/~a:~a:~a/<<file>>"
+				   (package-owner pkg)
+				   (remove-plt (package-name pkg))
+				   (pkgversion-maj pv)
+				   (pkgversion-min pv))))))]
      [else (load-old-style pkg pv)]))
 
   (define (load-old-style pkg pv)
