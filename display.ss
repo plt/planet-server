@@ -145,7 +145,7 @@
             (table
              (tr (td ((width "60%"))
                   (p (strong "PLaneT") " is Racket's centralized package distribution system. Here you "
-                     "will find user-contributed Scheme packages along with instructions for using them.")
+                     "will find user-contributed Racket packages along with instructions for using them.")
                   (p "The packages on this site are user-contributed and not part of Racket. Be aware "
                      "that when you download one of them for use in your programs, you are installing "
                      "software on your computer that could deliberately or accidentally harm your system. "
