@@ -144,8 +144,12 @@
      `((div ((class "description"))
             (table
              (tr (td ((width "60%"))
-                  (p (strong "PLaneT") " is Racket's centralized package distribution system. Here you "
-                     "will find user-contributed Racket packages along with instructions for using them.")
+                  (p (strong "PLaneT") " is Racket's old package distribution system. "
+                     "We encourage you to use the newer "
+                     (a ((href "http://docs.racket-lang.org/pkg/")) "pkg system") " for any"
+                     " new software. PLaneT will continue to be maintained, but future"
+                     " effort will most be focused on pkgs.")
+                  (p "")
                   (p "The packages on this site are user-contributed and not part of Racket. Be aware "
                      "that when you download one of them for use in your programs, you are installing "
                      "software on your computer that could deliberately or accidentally harm your system. "
