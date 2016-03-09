@@ -34,7 +34,8 @@
 	(date->string (seconds->date (current-seconds)) #t)
 	(current-seconds))
 
-(void (spawn-bug-closer-thread))
+;; we don't show this on the main page anymore, so don't compute it
+;; (void (spawn-bug-closer-thread))
 
 (void (serve))
 
