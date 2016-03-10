@@ -143,7 +143,7 @@
      '()
      `((div ((class "description"))
             (table ((width "50%") (align "center"))
-             (tr (td (br) (br) (br) "This site is for " (b "legacy support") " of PLaneT,"
+             (tr (td (br) (br) (br) "This page is for " (b "legacy support") " of PLaneT,"
                " Racket's deprecated, old package system." 
                " All new work should " (a ((href "http://pkgs.racket-lang.org/")) 
                "use the new Racket package system instead") "." (br) (br) (br) (br) (br)))
